@@ -82,6 +82,40 @@ fn clean_install_needs_no_adoption() {
     let _ = std::fs::remove_dir_all(&base);
 }
 
+/// Живая проверка 05.08.2026 на Маке владельца: папка переехала, а в базе
+/// настроек остался путь в старую. Ядро искало ключ там и говорило «Ключ не
+/// подошёл» — при том что ключ лежал рядом, в новой папке. Переписать путь
+/// один раз при старте оказалось мало: настройки в этот момент читает и пишет
+/// ещё и экран, и он возвращает прочитанное раньше. Поэтому чиним в месте
+/// чтения — каждый раз, когда путь берут.
+#[test]
+fn saved_path_into_the_old_folder_is_read_from_the_new_one() {
+    let old = format!(
+        "/Users/dima/Library/Application Support/{LEGACY_WORK_DIR_NAME}/sing-box/configs/key.json"
+    );
+
+    let fixed = rebase_legacy_path(&old).expect("путь из старой папки должен переписываться");
+
+    assert!(fixed.contains(WORK_DIR_NAME));
+    assert!(!fixed.contains(LEGACY_WORK_DIR_NAME));
+    assert!(fixed.ends_with("sing-box/configs/key.json"));
+}
+
+#[test]
+fn path_outside_the_old_folder_is_left_alone() {
+    assert_eq!(rebase_legacy_path(""), None);
+    assert_eq!(
+        rebase_legacy_path("/Users/dima/Documents/my-own-config.json"),
+        None
+    );
+    assert_eq!(
+        rebase_legacy_path(&format!(
+            "/Users/dima/Library/Application Support/{WORK_DIR_NAME}/sing-box/configs/key.json"
+        )),
+        None
+    );
+}
+
 /// Токен подписки — это и есть платный ключ клиента.
 ///
 /// Журнал ядра лежит файлом на диске, попадает в резервную копию и приезжает

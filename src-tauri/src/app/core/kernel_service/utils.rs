@@ -30,6 +30,11 @@ pub async fn resolve_config_path(app_handle: &AppHandle) -> Result<PathBuf, Stri
 
     Ok(app_config
         .active_config_path
+        .map(|path| {
+            // Установка с прошлых версий: папка переехала под наше имя, а путь
+            // в настройках мог остаться старым — ключ лежит в новой.
+            crate::utils::app_util::rebase_legacy_path(&path).unwrap_or(path)
+        })
         .map(PathBuf::from)
         .unwrap_or_else(|| paths::get_config_dir().join("config.json")))
 }

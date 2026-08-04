@@ -1,9 +1,21 @@
 use crate::app::storage::state_model::{AppConfig, Subscription};
 use crate::app::storage::{db_save_app_config_internal, get_enhanced_storage};
+use crate::utils::app_util::rebase_legacy_path;
 use tauri::AppHandle;
 use tracing::info;
 
 pub fn resolve_startup_active_config_path(
+    app_config: &AppConfig,
+    subscriptions: &[Subscription],
+    active_subscription_index: Option<i64>,
+) -> Option<String> {
+    let saved =
+        pick_startup_active_config_path(app_config, subscriptions, active_subscription_index)?;
+    // Установка с прошлых версий: рабочая папка переехала под наше имя.
+    Some(rebase_legacy_path(&saved).unwrap_or(saved))
+}
+
+fn pick_startup_active_config_path(
     app_config: &AppConfig,
     subscriptions: &[Subscription],
     active_subscription_index: Option<i64>,

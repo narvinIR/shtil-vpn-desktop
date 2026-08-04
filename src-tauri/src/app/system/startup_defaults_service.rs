@@ -13,7 +13,7 @@ use tauri::AppHandle;
 use tracing::{info, warn};
 
 use crate::app::storage::enhanced_storage_service::get_enhanced_storage;
-use crate::utils::app_util::{LEGACY_WORK_DIR_NAME, WORK_DIR_NAME};
+use crate::utils::app_util::rebase_legacy_path;
 use crate::utils::proxy_util::disable_system_proxy;
 
 /// Ключ записи в базе настроек: дефолты какой версии уже применены.
@@ -56,15 +56,11 @@ fn should_clear_leftover_proxy(system_proxy_enabled: bool) -> bool {
     system_proxy_enabled
 }
 
-/// Путь из старой папки форка — в нашу. `None`, если правка не нужна.
-fn rebase_legacy_path(path: &str) -> Option<String> {
-    if path.is_empty() || !path.contains(LEGACY_WORK_DIR_NAME) {
-        return None;
-    }
-    Some(path.replace(LEGACY_WORK_DIR_NAME, WORK_DIR_NAME))
-}
-
 /// Переписать сохранённые пути ключей после переименования рабочей папки.
+///
+/// Запись помогает, но не спасает: настройки в этот же момент читает экран и
+/// возвращает прочитанное раньше. Поэтому путь ещё и лечится при каждом чтении
+/// (`app_util::rebase_legacy_path` в `kernel_service::utils::resolve_config_path`).
 async fn rebase_saved_paths(
     storage: &crate::app::storage::EnhancedStorageService,
     app_config: &mut crate::app::storage::state_model::AppConfig,

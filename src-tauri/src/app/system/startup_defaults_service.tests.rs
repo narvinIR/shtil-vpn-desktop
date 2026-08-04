@@ -39,36 +39,8 @@ fn unreadable_version_should_not_repeat_the_move() {
     assert!(!needs_system_mode(Some("мусор"), false, false));
 }
 
-#[test]
-fn saved_paths_should_follow_the_renamed_folder() {
-    // Папка переехала под наше имя, а в настройках остался старый путь: без
-    // правки ядро искало бы ключ там, где его больше нет.
-    assert_eq!(
-        rebase_legacy_path(
-            "/Users/dima/Library/Application Support/sing-box-windows/sing-box/configs/key.json"
-        ),
-        Some(
-            "/Users/dima/Library/Application Support/ShtilVPN/sing-box/configs/key.json"
-                .to_string()
-        )
-    );
-    assert_eq!(
-        rebase_legacy_path(
-            r"C:\Users\dima\AppData\Local\sing-box-windows\sing-box\configs\key.json"
-        ),
-        Some(r"C:\Users\dima\AppData\Local\ShtilVPN\sing-box\configs\key.json".to_string())
-    );
-}
-
-#[test]
-fn foreign_paths_should_be_left_alone() {
-    assert_eq!(
-        rebase_legacy_path("/Users/dima/ShtilVPN/sing-box/configs/key.json"),
-        None
-    );
-    assert_eq!(rebase_legacy_path("/tmp/key.json"), None);
-    assert_eq!(rebase_legacy_path(""), None);
-}
+// Перевод путей со старой папки на нашу проверяется там, где он теперь живёт, —
+// `utils/app_util.tests.rs`: его зовёт и старт, и каждое чтение пути ключа.
 
 #[test]
 fn leftover_proxy_should_be_cleared_only_when_it_is_ours() {

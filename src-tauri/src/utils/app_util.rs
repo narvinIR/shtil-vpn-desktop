@@ -55,6 +55,17 @@ fn adopt_legacy_dir(ours: &Path, legacy: &Path) -> PathBuf {
     }
 }
 
+/// Путь, записанный в старую папку форка, — в нашу. `None`, если правка не нужна.
+///
+/// Применяется в момент чтения пути, а не только один раз при старте: настройки
+/// пишет и экран тоже, и он возвращает то, что прочитал до переноса.
+pub fn rebase_legacy_path(path: &str) -> Option<String> {
+    if path.is_empty() || !path.contains(LEGACY_WORK_DIR_NAME) {
+        return None;
+    }
+    Some(path.replace(LEGACY_WORK_DIR_NAME, WORK_DIR_NAME))
+}
+
 /// Рабочая папка: наша, а если приложение стоит с прошлых версий — перенесённая.
 fn resolve_work_dir() -> PathBuf {
     let base = data_base_dir();
