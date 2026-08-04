@@ -63,7 +63,7 @@ const getColors = () => {
   const read = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback
   return {
     upload: read('--success-color', '#10b981'),
-    download: read('--primary-color', '#6366f1'),
+    download: read('--primary-color', '#4f92ff'),
     grid: read('--border-color', 'rgba(128, 128, 128, 0.2)'),
     text: read('--text-secondary', '#64748b'),
     tooltipBg: read('--bg-elevated', '#ffffff'),

@@ -236,7 +236,7 @@ const exportLogs = () => {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = `sing-box-windows-logs-${Date.now()}.txt`
+  anchor.download = `shtil-vpn-logs-${Date.now()}.txt`
   anchor.click()
   URL.revokeObjectURL(url)
   message.success(t('log.exportedSuccess'))

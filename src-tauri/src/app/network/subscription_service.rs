@@ -525,8 +525,8 @@ async fn download_and_process_subscription(
 
     info!("订阅下载成功，内容长度: {} 字节", response_text.len());
 
-    if use_original_config {
-        info!("使用原始订阅内容，仅修改必要的端口和地址");
+    if use_original_config || is_full_singbox_config(&response_text) {
+        info!("Подписка приехала готовым конфигом — берём целиком, правим только порты");
         process_original_config(&response_text, app_config, target_path)?;
         return Ok(userinfo);
     }
@@ -615,6 +615,26 @@ async fn download_and_process_subscription(
     Ok(userinfo)
 }
 
+/// Приехал ли готовый конфиг sing-box, а не список ссылок.
+///
+/// Наша подписка (`/sub/{token}`) отдаёт конфиг целиком: узлы, маршруты и DNS.
+/// Вытаскивать из него одни серверы нельзя — потеряются правила для российских
+/// сайтов, а вместо них подставятся скачиваемые списки, которые из России не
+/// отвечают: тогда ядро не стартует вообще. Признак «конфиг, а не ссылки» —
+/// непустые `outbounds` рядом с `route` или `dns`.
+fn is_full_singbox_config(content: &str) -> bool {
+    let Ok(value) = serde_json::from_str::<Value>(content) else {
+        return false;
+    };
+
+    let has_outbounds = value
+        .get("outbounds")
+        .and_then(Value::as_array)
+        .is_some_and(|list| !list.is_empty());
+
+    has_outbounds && (value.get("route").is_some() || value.get("dns").is_some())
+}
+
 fn process_subscription_content(
     content: String,
     use_original_config: bool,
@@ -622,8 +642,8 @@ fn process_subscription_content(
     app_config: &AppConfig,
     target_path: &Path,
 ) -> Result<(), Box<dyn Error>> {
-    if use_original_config {
-        info!("使用原始配置内容，仅调整端口和地址");
+    if use_original_config || is_full_singbox_config(&content) {
+        info!("Вставили готовый конфиг — берём целиком, правим только порты");
         process_original_config(&content, app_config, target_path)?;
         return Ok(());
     }

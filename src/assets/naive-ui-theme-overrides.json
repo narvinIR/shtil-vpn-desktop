@@ -1,25 +1,25 @@
 {
     "common": {
-        "primaryColor": "#6366f1",
-        "primaryColorHover": "#818cf8",
-        "primaryColorPressed": "#4f46e5",
-        "primaryColorSuppl": "#6366f1",
-        "infoColor": "#3b82f6",
-        "infoColorHover": "#60a5fa",
-        "infoColorPressed": "#2563eb",
-        "infoColorSuppl": "#3b82f6",
-        "successColor": "#10b981",
-        "successColorHover": "#34d399",
-        "successColorPressed": "#059669",
-        "successColorSuppl": "#10b981",
-        "warningColor": "#f59e0b",
-        "warningColorHover": "#fbbf24",
-        "warningColorPressed": "#d97706",
-        "warningColorSuppl": "#f59e0b",
-        "errorColor": "#ef4444",
-        "errorColorHover": "#f87171",
-        "errorColorPressed": "#dc2626",
-        "errorColorSuppl": "#ef4444",
+        "primaryColor": "#4f92ff",
+        "primaryColorHover": "#7fb2ff",
+        "primaryColorPressed": "#1f5fc4",
+        "primaryColorSuppl": "#4f92ff",
+        "infoColor": "#4f92ff",
+        "infoColorHover": "#7fb2ff",
+        "infoColorPressed": "#1f5fc4",
+        "infoColorSuppl": "#4f92ff",
+        "successColor": "#0e7a47",
+        "successColorHover": "#46d189",
+        "successColorPressed": "#0b6339",
+        "successColorSuppl": "#0e7a47",
+        "warningColor": "#8a5a00",
+        "warningColorHover": "#ffc24b",
+        "warningColorPressed": "#6f4800",
+        "warningColorSuppl": "#8a5a00",
+        "errorColor": "#b3261e",
+        "errorColorHover": "#ff7a7a",
+        "errorColorPressed": "#8f1e18",
+        "errorColorSuppl": "#b3261e",
         "borderRadius": "12px",
         "borderRadiusSmall": "8px",
         "borderRadiusMedium": "10px",
@@ -48,11 +48,11 @@
         "paddingLarge": "0 22px",
         "fontWeight": "600",
         "fontWeightStrong": "700",
-        "border": "1px solid rgba(99, 102, 241, 0.2)",
-        "borderHover": "1px solid rgba(99, 102, 241, 0.4)",
-        "borderPressed": "1px solid #6366f1",
-        "borderFocus": "1px solid #6366f1",
-        "rippleColor": "rgba(99, 102, 241, 0.2)"
+        "border": "1px solid rgba(79, 146, 255, 0.2)",
+        "borderHover": "1px solid rgba(79, 146, 255, 0.4)",
+        "borderPressed": "1px solid #4f92ff",
+        "borderFocus": "1px solid #4f92ff",
+        "rippleColor": "rgba(79, 146, 255, 0.2)"
     },
     "Card": {
         "borderRadius": "16px",
@@ -61,7 +61,7 @@
         "paddingSmall": "16px",
         "paddingHuge": "40px",
         "titleFontWeight": "700",
-        "borderColor": "rgba(148, 163, 184, 0.22)"
+        "borderColor": "rgba(155, 170, 196, 0.22)"
     },
     "Input": {
         "borderRadius": "10px",
@@ -71,10 +71,10 @@
         "heightMedium": "40px",
         "heightLarge": "46px",
         "heightSmall": "34px",
-        "border": "1px solid rgba(148, 163, 184, 0.3)",
-        "borderHover": "1px solid rgba(99, 102, 241, 0.5)",
-        "borderFocus": "1px solid #6366f1",
-        "boxShadowFocus": "0 0 0 3px rgba(99, 102, 241, 0.15)"
+        "border": "1px solid rgba(155, 170, 196, 0.3)",
+        "borderHover": "1px solid rgba(79, 146, 255, 0.5)",
+        "borderFocus": "1px solid #4f92ff",
+        "boxShadowFocus": "0 0 0 3px rgba(79, 146, 255, 0.15)"
     },
     "Select": {
         "borderRadius": "10px",
@@ -86,8 +86,8 @@
         "heightSmall": "34px"
     },
     "Switch": {
-        "railColorActive": "#6366f1",
-        "railColor": "rgba(148, 163, 184, 0.3)",
+        "railColorActive": "#4f92ff",
+        "railColor": "rgba(155, 170, 196, 0.3)",
         "buttonBoxShadow": "0 2px 4px 0 rgba(0, 0, 0, 0.1)",
         "buttonBoxShadowActive": "0 2px 4px 0 rgba(0, 0, 0, 0.1)"
     },
@@ -102,7 +102,7 @@
         "thPaddingMedium": "12px 16px",
         "tdPaddingMedium": "12px 16px",
         "thFontWeight": "600",
-        "borderColor": "rgba(148, 163, 184, 0.22)"
+        "borderColor": "rgba(155, 170, 196, 0.22)"
     },
     "Modal": {
         "borderRadius": "20px",

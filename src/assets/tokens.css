@@ -1,13 +1,14 @@
 /**
- * Design Tokens — 精致 Indigo 设计系统
+ * Дизайн-система «Штиль» для компьютера.
  *
- * 分层结构：
- *   1. 原始色板（Primitive，固定值，不随主题变化）
- *   2. 语义 Token（Semantic，随明暗主题切换）
- *   3. 尺寸 Token（Radius / Shadow / Space / Typography / Z-index / Motion）
+ * Цвета те же, что на телефоне и телевизоре: сине-графитовый фон, один
+ * спокойный синий акцент, красного нет нигде кроме настоящей ошибки.
+ * Источник правды — mobile/app/.../ui/theme/Color.kt; менять цвет надо
+ * в обоих местах сразу, иначе экраны разъедутся.
  *
- * 所有页面/组件只引用语义 Token 与尺寸 Token，不应直接使用原始色板。
- * ThemeStore 的 applyAccentVariables 会覆盖 --primary-* 与部分强调相关变量。
+ * Слои: сырая палитра → смысловые значения (меняются со сменой темы) →
+ * размеры. Экраны берут ТОЛЬКО смысловые и размерные значения, к сырой
+ * палитре не обращаются — иначе тёмная и светлая темы разъезжаются.
  */
 
 :root {
@@ -15,58 +16,61 @@
    * 1. 原始色板（Primitive Palette）
    * ============================================================ */
 
-  /* Indigo 强调色阶（主品牌色） */
-  --indigo-50: #eef2ff;
-  --indigo-100: #e0e7ff;
-  --indigo-200: #c7d2fe;
-  --indigo-300: #a5b4fc;
-  --indigo-400: #818cf8;
-  --indigo-500: #6366f1;
-  --indigo-600: #4f46e5;
-  --indigo-700: #4338ca;
-  --indigo-800: #3730a3;
-  --indigo-900: #312e81;
+  /* Акцент «Штиль» — Azure. Совпадает с телефоном и телевизором:
+     mobile/app/.../ui/theme/Color.kt. Опорные ступени 300/500/700/900 взяты
+     оттуда дословно, промежуточные — переходы между ними. */
+  --azure-50: #dce8ff;
+  --azure-100: #c3d8ff;
+  --azure-200: #a5c5ff;
+  --azure-300: #7fb2ff;
+  --azure-400: #669fff;
+  --azure-500: #4f92ff;
+  --azure-600: #3579e0;
+  --azure-700: #1f5fc4;
+  --azure-800: #12417f;
+  --azure-900: #06152e;
 
-  /* 中性灰阶（Slate） */
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-300: #cbd5e1;
-  --slate-400: #94a3b8;
-  --slate-500: #64748b;
-  --slate-600: #475569;
-  --slate-700: #334155;
-  --slate-800: #1e293b;
-  --slate-900: #0f172a;
-  --slate-950: #020617;
+  /* Нейтральные: бумага днём, чернила ночью — та же шкала, что в приложении */
+  --ink-50: #f4f7fc;
+  --ink-100: #e7edf7;
+  --ink-200: #d3deee;
+  --ink-300: #b4c2d8;
+  --ink-400: #9baac4;
+  --ink-500: #5a6b85;
+  --ink-600: #2c3e5f;
+  --ink-700: #1e2e4a;
+  --ink-800: #17263f;
+  --ink-900: #0e1728;
+  --ink-950: #090e1a;
 
-  /* 语义功能色阶 */
-  --green-400: #34d399;
-  --green-500: #10b981;
-  --green-600: #059669;
-  --green-50: #ecfdf5;
-  --green-500-soft: rgba(16, 185, 129, 0.12);
+  /* Состояния. Оттенки разные для тёмной и светлой темы: один и тот же
+     зелёный на белом фоне слепнет (то же правило, что в приложении). */
+  --green-400: #46d189;
+  --green-500: #0e7a47;
+  --green-600: #0b6339;
+  --green-50: #e6f6ee;
+  --green-500-soft: rgba(14, 122, 71, 0.12);
 
-  --amber-400: #fbbf24;
-  --amber-500: #f59e0b;
-  --amber-600: #d97706;
-  --amber-50: #fffbeb;
-  --amber-500-soft: rgba(245, 158, 11, 0.14);
+  --amber-400: #ffc24b;
+  --amber-500: #8a5a00;
+  --amber-600: #6f4800;
+  --amber-50: #fff6e3;
+  --amber-500-soft: rgba(138, 90, 0, 0.14);
 
-  --red-400: #f87171;
-  --red-500: #ef4444;
-  --red-600: #dc2626;
-  --red-50: #fef2f2;
-  --red-500-soft: rgba(239, 68, 68, 0.12);
+  --red-400: #ff7a7a;
+  --red-500: #b3261e;
+  --red-600: #8f1e18;
+  --red-50: #fdeceb;
+  --red-500-soft: rgba(179, 38, 30, 0.12);
 
-  --blue-400: #60a5fa;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
-  --blue-50: #eff6ff;
-  --blue-500-soft: rgba(59, 130, 246, 0.12);
+  --blue-400: var(--azure-300);
+  --blue-500: var(--azure-500);
+  --blue-600: var(--azure-700);
+  --blue-50: var(--azure-50);
+  --blue-500-soft: rgba(79, 146, 255, 0.12);
 
-  --orange-500: #f97316;
-  --orange-500-soft: rgba(249, 115, 22, 0.12);
+  --orange-500: #d97a1f;
+  --orange-500-soft: rgba(217, 122, 31, 0.12);
 
   /* ============================================================
    * 3. 尺寸 Token（Size Tokens） — 不随主题变化
@@ -87,7 +91,7 @@
   --shadow-md: 0 6px 20px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.1);
   --shadow-xl: 0 20px 48px rgba(15, 23, 42, 0.14);
-  --shadow-focus: 0 0 0 3px rgba(99, 102, 241, 0.18);
+  --shadow-focus: 0 0 0 3px rgba(79, 146, 255, 0.18);
 
   /* 间距（4px 网格） */
   --space-1: 4px;
@@ -140,11 +144,11 @@
    * ============================================================ */
 
   /* 强调色（可被 ThemeStore.applyAccentVariables 覆盖） */
-  --primary-color: var(--indigo-500);
-  --primary-hover: var(--indigo-400);
-  --primary-active: var(--indigo-600);
-  --primary-soft: rgba(99, 102, 241, 0.1);
-  --primary-soft-strong: rgba(99, 102, 241, 0.16);
+  --primary-color: var(--azure-500);
+  --primary-hover: var(--azure-300);
+  --primary-active: var(--azure-700);
+  --primary-soft: rgba(79, 146, 255, 0.1);
+  --primary-soft-strong: rgba(79, 146, 255, 0.16);
   --primary-contrast: #ffffff;
 
   /* 功能语义色 */
@@ -158,16 +162,16 @@
   --info-soft: var(--blue-500-soft);
 
   /* 文本层级 */
-  --text-primary: var(--slate-900);
-  --text-secondary: var(--slate-600);
-  --text-tertiary: var(--slate-400);
-  --text-disabled: var(--slate-300);
+  --text-primary: var(--ink-900);
+  --text-secondary: var(--ink-600);
+  --text-tertiary: var(--ink-400);
+  --text-disabled: var(--ink-300);
   --text-on-primary: #ffffff;
 
   /* 背景层级 */
-  --bg-base: var(--slate-50);
+  --bg-base: var(--ink-50);
   --bg-surface: #ffffff;
-  --bg-surface-2: var(--slate-100);
+  --bg-surface-2: var(--ink-100);
   --bg-elevated: #ffffff;
   --bg-overlay: rgba(255, 255, 255, 0.72);
 
@@ -177,12 +181,12 @@
   --glass-blur: 18px;
 
   /* 边框 */
-  --border-color: rgba(148, 163, 184, 0.22);
-  --border-strong: rgba(148, 163, 184, 0.4);
-  --border-hover: rgba(99, 102, 241, 0.4);
+  --border-color: rgba(155, 170, 196, 0.22);
+  --border-strong: rgba(155, 170, 196, 0.4);
+  --border-hover: rgba(79, 146, 255, 0.4);
 
   /* 页面/卡片背景（向下兼容旧变量名） */
-  --page-bg: var(--slate-50);
+  --page-bg: var(--ink-50);
   --hero-bg: #ffffff;
   --hero-border: var(--border-color);
   --hero-shadow: var(--shadow-md);
@@ -191,16 +195,16 @@
   --panel-shadow: var(--shadow-sm);
 
   /* Chip / 标签 */
-  --chip-bg: rgba(99, 102, 241, 0.1);
-  --chip-text: var(--indigo-700);
+  --chip-bg: rgba(79, 146, 255, 0.1);
+  --chip-text: var(--azure-700);
   --chip-border: transparent;
 
   /* 滚动条 */
-  --scrollbar-thumb: rgba(148, 163, 184, 0.35);
-  --scrollbar-thumb-hover: var(--slate-400);
+  --scrollbar-thumb: rgba(155, 170, 196, 0.35);
+  --scrollbar-thumb-hover: var(--ink-400);
 
   /* 表格 */
-  --table-row-hover: var(--slate-50);
+  --table-row-hover: var(--ink-50);
   --table-border: var(--border-color);
 }
 
@@ -209,11 +213,11 @@
  * ============================================================ */
 .dark,
 [data-theme='dark'] {
-  --primary-color: var(--indigo-400);
-  --primary-hover: var(--indigo-300);
-  --primary-active: var(--indigo-500);
-  --primary-soft: rgba(129, 140, 248, 0.16);
-  --primary-soft-strong: rgba(129, 140, 248, 0.24);
+  --primary-color: var(--azure-300);
+  --primary-hover: var(--azure-200);
+  --primary-active: var(--azure-500);
+  --primary-soft: rgba(127, 178, 255, 0.16);
+  --primary-soft-strong: rgba(127, 178, 255, 0.24);
   --primary-contrast: #ffffff;
 
   --success-color: var(--green-400);
@@ -221,35 +225,35 @@
   --error-color: var(--red-400);
   --info-color: var(--blue-400);
 
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-tertiary: #64748b;
-  --text-disabled: #475569;
+  --text-primary: #e9effa;
+  --text-secondary: #9baac4;
+  --text-tertiary: var(--ink-500);
+  --text-disabled: var(--ink-600);
 
-  --bg-base: var(--slate-900);
-  --bg-surface: var(--slate-800);
-  --bg-surface-2: var(--slate-700);
-  --bg-elevated: #1a2438;
-  --bg-overlay: rgba(15, 23, 42, 0.72);
+  --bg-base: var(--ink-950);
+  --bg-surface: var(--ink-900);
+  --bg-surface-2: var(--ink-800);
+  --bg-elevated: var(--ink-700);
+  --bg-overlay: rgba(9, 14, 26, 0.72);
 
-  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-bg: rgba(23, 38, 63, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
 
   --border-color: rgba(255, 255, 255, 0.1);
   --border-strong: rgba(255, 255, 255, 0.18);
-  --border-hover: rgba(129, 140, 248, 0.5);
+  --border-hover: rgba(127, 178, 255, 0.5);
 
-  --page-bg: var(--slate-900);
-  --hero-bg: var(--slate-800);
+  --page-bg: var(--ink-950);
+  --hero-bg: var(--ink-900);
   --hero-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-  --panel-bg: var(--slate-800);
+  --panel-bg: var(--ink-900);
   --panel-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 
-  --chip-bg: rgba(129, 140, 248, 0.18);
-  --chip-text: #e0e7ff;
+  --chip-bg: rgba(127, 178, 255, 0.18);
+  --chip-text: var(--azure-50);
 
-  --scrollbar-thumb: rgba(148, 163, 184, 0.28);
-  --scrollbar-thumb-hover: var(--slate-400);
+  --scrollbar-thumb: rgba(155, 170, 196, 0.28);
+  --scrollbar-thumb-hover: var(--ink-400);
 
   --table-row-hover: rgba(255, 255, 255, 0.03);
 
@@ -259,5 +263,5 @@
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.38);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.42);
   --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.5);
-  --shadow-focus: 0 0 0 3px rgba(129, 140, 248, 0.28);
+  --shadow-focus: 0 0 0 3px rgba(127, 178, 255, 0.28);
 }

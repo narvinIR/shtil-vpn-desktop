@@ -132,7 +132,7 @@
 }
 
 .stat-card[data-accent='purple'] .stat-icon {
-  background: linear-gradient(135deg, var(--indigo-300), var(--indigo-500));
+  background: linear-gradient(135deg, var(--azure-200), var(--azure-500));
 }
 
 .stat-info {

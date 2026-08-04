@@ -846,7 +846,7 @@ onMounted(async () => {
 }
 
 .quick-icon.purple {
-  background: linear-gradient(135deg, var(--indigo-400), var(--indigo-600));
+  background: linear-gradient(135deg, var(--azure-300), var(--indigo-600));
 }
 
 .quick-icon.green {

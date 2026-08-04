@@ -7,7 +7,7 @@ import baseThemeOverrides from '@/assets/naive-ui-theme-overrides.json'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
-const DEFAULT_ACCENT = '#6366f1'
+const DEFAULT_ACCENT = '#4f92ff'
 
 const normalizeHexColor = (color?: string) => {
   if (!color) return DEFAULT_ACCENT

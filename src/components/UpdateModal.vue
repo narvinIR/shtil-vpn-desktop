@@ -363,8 +363,8 @@ onBeforeUnmount(() => cleanup())
 }
 
 .version-badge.new {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(59, 130, 246, 0.12));
-  border-color: rgba(99, 102, 241, 0.24);
+  background: linear-gradient(135deg, rgba(79, 146, 255, 0.16), rgba(31, 95, 196, 0.12));
+  border-color: rgba(79, 146, 255, 0.24);
 }
 
 .version-badge.current {
@@ -435,8 +435,8 @@ onBeforeUnmount(() => cleanup())
   gap: 10px;
   padding: 14px 16px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1));
-  border: 1px solid rgba(99, 102, 241, 0.18);
+  background: linear-gradient(135deg, rgba(31, 95, 196, 0.1), rgba(79, 146, 255, 0.1));
+  border: 1px solid rgba(79, 146, 255, 0.18);
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.6;

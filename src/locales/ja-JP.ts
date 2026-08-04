@@ -1,7 +1,7 @@
 export default {
   // 通用词汇
   common: {
-    appName: 'Sing-Box Windows',
+    appName: 'Shtil VPN',
     cancel: 'キャンセル',
     save: '保存',
     saveSuccess: '保存成功',

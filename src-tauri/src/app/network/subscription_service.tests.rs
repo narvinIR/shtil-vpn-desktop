@@ -1,6 +1,6 @@
 use super::{
     active_config_change_requires_restart,
-    extract_nodes_from_subscription, extract_subscription_userinfo,
+    extract_nodes_from_subscription, extract_subscription_userinfo, is_full_singbox_config,
     merge_subscription_fetch_result, parse_subscription_userinfo,
     should_retry_subscription_userinfo, try_decode_base64_to_text, SubscriptionFetchResult,
     SubscriptionUserInfo,
@@ -16,6 +16,34 @@ fn base64_uri_list_should_extract_nodes_after_decode() {
     let decoded = try_decode_base64_to_text(&b64).expect("decode should work");
     let nodes = extract_nodes_from_subscription(&decoded).expect("extract should work");
     assert_eq!(nodes.len(), 2);
+}
+
+/// Наша подписка отдаёт готовый конфиг: узлы, маршруты и DNS в одном файле.
+/// Если вытащить из него только серверы, вместе с маршрутами пропадут правила
+/// для российских сайтов, а клиент подставит свои скачиваемые списки — из
+/// России они не отвечают, и ядро не стартует вовсе.
+#[test]
+fn our_subscription_config_is_taken_whole() {
+    let ours = r#"{
+        "log": {"level": "warn"},
+        "dns": {"servers": [{"tag": "dns-direct", "address": "8.8.8.8"}]},
+        "inbounds": [{"type": "tun", "tag": "tun-in"}],
+        "outbounds": [{"type": "vless", "tag": "proxy", "server": "example.com"}],
+        "route": {"rules": [{"domain_suffix": [".ru"], "outbound": "direct"}]}
+    }"#;
+
+    assert!(is_full_singbox_config(ours));
+}
+
+/// Чужая подписка приходит списком ссылок, а не конфигом — её по-прежнему
+/// разбираем по узлам, иначе у человека с чужим ключом ничего не заработает.
+#[test]
+fn foreign_link_list_is_not_taken_whole() {
+    assert!(!is_full_singbox_config(
+        "vless://uuid@example.com:443?security=reality#node"
+    ));
+    assert!(!is_full_singbox_config("{\"outbounds\": []}"));
+    assert!(!is_full_singbox_config("не json вовсе"));
 }
 
 #[test]

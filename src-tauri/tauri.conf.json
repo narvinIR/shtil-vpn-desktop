@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "sing-box-windows",
-  "version": "2.3.1",
-  "identifier": "cn.moncn.singbox",
+  "productName": "ShtilVPN",
+  "version": "1.0.0",
+  "identifier": "app.realityvpn.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:6221",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "sing-box-windows",
+        "title": "Штиль VPN",
         "width": 1024,
         "height": 700,
         "minWidth": 1024,

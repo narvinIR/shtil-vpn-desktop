@@ -1,6 +1,6 @@
 export default {
   common: {
-    appName: 'Sing-Box Windows',
+    appName: 'Shtil VPN',
     cancel: 'Cancel',
     save: 'Save',
     saveSuccess: 'Saved successfully',
