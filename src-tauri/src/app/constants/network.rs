@@ -28,6 +28,10 @@ pub mod api {
 
     /// 用户代理
     pub const USER_AGENT: &str = "shtil-vpn-desktop";
+
+    /// Наш сервер: подписка, привязка устройства, гостевой доступ.
+    /// Тот же адрес, что у телефона и на странице установки.
+    pub const BACKEND_URL: &str = "https://sub.ndvsdom54.ru";
 }
 
 /// 服务器默认配置

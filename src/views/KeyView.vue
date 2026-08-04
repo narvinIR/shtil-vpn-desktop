@@ -43,26 +43,69 @@
         <p v-else class="card-text">{{ t('key.current.none') }}</p>
       </section>
 
-      <!-- Главный путь: ключ выдаёт бот -->
+      <!-- Главный путь: ключ выдаёт бот по коду, руками ничего не переносят -->
       <section class="card primary">
         <h2 class="card-title">{{ t('key.fromBot.title') }}</h2>
-        <p class="card-text">{{ t('key.fromBot.text') }}</p>
-        <div class="bot-row">
-          <div class="bot-actions">
-            <n-button type="primary" @click="openBot">
-              <template #icon>
-                <n-icon><PaperPlaneOutline /></n-icon>
-              </template>
-              {{ t('key.fromBot.open') }}
-            </n-button>
-            <p class="card-note">{{ t('key.fromBot.soon') }}</p>
+
+        <!-- Компьютер уже привязан: дальше всё происходит само -->
+        <template v-if="deviceLink.linked">
+          <p class="card-text">{{ t('key.fromBot.linkedText') }}</p>
+          <div class="card-actions">
+            <n-button secondary @click="unlink">{{ t('key.fromBot.unlink') }}</n-button>
           </div>
-          <!-- Telegram у большинства на телефоне, а не на компьютере: код наводят камерой -->
-          <div v-if="botQr" class="qr-row">
-            <img class="qr" :src="botQr" alt="" />
-            <p class="card-note">{{ t('key.fromBot.qrHint') }}</p>
+        </template>
+
+        <!-- Код получен: человек называет его боту и ждёт -->
+        <template v-else-if="deviceLink.code">
+          <p class="card-text">{{ t('key.fromBot.codeText') }}</p>
+          <div class="bot-row">
+            <div class="bot-actions">
+              <div class="link-code">{{ groupedCode }}</div>
+              <p class="card-note wait" v-if="deviceLink.waiting">
+                {{ t('key.fromBot.waiting') }}
+              </p>
+              <p class="card-note warn" v-if="deviceLink.failure === 'no_subscription'">
+                {{ t('key.fromBot.noSubscription') }}
+              </p>
+              <div class="card-actions">
+                <n-button type="primary" @click="openBot">
+                  <template #icon>
+                    <n-icon><PaperPlaneOutline /></n-icon>
+                  </template>
+                  {{ t('key.fromBot.open') }}
+                </n-button>
+                <n-button quaternary @click="deviceLink.stopWaiting">
+                  {{ t('key.fromBot.cancel') }}
+                </n-button>
+              </div>
+            </div>
+            <!-- Telegram у большинства на телефоне: код уезжает в бота одним наведением -->
+            <div v-if="codeQr" class="qr-row">
+              <img class="qr" :src="codeQr" alt="" />
+              <p class="card-note">{{ t('key.fromBot.codeQrHint') }}</p>
+            </div>
           </div>
-        </div>
+        </template>
+
+        <!-- Ключа нет: одна кнопка -->
+        <template v-else>
+          <p class="card-text">{{ t('key.fromBot.text') }}</p>
+          <div class="bot-row">
+            <div class="bot-actions">
+              <n-button type="primary" :loading="deviceLink.requesting" @click="askCode">
+                {{ t('key.fromBot.getCode') }}
+              </n-button>
+              <p class="card-note warn" v-if="deviceLink.failure === 'network'">
+                {{ t('key.fromBot.failed') }}
+              </p>
+              <p class="card-note" v-else>{{ t('key.fromBot.getCodeHint') }}</p>
+            </div>
+            <div v-if="botQr" class="qr-row">
+              <img class="qr" :src="botQr" alt="" />
+              <p class="card-note">{{ t('key.fromBot.qrHint') }}</p>
+            </div>
+          </div>
+        </template>
       </section>
 
       <!-- Поле ввода стоит открытым: под свёрнутой строкой человек его не находит
@@ -118,6 +161,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { readText } from '@tauri-apps/plugin-clipboard-manager'
 import QRCode from 'qrcode'
 import { useSubStore } from '@/stores/subscription/SubStore'
+import { useDeviceLinkStore } from '@/stores/subscription/DeviceLinkStore'
 import { useAppStore } from '@/stores'
 import { subscriptionService } from '@/services/subscription-service'
 import type { SubscriptionPersistResult } from '@/services/subscription-service'
@@ -143,10 +187,12 @@ const { t } = useI18n()
 const message = useMessage()
 const subStore = useSubStore()
 const appStore = useAppStore()
+const deviceLink = useDeviceLinkStore()
 
 const linkUrl = ref('')
 const botQr = ref('')
 const keyQr = ref('')
+const codeQr = ref('')
 const applying = ref(false)
 const refreshing = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -165,7 +211,27 @@ const trafficLine = computed(() => {
 const formatExpire = (timestamp?: number) => formatExpireTime(timestamp, t)
 
 const openBot = async () => {
-  await openUrl(BOT_URL)
+  // Код уже в ссылке: бот откроется с ним, вводить руками ничего не нужно.
+  await openUrl(deviceLink.code ? `${BOT_URL}?start=link_${deviceLink.code}` : BOT_URL)
+}
+
+/** Десять цифр подряд читаются плохо — разбиваем на группы. */
+const groupedCode = computed(() => {
+  const value = deviceLink.code
+  if (value.length !== 10) return value
+  return `${value.slice(0, 1)} ${value.slice(1, 4)} ${value.slice(4, 7)} ${value.slice(7)}`
+})
+
+const askCode = async () => {
+  await deviceLink.requestCode()
+  if (deviceLink.failure === 'network') {
+    message.error(t('key.fromBot.failed'))
+  }
+}
+
+const unlink = async () => {
+  await deviceLink.forget()
+  message.success(t('key.fromBot.unlinked'))
 }
 
 /** Код рисуется прямо в приложении: интернет для этого не нужен. */
@@ -387,6 +453,15 @@ watch(
   { immediate: true },
 )
 
+// Код привязки уезжает в бота ссылкой — телефоном достаточно навести камеру
+watch(
+  () => deviceLink.code,
+  async (code) => {
+    codeQr.value = code ? await drawQr(`${BOT_URL}?start=link_${code}`) : ''
+  },
+  { immediate: true },
+)
+
 onUnmounted(() => {
   stopAutoUpdateLoop()
 })
@@ -487,6 +562,27 @@ onUnmounted(() => {
 .bot-actions {
   flex: 1 1 260px;
   margin-top: var(--space-4);
+}
+
+/* Код — самое крупное на карточке: его читают с экрана и называют боту */
+.link-code {
+  font-family: 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+  font-size: clamp(24px, 3.4vw, 34px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--primary-color);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.card-note.wait {
+  color: var(--primary-color);
+}
+
+.card-note.warn {
+  color: var(--warning-color, #e0a300);
 }
 
 .qr-row {

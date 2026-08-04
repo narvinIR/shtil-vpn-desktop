@@ -39,6 +39,7 @@ import {
   useKernelStore,
   useUpdateStore,
   useSubStore,
+  useDeviceLinkStore,
   useTrafficStore,
   useConnectionStore,
   useLogStore,
@@ -205,6 +206,12 @@ onMounted(async () => {
 
     await initialize()
     cleanupFunctions.push(() => cleanupBootstrap())
+
+    // Привязка к боту: спрашиваем сервер о подписке при запуске и дальше сами.
+    // Сеть недоступна — приложение всё равно поднимается, состояние остаётся прошлым.
+    const deviceLinkStore = useDeviceLinkStore()
+    void deviceLinkStore.initialize()
+    cleanupFunctions.push(() => deviceLinkStore.cleanup())
 
     // 全局监听 kernel-error：所有页面统一提示失败信息，并保留 Linux/macOS 的 sudo 提示流程。
     const sudoStore = useSudoStore()

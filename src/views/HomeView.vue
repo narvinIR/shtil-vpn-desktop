@@ -3,6 +3,20 @@
     <BrandWave :active="connected" />
 
     <div class="home-inner">
+      <!-- Новость от бота: подписку продлили, начался бесплатный период, срок вышел.
+           Появляется только на СМЕНЕ состояния и закрывается кнопкой. -->
+      <div v-if="newsText" class="news" :class="{ over: deviceLink.news === 'over' }">
+        <span class="news-text">{{ newsText }}</span>
+        <div class="news-actions">
+          <n-button v-if="deviceLink.news === 'over'" size="small" type="primary" @click="payInBot">
+            {{ t('home.deviceNews.pay') }}
+          </n-button>
+          <n-button size="small" quaternary @click="deviceLink.dismissNews">
+            {{ t('home.deviceNews.ok') }}
+          </n-button>
+        </div>
+      </div>
+
       <!-- Круг в центре — он же кнопка. Язык, на котором говорят платные VPN:
            один крупный объект, всё остальное подчинено ему. -->
       <div class="ring-wrap">
@@ -55,6 +69,9 @@
           <span class="stat-label">{{ t('home.stats.sent') }}</span>
         </div>
       </div>
+
+      <!-- Сколько осталось: второй из трёх ответов, которые человек ищет на экране -->
+      <p v-if="subscriptionLine" class="subscription-line">{{ subscriptionLine }}</p>
 
       <p class="hint">{{ hint }}</p>
 
@@ -129,6 +146,8 @@ import { useKernelStore } from '@/stores/kernel/KernelStore'
 import { useConnectionStore } from '@/stores/kernel/ConnectionStore'
 import { useProxyStore } from '@/stores/kernel/ProxyStore'
 import { useSubStore } from '@/stores/subscription/SubStore'
+import { useDeviceLinkStore } from '@/stores/subscription/DeviceLinkStore'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import BrandWave from '@/components/common/BrandWave.vue'
 import { useKernelStatus } from '@/composables/useKernelStatus'
 import { formatBytes } from '@/utils'
@@ -146,6 +165,7 @@ const kernelStore = useKernelStore()
 const connectionStore = useConnectionStore()
 const proxyStore = useProxyStore()
 const subStore = useSubStore()
+const deviceLink = useDeviceLinkStore()
 
 const { statusState, isReady } = useKernelStatus(kernelStore)
 
@@ -217,6 +237,33 @@ const sentText = computed(() =>
 )
 
 const proxyAddress = computed(() => `127.0.0.1:${appStore.proxyPort}`)
+
+/** Оплата живёт только в боте — отсюда туда и ведём. */
+const payInBot = () => openUrl('https://t.me/RealityVPNBot_bot?start=buy_vpn')
+
+const newsText = computed(() => {
+  const key = `home.deviceNews.${deviceLink.news}`
+  return deviceLink.news && te(key) ? t(key) : ''
+})
+
+/** «Сколько осталось» словами: дата, а не число секунд. */
+const subscriptionLine = computed(() => {
+  if (!deviceLink.linked) return ''
+  if (deviceLink.subscription === 'expired') return t('home.subscription.over')
+  if (deviceLink.subscription !== 'active') return ''
+  const raw = deviceLink.expiresAt
+  if (!raw) return ''
+  const date = new Date(raw)
+  if (Number.isNaN(date.getTime())) return ''
+  const text = date.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+  return deviceLink.isTrial
+    ? t('home.subscription.trialUntil', { date: text })
+    : t('home.subscription.activeUntil', { date: text })
+})
 
 const hint = computed(() => {
   if (!hasKey.value) return t('home.hint.noKey')
@@ -580,6 +627,44 @@ onUnmounted(() => {
   font-size: var(--text-sm);
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+/* Новость от бота: заметная, но не тревожная — тревожный вид только у «срок вышел» */
+.news {
+  width: min(520px, 100%);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--primary-color);
+  background: var(--primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  text-align: left;
+}
+
+.news.over {
+  border-color: var(--error-color);
+  background: var(--error-soft);
+}
+
+.news-text {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  flex: 1 1 240px;
+}
+
+.news-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.subscription-line {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--primary-color);
 }
 
 .failure {

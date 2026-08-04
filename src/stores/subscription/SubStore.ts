@@ -1,9 +1,20 @@
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { DatabaseService } from '@/services/database-service'
+import { subscriptionService } from '@/services/subscription-service'
 import type { Subscription } from '@/types/database'
 import mitt from '@/utils/mitt'
+import { useAppStore } from '@/stores/app/AppStore'
+import { generateConfigFileName } from '@/views/sub/subscription-utils'
 import { DEFAULT_AUTO_UPDATE_MINUTES, type FrontendSubscription } from './types'
+
+/**
+ * Наш адрес `/sub/{token}` отдаёт готовый конфиг sing-box целиком — берём его
+ * как есть. Иначе из ключа достали бы только серверы и подставили чужие
+ * маршруты на скачиваемых списках: из России они не отвечают, и связь не
+ * поднимется вовсе.
+ */
+const USE_ORIGINAL_CONFIG = true
 
 export const useSubStore = defineStore(
   'sub',
@@ -203,6 +214,57 @@ export const useSubStore = defineStore(
       // 保存会在 watch 中自动处理
     }
 
+    /**
+     * Применить ссылку подписки, пришедшую от сервера (привязка к боту, гость).
+     *
+     * Та же ссылка второй раз не плодит запись: сервер отдаёт её при каждом
+     * опросе состояния, и без этой проверки список ключей рос бы сам собой.
+     */
+    const applySubscriptionUrl = async (url: string, name: string) => {
+      const appStore = useAppStore()
+      const known = list.value.findIndex((item) => item.url === url)
+      const target = known >= 0 ? known : list.value.length
+
+      const result = await subscriptionService.downloadSubscription(url, USE_ORIGINAL_CONFIG, {
+        ...(known >= 0 && list.value[known].configPath
+          ? { configPath: list.value[known].configPath }
+          : { fileName: generateConfigFileName(name) }),
+        applyRuntime: false,
+      })
+
+      const item: FrontendSubscription = {
+        ...(known >= 0 ? list.value[known] : {}),
+        name: known >= 0 ? list.value[known].name : name,
+        url,
+        isLoading: false,
+        isManual: false,
+        useOriginalConfig: USE_ORIGINAL_CONFIG,
+        autoUpdateIntervalMinutes: DEFAULT_AUTO_UPDATE_MINUTES,
+        lastUpdate: Date.now(),
+        configPath: result.configPath || undefined,
+        backupPath: result.configPath ? `${result.configPath}.bak` : undefined,
+        subscriptionUpload: result.subscriptionUpload,
+        subscriptionDownload: result.subscriptionDownload,
+        subscriptionTotal: result.subscriptionTotal,
+        subscriptionExpire: result.subscriptionExpire,
+      }
+
+      if (known >= 0) {
+        list.value[known] = item
+      } else {
+        list.value.push(item)
+      }
+      await setActiveIndex(target)
+
+      if (result.configPath) {
+        await subscriptionService.setActiveConfig(result.configPath, {
+          useOriginalConfig: USE_ORIGINAL_CONFIG,
+        })
+        await appStore.setActiveConfigPath(result.configPath)
+      }
+      return result
+    }
+
     // 获取当前激活的订阅
     const getActiveSubscription = () => {
       if (
@@ -268,6 +330,7 @@ export const useSubStore = defineStore(
       setLoadingState,
       updateLastUpdateTime,
       clear,
+      applySubscriptionUrl,
       getActiveSubscription,
       initializeStore,
       loadFromBackend,

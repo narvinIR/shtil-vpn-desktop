@@ -244,6 +244,12 @@ pub fn run() {
             crate::app::network::subscription_service::rollback_subscription_config,
             crate::app::network::subscription_service::toggle_proxy_mode,
             crate::app::network::subscription_service::get_current_proxy_mode,
+            // Network - привязка устройства к боту по коду
+            crate::app::network::device_link::device_link_start,
+            crate::app::network::device_link::device_link_status,
+            crate::app::network::device_link::device_link_poll,
+            crate::app::network::device_link::device_link_snapshot,
+            crate::app::network::device_link::device_link_forget,
             // System - System service commands
             crate::app::system::system_service::check_admin,
             crate::app::system::system_service::restart_as_admin,
