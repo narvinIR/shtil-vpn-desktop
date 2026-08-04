@@ -26,6 +26,7 @@ sing-box отдельным файлом (`pnpm kernel:fetch` кладёт ег�
 | Имя приложения | `src-tauri/tauri.conf.json`, `src/locales/*.ts` (`common.appName`) | — |
 | Обновление смотрит в НАШ репозиторий | `src-tauri/src/app/constants/network.rs` (`GITHUB_API_URL`), `.../system/update_service.rs` (`RELEASES_PAGE_URL`, список выпусков) | С апстримным адресом приложение видит чужой выпуск как «доступно обновление» и на Windows **ставит чужую программу само** (`autoCheckUpdate` включён по умолчанию). Стережёт тест `update_endpoints_must_point_to_our_repository` |
 | Наши имена пакета и выпусков | `src-tauri/Cargo.toml`, теги `desktop-v*` | Имя пакета = имя файла внутри установки; после первой раздачи не меняется |
+| Акцентный цвет по умолчанию | `src-tauri/src/app/storage/state_model.rs`, `.../database.rs` (три места) | Тема naive-ui у нас своя, но кнопки красились в апстримный индиго `#6366f1`: он хранится **в базе настроек**, а не в палитре, и перебивает её при первом запуске. Наш — `#4f92ff` |
 
 ## Правила, которые здесь нельзя нарушать
 
