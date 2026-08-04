@@ -34,6 +34,11 @@
               {{ t('key.current.updated', { time: formatLocalTime(activeKey.lastUpdate) }) }}
             </span>
           </div>
+          <!-- Тот же ключ на телефон: снять камерой быстрее, чем пересылать себе текст -->
+          <div v-if="keyQr" class="qr-row">
+            <img class="qr" :src="keyQr" alt="" />
+            <p class="card-note">{{ t('key.current.qrHint') }}</p>
+          </div>
         </template>
         <p v-else class="card-text">{{ t('key.current.none') }}</p>
       </section>
@@ -42,38 +47,47 @@
       <section class="card primary">
         <h2 class="card-title">{{ t('key.fromBot.title') }}</h2>
         <p class="card-text">{{ t('key.fromBot.text') }}</p>
-        <div class="card-actions">
-          <n-button type="primary" @click="openBot">
-            <template #icon>
-              <n-icon><PaperPlaneOutline /></n-icon>
-            </template>
-            {{ t('key.fromBot.open') }}
-          </n-button>
+        <div class="bot-row">
+          <div class="bot-actions">
+            <n-button type="primary" @click="openBot">
+              <template #icon>
+                <n-icon><PaperPlaneOutline /></n-icon>
+              </template>
+              {{ t('key.fromBot.open') }}
+            </n-button>
+            <p class="card-note">{{ t('key.fromBot.soon') }}</p>
+          </div>
+          <!-- Telegram у большинства на телефоне, а не на компьютере: код наводят камерой -->
+          <div v-if="botQr" class="qr-row">
+            <img class="qr" :src="botQr" alt="" />
+            <p class="card-note">{{ t('key.fromBot.qrHint') }}</p>
+          </div>
         </div>
-        <p class="card-note">{{ t('key.fromBot.soon') }}</p>
       </section>
 
-      <!-- Запасные пути: свёрнуты, чтобы не путать на первом запуске -->
-      <details class="card fold">
-        <summary>{{ t('key.link.title') }}</summary>
+      <!-- Поле ввода стоит открытым: под свёрнутой строкой человек его не находит
+           и спрашивает «куда вставлять ключ» (04.08.2026) -->
+      <section class="card">
+        <h2 class="card-title">{{ t('key.link.title') }}</h2>
+        <p class="card-text">{{ t('key.link.text') }}</p>
         <div class="fold-body">
-          <n-input
-            v-model:value="linkName"
-            :placeholder="t('key.link.namePlaceholder')"
-            :disabled="applying"
-          />
           <n-input
             v-model:value="linkUrl"
             type="textarea"
-            :rows="2"
+            :rows="3"
             :placeholder="t('key.link.placeholder')"
             :disabled="applying"
           />
-          <n-button type="primary" :loading="applying" @click="applyLink">
-            {{ t('key.link.apply') }}
-          </n-button>
+          <div class="card-actions">
+            <n-button secondary :disabled="applying" @click="pasteLink">
+              {{ t('key.link.paste') }}
+            </n-button>
+            <n-button type="primary" :loading="applying" @click="applyLink">
+              {{ t('key.link.apply') }}
+            </n-button>
+          </div>
         </div>
-      </details>
+      </section>
 
       <details class="card fold">
         <summary>{{ t('key.file.title') }}</summary>
@@ -96,11 +110,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { PaperPlaneOutline } from '@vicons/ionicons5'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import { readText } from '@tauri-apps/plugin-clipboard-manager'
+import QRCode from 'qrcode'
 import { useSubStore } from '@/stores/subscription/SubStore'
 import { useAppStore } from '@/stores'
 import { subscriptionService } from '@/services/subscription-service'
@@ -128,8 +144,9 @@ const message = useMessage()
 const subStore = useSubStore()
 const appStore = useAppStore()
 
-const linkName = ref('')
 const linkUrl = ref('')
+const botQr = ref('')
+const keyQr = ref('')
 const applying = ref(false)
 const refreshing = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -151,6 +168,23 @@ const openBot = async () => {
   await openUrl(BOT_URL)
 }
 
+/** Код рисуется прямо в приложении: интернет для этого не нужен. */
+const drawQr = (text: string) =>
+  QRCode.toDataURL(text, {
+    margin: 1,
+    width: 320,
+    color: { dark: '#0b1220', light: '#ffffff' },
+  }).catch(() => '')
+
+const pasteLink = async () => {
+  const text = (await readText().catch(() => '')) ?? ''
+  if (!text.trim()) {
+    message.warning(t('key.link.clipboardEmpty'))
+    return
+  }
+  linkUrl.value = text.trim()
+}
+
 /**
  * Наш адрес `/sub/{token}` отдаёт ГОТОВЫЙ конфиг sing-box целиком, поэтому
  * ключ всегда применяется как есть. Иначе из него достали бы только серверы и
@@ -168,7 +202,6 @@ const persistKey = async (
     ...item,
     isLoading: false,
     lastUpdate: Date.now(),
-    useOriginalConfig: USE_ORIGINAL_CONFIG,
     configPath: savedPath || undefined,
     backupPath: savedPath ? `${savedPath}.bak` : undefined,
     subscriptionUpload: result.subscriptionUpload,
@@ -183,7 +216,7 @@ const persistKey = async (
 
   if (savedPath) {
     await subscriptionService.setActiveConfig(savedPath, {
-      useOriginalConfig: USE_ORIGINAL_CONFIG,
+      useOriginalConfig: item.useOriginalConfig,
     })
     await appStore.setActiveConfigPath(savedPath)
   }
@@ -191,30 +224,39 @@ const persistKey = async (
 }
 
 const applyLink = async () => {
-  const url = linkUrl.value.trim()
-  if (!url) {
+  const value = linkUrl.value.trim()
+  if (!value) {
     message.warning(t('key.link.needLink'))
     return
   }
-  const name = linkName.value.trim() || t('key.defaultName')
+  const name = t('key.defaultName')
   applying.value = true
   try {
-    const result = await subscriptionService.downloadSubscription(url, USE_ORIGINAL_CONFIG, {
-      fileName: generateConfigFileName(name),
-      applyRuntime: false,
-    })
+    // Из бота приходят две разные вещи: ссылка подписки (её надо скачать) и голый
+    // ключ vless:// из-под кнопки «Показать ключ». Человек не обязан их различать —
+    // различаем мы. Ключ применяется как ручное содержимое, и «оригинальный конфиг»
+    // для него выключен: конфига там нет, есть одна строка узла.
+    const isRawKey = /^(vless|vmess|trojan|ss|hysteria2):\/\//i.test(value)
+    const result = isRawKey
+      ? await subscriptionService.addManualSubscription(value, false, {
+          fileName: generateConfigFileName(name),
+          applyRuntime: false,
+        })
+      : await subscriptionService.downloadSubscription(value, USE_ORIGINAL_CONFIG, {
+          fileName: generateConfigFileName(name),
+          applyRuntime: false,
+        })
     await persistKey(
       {
         name,
-        url,
-        isManual: false,
-        useOriginalConfig: USE_ORIGINAL_CONFIG,
+        url: value,
+        isManual: isRawKey,
+        useOriginalConfig: isRawKey ? false : USE_ORIGINAL_CONFIG,
         autoUpdateIntervalMinutes: DEFAULT_AUTO_UPDATE_MINUTES,
       },
       result,
     )
     linkUrl.value = ''
-    linkName.value = ''
   } catch {
     message.error(t('key.failed'))
   } finally {
@@ -269,13 +311,16 @@ const refreshKey = async (index: number, applyRuntime = false, silent = false) =
 
   try {
     subStore.list[index].isLoading = true
+    // У ключа vless конфига нет — только строка узла, поэтому «применять целиком»
+    // для него выключено, и обновление обязано идти тем же способом, что и добавление
+    const asOriginal = item.useOriginalConfig ?? USE_ORIGINAL_CONFIG
     const result = item.isManual
       ? await subscriptionService.addManualSubscription(
-          item.manualContent || '',
-          USE_ORIGINAL_CONFIG,
+          item.manualContent || item.url || '',
+          asOriginal,
           persistOptions,
         )
-      : await subscriptionService.downloadSubscription(item.url, USE_ORIGINAL_CONFIG, persistOptions)
+      : await subscriptionService.downloadSubscription(item.url, asOriginal, persistOptions)
 
     if (result.configPath) {
       subStore.list[index].configPath = result.configPath
@@ -290,7 +335,7 @@ const refreshKey = async (index: number, applyRuntime = false, silent = false) =
 
     if (result.configPath && applyRuntime) {
       await subscriptionService.setActiveConfig(result.configPath, {
-        useOriginalConfig: USE_ORIGINAL_CONFIG,
+        useOriginalConfig: asOriginal,
       })
       await appStore.setActiveConfigPath(result.configPath)
     }
@@ -327,10 +372,20 @@ const { startAutoUpdateLoop, stopAutoUpdateLoop } = useSubscriptionAutoUpdate({
   onRefresh: refreshKey,
 })
 
-onMounted(() => {
+onMounted(async () => {
   subStore.resetLoadingState()
   startAutoUpdateLoop()
+  botQr.value = await drawQr(BOT_URL)
 })
+
+// Код ключа перерисовывается вслед за самим ключом: показываем то, что применено сейчас
+watch(
+  () => activeKey.value?.url,
+  async (url) => {
+    keyQr.value = url ? await drawQr(url) : ''
+  },
+  { immediate: true },
+)
 
 onUnmounted(() => {
   stopAutoUpdateLoop()
@@ -416,6 +471,42 @@ onUnmounted(() => {
 
 .card-actions {
   margin-top: var(--space-4);
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.bot-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.bot-actions {
+  flex: 1 1 260px;
+  margin-top: var(--space-4);
+}
+
+.qr-row {
+  margin-top: var(--space-3);
+  text-align: center;
+}
+
+.qr {
+  width: 132px;
+  height: 132px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 6px;
+  display: block;
+  margin: 0 auto;
+}
+
+.qr-row .card-note {
+  margin-top: var(--space-2);
+  max-width: 160px;
 }
 
 .key-name {

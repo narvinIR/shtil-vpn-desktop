@@ -539,17 +539,20 @@ export default {
     refreshed: 'Key refreshed',
     failed: 'The key could not be applied',
     fromBot: {
+      qrHint: 'Or point your phone camera at the code — the bot opens there',
       title: 'Key from the bot',
-      text: 'The Shtil bot in Telegram issues the key — payment and subscription term live there too. Open the bot, copy the link from “My VPN” and paste it below, under “I already have a link”.',
+      text: 'The Shtil bot in Telegram issues the key — payment and subscription term live there too. Open the bot, copy the link from “My VPN” and paste it into the field below.',
       open: 'Open the bot',
       soon: 'Soon the key will arrive by code — no link to paste',
     },
     link: {
-      title: 'I already have a link',
-      placeholder: 'https://sub.ndvsdom54.ru/sub/…',
-      namePlaceholder: 'Name — for example, Shtil',
+      clipboardEmpty: 'The clipboard is empty — copy the key in the bot first',
+      paste: 'Paste from clipboard',
+      text: 'A subscription link works, and so does a key that starts with vless://',
+      title: 'Paste the key here',
+      placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
       apply: 'Apply the key',
-      needLink: 'Paste the link',
+      needLink: 'Paste the link or the key',
     },
     file: {
       title: 'Load from a file',
@@ -558,6 +561,7 @@ export default {
       badFile: 'The file could not be read',
     },
     current: {
+      qrHint: 'Point your phone camera here — the same key lands on the phone',
       title: 'Your key',
       none: 'No key yet',
       updated: 'Refreshed {time}',

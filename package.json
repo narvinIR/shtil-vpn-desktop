@@ -26,6 +26,7 @@
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-autostart": "^2.5.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-websocket": "~2.4.2",
     "@tauri-apps/plugin-window-state": "^2.4.0",
@@ -33,6 +34,7 @@
     "@vueuse/core": "^14.4.0",
     "flag-icons": "^7.5.0",
     "pinia": "^4.0.2",
+    "qrcode": "^1.5.4",
     "vue": "^3.5.40",
     "vue-i18n": "^11.4.8",
     "vue-router": "^5.2.0"
@@ -41,6 +43,7 @@
     "@tauri-apps/cli": "^2.11.4",
     "@tsconfig/node20": "^20.1.9",
     "@types/node": "^24.0.0",
+    "@types/qrcode": "^1.5.6",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.9.0",

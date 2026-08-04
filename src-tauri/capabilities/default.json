@@ -23,6 +23,8 @@
     "opener:default",
     "core:window:allow-set-focus",
     "core:window:allow-unmaximize",
-    "websocket:default"
+    "websocket:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text"
   ]
 }

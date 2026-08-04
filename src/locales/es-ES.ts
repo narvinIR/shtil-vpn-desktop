@@ -220,17 +220,20 @@ export default {
     refreshed: 'Clave actualizada',
     failed: 'No se pudo aplicar la clave',
     fromBot: {
+      qrHint: 'O apunte la cámara del teléfono al código: el bot se abrirá allí',
       title: 'Clave desde el bot',
-      text: 'La clave la entrega el bot Shtil en Telegram: allí están también el pago y el plazo. Abra el bot, copie el enlace de «Mi VPN» y péguelo abajo, en «Ya tengo un enlace».',
+      text: 'La clave la entrega el bot Shtil en Telegram: allí están también el pago y el plazo. Abra el bot, copie el enlace de «Mi VPN» y péguelo en el campo de abajo.',
       open: 'Abrir el bot',
       soon: 'Pronto la clave llegará por código y no habrá que pegar enlaces',
     },
     link: {
-      title: 'Ya tengo un enlace',
-      placeholder: 'https://sub.ndvsdom54.ru/sub/…',
-      namePlaceholder: 'Nombre: por ejemplo, Shtil',
+      clipboardEmpty: 'El portapapeles está vacío: copie primero la clave en el bot',
+      paste: 'Pegar del portapapeles',
+      text: 'Sirve un enlace de suscripción y también una clave que empieza por vless://',
+      title: 'Pegue la clave aquí',
+      placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
       apply: 'Aplicar la clave',
-      needLink: 'Pegue el enlace',
+      needLink: 'Pegue el enlace o la clave',
     },
     file: {
       title: 'Cargar desde un archivo',
@@ -239,6 +242,7 @@ export default {
       badFile: 'No se pudo leer el archivo',
     },
     current: {
+      qrHint: 'Apunte la cámara del teléfono: la misma clave pasa al teléfono',
       title: 'Su clave',
       none: 'Todavía no hay clave',
       updated: 'Actualizada {time}',

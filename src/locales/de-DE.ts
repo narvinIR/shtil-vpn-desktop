@@ -220,17 +220,20 @@ export default {
     refreshed: 'Schlüssel erneuert',
     failed: 'Der Schlüssel ließ sich nicht übernehmen',
     fromBot: {
+      qrHint: 'Oder richten Sie die Handykamera auf den Code — der Bot öffnet sich dort',
       title: 'Schlüssel aus dem Bot',
-      text: 'Den Schlüssel stellt der Shtil-Bot in Telegram aus — dort laufen auch Zahlung und Laufzeit. Öffnen Sie den Bot, kopieren Sie den Link aus „Mein VPN“ und fügen Sie ihn unten unter „Ich habe bereits einen Link“ ein.',
+      text: 'Den Schlüssel stellt der Shtil-Bot in Telegram aus — dort laufen auch Zahlung und Laufzeit. Öffnen Sie den Bot, kopieren Sie den Link aus „Mein VPN“ und fügen Sie ihn unten in das Feld ein.',
       open: 'Bot öffnen',
       soon: 'Bald kommt der Schlüssel per Code — ohne Link einzufügen',
     },
     link: {
-      title: 'Ich habe bereits einen Link',
-      placeholder: 'https://sub.ndvsdom54.ru/sub/…',
-      namePlaceholder: 'Name — zum Beispiel Shtil',
+      clipboardEmpty: 'Die Zwischenablage ist leer — kopieren Sie den Schlüssel zuerst im Bot',
+      paste: 'Aus Zwischenablage einfügen',
+      text: 'Es passt ein Abo-Link ebenso wie ein Schlüssel, der mit vless:// beginnt',
+      title: 'Schlüssel hier einfügen',
+      placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
       apply: 'Schlüssel übernehmen',
-      needLink: 'Fügen Sie den Link ein',
+      needLink: 'Fügen Sie den Link oder den Schlüssel ein',
     },
     file: {
       title: 'Aus einer Datei laden',
@@ -239,6 +242,7 @@ export default {
       badFile: 'Die Datei ließ sich nicht lesen',
     },
     current: {
+      qrHint: 'Handykamera darauf richten — derselbe Schlüssel landet auf dem Telefon',
       title: 'Ihr Schlüssel',
       none: 'Noch kein Schlüssel',
       updated: 'Erneuert {time}',
