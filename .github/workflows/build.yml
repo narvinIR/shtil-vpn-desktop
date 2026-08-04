@@ -3,6 +3,10 @@ name: Сборка «Штиль» для компьютера
 # Собираем в облаке, а не на своей машине: Windows-установщик собирается только
 # на Windows, файл для macOS — только на macOS. Заодно ядро sing-box тянется с
 # GitHub, что из России напрямую не всегда доходит.
+#
+# Имена работ и полей матрицы — латиницей: GitHub принимает в них только
+# латинские буквы, цифры, дефис и подчёркивание. Человеческие названия живут
+# в поле `name`.
 
 on:
   push:
@@ -10,7 +14,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  проверки:
+  checks:
     name: Тесты и типы
     runs-on: ubuntu-latest
     steps:
@@ -32,16 +36,16 @@ jobs:
       - name: Тесты ядра приложения
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
-  сборка:
-    name: ${{ matrix.имя }}
-    needs: проверки
+  build:
+    name: ${{ matrix.title }}
+    needs: checks
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, имя: Windows, args: '' }
-          - { os: macos-latest, имя: 'macOS (Apple)', args: '--target aarch64-apple-darwin' }
-          - { os: macos-13, имя: 'macOS (Intel)', args: '--target x86_64-apple-darwin' }
+          - { os: windows-latest, title: Windows, args: '' }
+          - { os: macos-latest, title: 'macOS (Apple)', args: '--target aarch64-apple-darwin' }
+          - { os: macos-13, title: 'macOS (Intel)', args: '--target x86_64-apple-darwin' }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
