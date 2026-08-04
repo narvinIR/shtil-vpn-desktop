@@ -23,6 +23,7 @@ lazy_static! {
 
 #[derive(Debug, Clone, Copy)]
 struct TrayText {
+    app_name: &'static str,
     show_window: &'static str,
     rebuild_window: &'static str,
     kernel_menu: &'static str,
@@ -40,25 +41,8 @@ struct TrayText {
     tooltip_subscription: &'static str,
 }
 
-const TRAY_TEXT_ZH_CN: TrayText = TrayText {
-    show_window: "显示主界面",
-    rebuild_window: "重建窗口",
-    kernel_menu: "内核",
-    restart_kernel: "重启内核",
-    status_running: "运行中",
-    status_stopped: "已停止",
-    proxy_controls: "代理开关",
-    current_status: "当前状态：",
-    mode_system: "系统代理",
-    mode_tun: "TUN 模式",
-    mode_manual: "手动模式",
-    quit: "退出",
-    tooltip_kernel: "内核: ",
-    tooltip_mode: "模式: ",
-    tooltip_subscription: "订阅: ",
-};
-
 const TRAY_TEXT_EN_US: TrayText = TrayText {
+    app_name: "Shtil VPN",
     show_window: "Show Main Window",
     rebuild_window: "Rebuild Window",
     kernel_menu: "Kernel",
@@ -76,25 +60,8 @@ const TRAY_TEXT_EN_US: TrayText = TrayText {
     tooltip_subscription: "Subscription: ",
 };
 
-const TRAY_TEXT_JA_JP: TrayText = TrayText {
-    show_window: "メイン画面を表示",
-    rebuild_window: "ウィンドウを再構築",
-    kernel_menu: "カーネル",
-    restart_kernel: "カーネルを再起動",
-    status_running: "稼働中",
-    status_stopped: "停止中",
-    proxy_controls: "プロキシ切替",
-    current_status: "現在の状態：",
-    mode_system: "システム",
-    mode_tun: "TUN",
-    mode_manual: "手動",
-    quit: "終了",
-    tooltip_kernel: "カーネル: ",
-    tooltip_mode: "モード: ",
-    tooltip_subscription: "サブスクリプション: ",
-};
-
 const TRAY_TEXT_RU_RU: TrayText = TrayText {
+    app_name: "Штиль VPN",
     show_window: "Показать окно",
     rebuild_window: "Пересоздать окно",
     kernel_menu: "Ядро",
@@ -112,6 +79,63 @@ const TRAY_TEXT_RU_RU: TrayText = TrayText {
     tooltip_subscription: "Подписка: ",
 };
 
+const TRAY_TEXT_DE_DE: TrayText = TrayText {
+    app_name: "Shtil VPN",
+    show_window: "Fenster anzeigen",
+    rebuild_window: "Fenster neu aufbauen",
+    kernel_menu: "Kern",
+    restart_kernel: "Kern neu starten",
+    status_running: "Läuft",
+    status_stopped: "Gestoppt",
+    proxy_controls: "Proxy-Schalter",
+    current_status: "Aktueller Status:",
+    mode_system: "System",
+    mode_tun: "TUN",
+    mode_manual: "Manuell",
+    quit: "Beenden",
+    tooltip_kernel: "Kern: ",
+    tooltip_mode: "Modus: ",
+    tooltip_subscription: "Abo: ",
+};
+
+const TRAY_TEXT_ES_ES: TrayText = TrayText {
+    app_name: "Shtil VPN",
+    show_window: "Mostrar ventana",
+    rebuild_window: "Recrear ventana",
+    kernel_menu: "Núcleo",
+    restart_kernel: "Reiniciar núcleo",
+    status_running: "En marcha",
+    status_stopped: "Detenido",
+    proxy_controls: "Interruptores de proxy",
+    current_status: "Estado actual:",
+    mode_system: "Sistema",
+    mode_tun: "TUN",
+    mode_manual: "Manual",
+    quit: "Salir",
+    tooltip_kernel: "Núcleo: ",
+    tooltip_mode: "Modo: ",
+    tooltip_subscription: "Suscripción: ",
+};
+
+const TRAY_TEXT_FA_IR: TrayText = TrayText {
+    app_name: "Shtil VPN",
+    show_window: "نمایش پنجره",
+    rebuild_window: "ساخت دوباره پنجره",
+    kernel_menu: "هسته",
+    restart_kernel: "راه‌اندازی دوباره هسته",
+    status_running: "در حال کار",
+    status_stopped: "متوقف",
+    proxy_controls: "کلیدهای پروکسی",
+    current_status: "وضعیت کنونی:",
+    mode_system: "سیستمی",
+    mode_tun: "TUN",
+    mode_manual: "دستی",
+    quit: "خروج",
+    tooltip_kernel: "هسته: ",
+    tooltip_mode: "حالت: ",
+    tooltip_subscription: "اشتراک: ",
+};
+
 fn with_state_read<T>(f: impl FnOnce(&TrayRuntimeState) -> T) -> T {
     let guard = TRAY_RUNTIME_STATE
         .read()
@@ -126,14 +150,17 @@ fn with_state_write<T>(f: impl FnOnce(&mut TrayRuntimeState) -> T) -> T {
     f(&mut guard)
 }
 
+/// Языки продукта — пять; всё остальное падает на английский.
 fn tray_text_for_locale(locale: &str) -> TrayText {
     let normalized = locale.trim().to_lowercase();
-    if normalized.starts_with("zh") {
-        TRAY_TEXT_ZH_CN
-    } else if normalized.starts_with("ja") {
-        TRAY_TEXT_JA_JP
-    } else if normalized.starts_with("ru") {
+    if normalized.starts_with("ru") {
         TRAY_TEXT_RU_RU
+    } else if normalized.starts_with("de") {
+        TRAY_TEXT_DE_DE
+    } else if normalized.starts_with("es") {
+        TRAY_TEXT_ES_ES
+    } else if normalized.starts_with("fa") {
+        TRAY_TEXT_FA_IR
     } else {
         TRAY_TEXT_EN_US
     }
@@ -157,8 +184,8 @@ fn compose_tooltip(state: &TrayRuntimeState, text: &TrayText) -> String {
     let mode = mode_summary_text(state, text);
 
     let mut tooltip = format!(
-        "sing-box-window - {}{}, {}{}",
-        text.tooltip_kernel, kernel_status, text.tooltip_mode, mode
+        "{} — {}{}, {}{}",
+        text.app_name, text.tooltip_kernel, kernel_status, text.tooltip_mode, mode
     );
 
     if let Some(subscription_name) = state.active_subscription_name.as_ref() {
@@ -909,5 +936,39 @@ mod tests {
         assert!(state.allow_app_exit);
         assert!(state.tun_enabled);
         assert_eq!(state.close_behavior, TrayCloseBehavior::Hide);
+    }
+
+    #[test]
+    fn tray_speaks_all_five_languages_of_the_product() {
+        assert_eq!(tray_text_for_locale("ru-RU").quit, "Выход");
+        assert_eq!(tray_text_for_locale("de-DE").quit, "Beenden");
+        assert_eq!(tray_text_for_locale("es-ES").quit, "Salir");
+        assert_eq!(tray_text_for_locale("fa-IR").quit, "خروج");
+        assert_eq!(tray_text_for_locale("en-US").quit, "Quit");
+    }
+
+    /// Языков форка в продукте нет: китаец и японец получают английский,
+    /// а не чужой набор слов, оставшийся в наследство.
+    #[test]
+    fn unknown_language_falls_back_to_english() {
+        assert_eq!(tray_text_for_locale("zh-CN").quit, "Quit");
+        assert_eq!(tray_text_for_locale("ja-JP").quit, "Quit");
+        assert_eq!(tray_text_for_locale("").quit, "Quit");
+    }
+
+    /// Подсказка значка — единственное место, где имя продукта показывалось
+    /// человеку именем форка.
+    #[test]
+    fn tooltip_names_our_product() {
+        let state = TrayRuntimeState {
+            kernel_running: true,
+            system_proxy_enabled: true,
+            ..TrayRuntimeState::default()
+        };
+
+        let tooltip = compose_tooltip(&state, &tray_text_for_locale("ru-RU"));
+
+        assert!(tooltip.starts_with("Штиль VPN"), "получилось: {tooltip}");
+        assert!(!tooltip.contains("sing-box"));
     }
 }

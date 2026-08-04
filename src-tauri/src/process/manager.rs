@@ -984,24 +984,27 @@ impl ProcessManager {
                     || detail.contains("ENABLE_DEPRECATED_LEGACY_DNS_SERVERS")
                 {
                     return Err(ProcessError::ConfigError(
-                        "当前配置仍使用已弃用的 legacy DNS servers。请在订阅页刷新当前订阅配置，或关闭“按原始配置运行”后重新生成。".to_string(),
+                        "The config still uses legacy DNS servers. Refresh the key on the Key screen."
+                            .to_string(),
                     ));
                 }
                 if detail.contains("legacy domain strategy options is deprecated")
                     || detail.contains("ENABLE_DEPRECATED_LEGACY_DOMAIN_STRATEGY_OPTIONS")
                 {
                     return Err(ProcessError::ConfigError(
-                        "当前配置仍使用已弃用的 legacy domain strategy 选项。请在订阅页刷新当前订阅配置（或重新导入）后重试。".to_string(),
+                        "The config still uses legacy domain strategy options. Refresh the key on the Key screen."
+                            .to_string(),
                     ));
                 }
                 if detail.contains("dns.servers") && detail.contains("unknown field \"strategy\"") {
                     return Err(ProcessError::ConfigError(
-                        "当前配置包含已弃用字段 dns.servers[].strategy。请在订阅页手动刷新当前订阅配置后重试。".to_string(),
+                        "The config contains the deprecated field dns.servers[].strategy. Refresh the key on the Key screen."
+                            .to_string(),
                     ));
                 }
 
                 return Err(ProcessError::ConfigError(format!(
-                    "配置校验失败: {}",
+                    "Config check failed: {}",
                     detail
                 )));
             }

@@ -225,13 +225,13 @@ async fn update_subscription_userinfo(
 ) -> Result<(), String> {
     let mut subscriptions = db_get_subscriptions(app_handle.clone())
         .await
-        .map_err(|e| format!("读取订阅配置失败: {}", e))?;
+        .map_err(|e| format!("Could not read the subscription config: {}", e))?;
 
     let trimmed_url = url.trim();
     let target_path = target_path.to_string_lossy();
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|e| format!("获取时间失败: {}", e))?
+        .map_err(|e| format!("Could not get the time: {}", e))?
         .as_millis() as u64;
 
     let mut updated = false;
@@ -263,7 +263,7 @@ async fn update_subscription_userinfo(
     if updated {
         db_save_subscriptions(subscriptions, app_handle.clone())
             .await
-            .map_err(|e| format!("保存订阅配置失败: {}", e))?;
+            .map_err(|e| format!("Could not save the subscription config: {}", e))?;
     }
 
     Ok(())
@@ -286,7 +286,7 @@ pub async fn download_subscription(
 
     let mut app_config = db_get_app_config(app_handle.clone())
         .await
-        .map_err(|e| format!("读取设置失败: {}", e))?;
+        .map_err(|e| format!("Could not read the settings: {}", e))?;
 
     if let Some(port) = proxy_port {
         app_config.proxy_port = port;
@@ -357,7 +357,7 @@ pub async fn add_manual_subscription(
 
     let mut app_config = db_get_app_config(app_handle.clone())
         .await
-        .map_err(|e| format!("读取设置失败: {}", e))?;
+        .map_err(|e| format!("Could not read the settings: {}", e))?;
 
     if let Some(port) = proxy_port {
         app_config.proxy_port = port;
@@ -408,7 +408,7 @@ pub async fn add_manual_subscription(
 pub async fn get_current_config(app_handle: AppHandle) -> Result<String, String> {
     let app_config = db_get_app_config(app_handle)
         .await
-        .map_err(|e| format!("获取应用配置失败: {}", e))?;
+        .map_err(|e| format!("Could not read the app config: {}", e))?;
 
     let config_path = if let Some(path_str) = app_config.active_config_path {
         std::path::PathBuf::from(path_str)
@@ -432,7 +432,7 @@ pub async fn set_active_config_path(
 ) -> Result<(), String> {
     let mut app_config = db_get_app_config(app_handle.clone())
         .await
-        .map_err(|e| format!("获取应用配置失败: {}", e))?;
+        .map_err(|e| format!("Could not read the app config: {}", e))?;
 
     // 记录 active_config_path 的变更，便于排查“过一段时间配置指针被改写”的问题
     let previous = app_config.active_config_path.clone();
@@ -444,7 +444,7 @@ pub async fn set_active_config_path(
 
     db_save_app_config_internal(app_config.clone(), &app_handle)
         .await
-        .map_err(|e| format!("保存配置路径失败: {}", e))?;
+        .map_err(|e| format!("Could not save the config path: {}", e))?;
 
     apply_runtime_config_update(
         &app_handle,
@@ -463,7 +463,8 @@ pub fn delete_subscription_config(config_path: String) -> Result<(), String> {
     let path = PathBuf::from(&config_path);
 
     if path.exists() {
-        std::fs::remove_file(&path).map_err(|e| format!("删除配置文件失败: {}", e))?;
+        std::fs::remove_file(&path)
+            .map_err(|e| format!("Could not delete the config file: {}", e))?;
     }
 
     let backup = path.with_extension("bak");
@@ -480,10 +481,10 @@ pub fn rollback_subscription_config(config_path: String) -> Result<String, Strin
     let backup = path.with_extension("bak");
 
     if !backup.exists() {
-        return Err("未找到可用于回滚的备份文件".to_string());
+        return Err("No backup file to roll back to".to_string());
     }
 
-    std::fs::copy(&backup, &path).map_err(|e| format!("回滚配置失败: {}", e))?;
+    std::fs::copy(&backup, &path).map_err(|e| format!("Could not roll back the config: {}", e))?;
 
     Ok(config_path)
 }
@@ -569,10 +570,7 @@ async fn download_and_process_subscription(
 
     if extracted_nodes.is_empty() {
         error!("无法从订阅内容提取节点信息，已尝试所有解码方式");
-        return Err(
-            "无法从订阅内容提取节点信息（支持 sing-box JSON / Clash YAML / URI 列表，且可 base64 封装），请检查订阅链接或内容格式"
-                .into(),
-        );
+        return Err("No servers found in the key. Check the link or paste the key again.".into());
     }
 
     info!(
@@ -590,7 +588,7 @@ async fn download_and_process_subscription(
 
     // 不再读取/替换模板文件：直接根据 AppConfig 生成一份通用配置骨架，然后注入订阅节点。
     let config = config_generator::generate_config_with_nodes(app_config, &extracted_nodes)
-        .map_err(|e| format!("生成配置失败: {}", e))?;
+        .map_err(|e| format!("Could not generate the config: {}", e))?;
 
     info!("正在保存配置到: {:?}", target_path);
 
@@ -661,12 +659,12 @@ fn process_subscription_content(
     }
 
     if extracted_nodes.is_empty() {
-        return Err("无法从配置内容提取节点，请检查格式".into());
+        return Err("No servers found in the pasted key. Check the format.".into());
     }
 
     // 手动输入的订阅内容（URI/节点列表等）同样走“生成骨架 + 注入节点”的路径。
     let config = config_generator::generate_config_with_nodes(app_config, &extracted_nodes)
-        .map_err(|e| format!("生成配置失败: {}", e))?;
+        .map_err(|e| format!("Could not generate the config: {}", e))?;
 
     info!("正在保存手动配置到: {:?}", target_path);
 

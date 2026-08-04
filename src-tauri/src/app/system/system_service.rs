@@ -374,7 +374,11 @@ async fn perform_network_probe(strict_http: bool) -> Result<bool, String> {
 
     let client = Client::builder()
         .timeout(Duration::from_secs(6))
-        .user_agent("sing-box-windows/connectivity-check")
+        .user_agent(concat!(
+            "ShtilVPN/",
+            env!("CARGO_PKG_VERSION"),
+            " connectivity"
+        ))
         .build()
         .map_err(|err| err.to_string())?;
 
