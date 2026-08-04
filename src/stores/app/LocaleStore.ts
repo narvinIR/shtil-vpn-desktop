@@ -44,12 +44,14 @@ export const useLocaleStore = defineStore(
       }
     }
 
-    // 计算实际使用的语言
+    // Язык окна. Как в боте: русский язык системы — русский интерфейс, любой
+    // другой — английский. Сравниваем по началу строки, иначе «ru» без региона
+    // или «en-GB» не совпадут ни с чем и человек увидит чужой язык.
     const currentLocale = computed<LocaleCode>(() => {
       if (locale.value === 'auto') {
-        // 获取浏览器语言
-        const browserLang = navigator.language
-        return isLocaleCode(browserLang) ? browserLang : DEFAULT_LOCALE
+        const systemLang = (navigator.language || '').toLowerCase()
+        if (isLocaleCode(navigator.language)) return navigator.language
+        return systemLang.startsWith('ru') ? 'ru-RU' : 'en-US'
       }
       return isLocaleCode(locale.value) ? locale.value : DEFAULT_LOCALE
     })

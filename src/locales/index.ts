@@ -11,7 +11,7 @@ export interface SupportedLocale {
   name: string
 }
 
-export const DEFAULT_LOCALE: LocaleCode = 'zh-CN'
+export const DEFAULT_LOCALE: LocaleCode = 'ru-RU'
 
 // 支持的语言列表
 export const supportedLocales: SupportedLocale[] = [
