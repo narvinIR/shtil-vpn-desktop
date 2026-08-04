@@ -21,12 +21,13 @@ pub mod network_config {
 
 /// API 常量
 pub mod api {
-    /// GitHub API URL
+    /// Наш репозиторий выпусков. Апстримный адрес здесь стоять НЕ может:
+    /// приложение предложит клиенту скачать чужую программу под нашим именем.
     pub const GITHUB_API_URL: &str =
-        "https://api.github.com/repos/xinggaoya/sing-box-windows/releases/latest";
+        "https://api.github.com/repos/narvinIR/shtil-vpn-desktop/releases/latest";
 
     /// 用户代理
-    pub const USER_AGENT: &str = "sing-box-windows";
+    pub const USER_AGENT: &str = "shtil-vpn-desktop";
 }
 
 /// 服务器默认配置

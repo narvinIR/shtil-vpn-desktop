@@ -33,6 +33,8 @@ const KERNEL_TARGETS = Object.freeze([
   }
 ])
 
+export { KERNEL_TARGETS }
+
 export function normalizePlatform(raw) {
   if (!raw) return null
   if (raw === 'win32' || raw === 'windows') return 'windows'

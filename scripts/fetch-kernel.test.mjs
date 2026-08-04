@@ -10,6 +10,7 @@ import {
   parseVersionFromReleaseUrl,
   resolveRequestedTargets
 } from './fetch-kernel.mjs'
+import { KERNEL_TARGETS } from './kernel-targets.mjs'
 
 test('parseArgs 支持等号和值分离两种形式', () => {
   const args = parseArgs([
@@ -35,8 +36,10 @@ test('resolveRequestedTargets 支持主机目标和全量目标', () => {
   assert.equal(hostTargets[0].platform, 'windows')
   assert.equal(hostTargets[0].arch, 'amd64')
 
+  // Число целей задаётся списком, а не переписывается в тесте руками:
+  // из-за расхождения этот тест был красным с добавления сборки под Intel Mac.
   const allTargets = resolveRequestedTargets({ all: true }, { platform: 'linux', arch: 'x64' })
-  assert.equal(allTargets.length, 4)
+  assert.equal(allTargets.length, KERNEL_TARGETS.length)
 })
 
 test('buildFilename 根据平台生成正确文件名', () => {

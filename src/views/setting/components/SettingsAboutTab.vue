@@ -42,7 +42,7 @@
         <div class="setting-info">
           <div class="setting-label">{{ props.t('setting.about.license') }}</div>
         </div>
-        <div class="setting-value">MIT License</div>
+        <div class="setting-value">MIT License · sing-box-windows (MIT), sing-box (GPLv3)</div>
       </div>
     </div>
 
@@ -50,7 +50,7 @@
       <n-button
         text
         tag="a"
-        href="https://github.com/xinggaoya/sing-box-windows"
+        href="https://github.com/narvinIR/shtil-vpn-desktop"
         target="_blank"
       >
         <template #icon>

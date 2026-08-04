@@ -8,7 +8,7 @@ use std::fs;
 use std::path::Path;
 use tauri::{Emitter, Manager};
 
-const RELEASES_PAGE_URL: &str = "https://github.com/xinggaoya/sing-box-windows/releases";
+const RELEASES_PAGE_URL: &str = "https://github.com/narvinIR/shtil-vpn-desktop/releases";
 
 // 获取当前平台标识符 - 使用 Rust 标准库，更准确
 fn get_platform_identifier() -> &'static str {
@@ -446,7 +446,7 @@ pub async fn check_update(
 
     // 稳定通道读取 latest，其他通道读取 releases 列表后由本地策略筛选。
     let api_url = if channel.uses_release_list() {
-        "https://api.github.com/repos/xinggaoya/sing-box-windows/releases"
+        "https://api.github.com/repos/narvinIR/shtil-vpn-desktop/releases"
     } else {
         api::GITHUB_API_URL
     };

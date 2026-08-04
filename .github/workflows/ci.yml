@@ -15,7 +15,7 @@ on:
       - '.github/workflows/ci.yml'
   push:
     branches:
-      - master
+      - main
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -66,8 +66,8 @@ jobs:
       - name: Frontend type-check
         run: pnpm type-check
 
-      - name: Kernel targets test
-        run: pnpm test:kernel-targets
+      - name: Script tests
+        run: pnpm test:scripts
 
       - name: Rust clippy
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings

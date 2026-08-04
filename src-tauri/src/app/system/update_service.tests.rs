@@ -240,16 +240,33 @@ fn supports_in_app_update_should_only_enable_windows() {
 #[test]
 fn resolve_release_page_url_should_prefer_html_url() {
     let release = json!({
-        "html_url": "https://github.com/xinggaoya/sing-box-windows/releases/tag/v2.2.6"
+        "html_url": "https://github.com/narvinIR/shtil-vpn-desktop/releases/tag/desktop-v1.0.1"
     });
     assert_eq!(
         resolve_release_page_url(&release),
-        "https://github.com/xinggaoya/sing-box-windows/releases/tag/v2.2.6"
+        "https://github.com/narvinIR/shtil-vpn-desktop/releases/tag/desktop-v1.0.1"
     );
 
     let release_without_url = json!({});
     assert_eq!(
         resolve_release_page_url(&release_without_url),
-        "https://github.com/xinggaoya/sing-box-windows/releases"
+        "https://github.com/narvinIR/shtil-vpn-desktop/releases"
     );
+}
+
+/// Обновление обязано смотреть в НАШ репозиторий. С апстримным адресом
+/// приложение предлагает клиенту скачать чужую программу под нашим именем,
+/// а на Windows ставит её само.
+#[test]
+fn update_endpoints_must_point_to_our_repository() {
+    for url in [api::GITHUB_API_URL, RELEASES_PAGE_URL] {
+        assert!(
+            url.contains("narvinIR/shtil-vpn-desktop"),
+            "адрес обновления ведёт не к нам: {url}"
+        );
+        assert!(
+            !url.contains("xinggaoya"),
+            "адрес обновления ведёт в апстрим: {url}"
+        );
+    }
 }

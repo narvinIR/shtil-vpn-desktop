@@ -24,6 +24,8 @@ sing-box отдельным файлом (`pnpm kernel:fetch` кладёт ег�
 | Подписка-конфиг применяется целиком | `src-tauri/src/app/network/subscription_service.rs` → `is_full_singbox_config` | Иначе из конфига брались только серверы, а маршруты подставлялись свои — на **скачиваемых** списках. Из России они не отвечают, и ядро не стартует вовсе |
 | Палитра и знак «Штиля» | `src/assets/tokens.css`, `naive-ui-theme-overrides.json`, `src-tauri/icons/`, `src/assets/icon.png` | Один вид с телефоном и телевизором |
 | Имя приложения | `src-tauri/tauri.conf.json`, `src/locales/*.ts` (`common.appName`) | — |
+| Обновление смотрит в НАШ репозиторий | `src-tauri/src/app/constants/network.rs` (`GITHUB_API_URL`), `.../system/update_service.rs` (`RELEASES_PAGE_URL`, список выпусков) | С апстримным адресом приложение видит чужой выпуск как «доступно обновление» и на Windows **ставит чужую программу само** (`autoCheckUpdate` включён по умолчанию). Стережёт тест `update_endpoints_must_point_to_our_repository` |
+| Наши имена пакета и выпусков | `src-tauri/Cargo.toml`, теги `desktop-v*` | Имя пакета = имя файла внутри установки; после первой раздачи не меняется |
 
 ## Правила, которые здесь нельзя нарушать
 
@@ -35,6 +37,12 @@ sing-box отдельным файлом (`pnpm kernel:fetch` кладёт ег�
    `../../.claude/rules/no-remote-rulesets-in-config.md`.
 3. **Имя приложения и идентификатор не менять** после первой раздачи —
    обновление не встанет.
+4. **Адреса выпусков — только наши** (`narvinIR/shtil-vpn-desktop`). Апстримный
+   адрес в коде обновления = раздача чужой программы под нашим именем.
+5. **Версия живёт в пяти местах разом** — `package.json`, `src-tauri/tauri.conf.json`,
+   `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `docs/CHANGELOG.md`. Руками их не
+   правят: `python3 ../../scripts/release/desktop.py --version X.Y.Z`. Сверка —
+   `python3 ../../scripts/platforms/check.py`.
 
 ## Проверки
 
