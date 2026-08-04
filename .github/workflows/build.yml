@@ -1,0 +1,81 @@
+name: Сборка «Штиль» для компьютера
+
+# Собираем в облаке, а не на своей машине: Windows-установщик собирается только
+# на Windows, файл для macOS — только на macOS. Заодно ядро sing-box тянется с
+# GitHub, что из России напрямую не всегда доходит.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  проверки:
+    name: Тесты и типы
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: './src-tauri -> target' }
+      - name: Системные библиотеки Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm type-check
+      - name: Тесты ядра приложения
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  сборка:
+    name: ${{ matrix.имя }}
+    needs: проверки
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, имя: Windows, args: '' }
+          - { os: macos-latest, имя: 'macOS (Apple)', args: '--target aarch64-apple-darwin' }
+          - { os: macos-13, имя: 'macOS (Intel)', args: '--target x86_64-apple-darwin' }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin' || matrix.os == 'macos-13' && 'x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: './src-tauri -> target' }
+      - run: pnpm install --frozen-lockfile
+      - name: Ядро sing-box в сборку
+        run: pnpm kernel:fetch
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: 'Штиль VPN ${{ github.ref_name }}'
+          releaseDraft: true
+          releaseBody: |
+            Приложение «Штиль» для компьютера.
+
+            **Windows** — скачайте файл `.exe`, запустите. Windows покажет
+            «неизвестный издатель»: нажмите «Подробнее» → «Выполнить в любом
+            случае». Так будет у любого приложения, которое раздаётся мимо
+            магазина.
+
+            **macOS** — скачайте `.dmg` под свой процессор (Apple или Intel),
+            перетащите в «Программы». При первом запуске система не пустит:
+            Системные настройки → Конфиденциальность и безопасность →
+            «Открыть всё равно».
+
+            Ключ берётся из бота @RealityVPNBot_bot.
