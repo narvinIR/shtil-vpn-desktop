@@ -1437,11 +1437,13 @@ mod tests {
 
         // 模拟订阅刷新：活动配置被替换为一份不同的干净配置（多一条 ads reject 规则）。
         let mut refreshed = clean_config_json();
-        refreshed
+        if let Some(a) = refreshed
             .get_mut("route")
             .and_then(|r| r.get_mut("rules"))
             .and_then(|r| r.as_array_mut())
-            .map(|a| a.push(json!({ "rule_set": "geosite-category-ads-all", "action": "reject" })));
+        {
+            a.push(json!({ "rule_set": "geosite-category-ads-all", "action": "reject" }));
+        }
         fixture.overwrite_active(refreshed);
 
         // 再次注入：应基于新配置 rebase .base，自定义规则挂在新配置上。
