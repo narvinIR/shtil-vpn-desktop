@@ -141,17 +141,6 @@ export function useAppBootstrap(deps: AppBootstrapDeps) {
   }
 
   const setupBackendEventBridge = () => {
-    // 更新可用事件 -> 同步到更新 Store
-    eventService
-      .on(APP_EVENTS.updateAvailable, (payload) => {
-        updateStore.applyUpdateInfo(payload)
-        mitt.emit('update-available', payload)
-      })
-      .then((unlisten) => cleanupFns.push(unlisten))
-      .catch((error) => {
-        console.error('注册 update-available 事件失败:', error)
-      })
-
     // 内核健康事件 - 仅记录日志，不向用户弹窗（在 Linux 上检测不准确）
     eventService
       .on(APP_EVENTS.kernelHealth, () => {

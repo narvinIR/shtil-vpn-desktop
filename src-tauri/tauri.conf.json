@@ -45,6 +45,18 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://sub.ndvsdom54.ru/desktop/version?target={{target}}&arch={{arch}}&current_version={{current_version}}"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMwMTc2MjFFNThEMUE5QgpSV1NiR28zbElYWUJET2VVZzdBRE9LMnQvU2FDN3VZM0tYRlg3OTh5cGx1QVZRQ1BMR1dTU3Avbgo=",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

@@ -250,13 +250,27 @@ const handleUpdateSkip = async () => {
   message.success(t('setting.update.skipSuccess'))
 }
 
-// 生命周期
+// Проверяем обновление сами: раз при запуске и раз в четыре часа. Раньше этим
+// занималась фоновая петля на стороне ядра, но её ответ никуда не доходил —
+// окно так и не показывалось, а сама она ходила на GitHub через чужое зеркало.
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
+let updateTimer: ReturnType<typeof setInterval> | null = null
+
+const checkForUpdate = async () => {
+  if (!updateStore.autoCheckUpdate) return
+  const info = await updateStore.checkUpdate(true)
+  if (info?.has_update) handleShowUpdateModal(info)
+}
+
 onMounted(() => {
   mittInstance.on('show-update-modal', handleShowUpdateModal)
+  void checkForUpdate()
+  updateTimer = setInterval(() => void checkForUpdate(), UPDATE_CHECK_INTERVAL_MS)
 })
 
 onUnmounted(() => {
   mittInstance.off('show-update-modal', handleShowUpdateModal)
+  if (updateTimer) clearInterval(updateTimer)
 })
 </script>
 

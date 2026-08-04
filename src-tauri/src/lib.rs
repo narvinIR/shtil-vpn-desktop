@@ -59,6 +59,10 @@ pub fn run() {
         // Кнопка «Вставить» на экране ключа: буфер читаем нативно, а не из вебки —
         // WebKit пускает туда только по своему усмотрению, и кнопка молчала бы
         .plugin(tauri_plugin_clipboard_manager::init())
+        // Самообновление: манифест спрашивается у нашего бота, подпись
+        // файла Tauri сверяет нашим открытым ключом из tauri.conf.json.
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_os::init()) // 添加 OS 信息插件
         .plugin(tauri_plugin_opener::init()) // 统一打开外部版本页面
         .plugin(tauri_plugin_autostart::init(
@@ -269,10 +273,7 @@ pub fn run() {
             crate::app::system::sudo_service::sudo_password_status,
             crate::app::system::sudo_service::sudo_set_password,
             crate::app::system::sudo_service::sudo_clear_password,
-            // System - Update service commands
-            crate::app::system::update_service::check_update,
-            crate::app::system::update_service::download_update,
-            crate::app::system::update_service::download_and_install_update,
+            // System - что за система и какое железо (для экрана «О программе»)
             crate::app::system::update_service::get_platform_info,
             crate::app::system::update_service::get_detailed_platform_info,
             // System - Config service commands

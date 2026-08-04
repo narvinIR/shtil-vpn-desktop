@@ -70,24 +70,6 @@ export const systemService = {
     })
   },
 
-  checkUpdate(currentVersion?: string, includePrerelease?: boolean, updateChannel?: string) {
-    const version = currentVersion || '0.0.0'
-    const includePre = includePrerelease || false
-    return invokeWithAppContext<AppUpdateInfo>('check_update', {
-      currentVersion: version,
-      includePrerelease: includePre,
-      updateChannel,
-    })
-  },
-
-  downloadUpdate() {
-    return invokeWithAppContext<void>('download_update')
-  },
-
-  downloadAndInstallUpdate(downloadUrl?: string) {
-    return invokeWithAppContext<void>('download_and_install_update', { downloadUrl })
-  },
-
   downloadKernel(version?: string) {
     return invokeWithAppContext<void>('download_kernel', { version }, { skipDataRestore: true })
   },

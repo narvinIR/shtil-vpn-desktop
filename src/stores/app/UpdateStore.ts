@@ -6,6 +6,8 @@ import { getVersion } from '@tauri-apps/api/app'
 import { DatabaseService } from '@/services/database-service'
 import type { UpdateConfig } from '@/types/database'
 import i18n from '@/locales'
+import { check, type Update } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/plugin-process'
 
 export type UpdateChannel = 'stable' | 'prerelease' | 'autobuild'
 type PlatformOs = 'windows' | 'linux' | 'macos' | 'unknown'
@@ -166,6 +168,9 @@ export const useUpdateStore = defineStore('update', () => {
     syncPlatformCapability(platformOs.value, info.supports_in_app_update)
   }
 
+  /** Что нам ответил наш манифест в прошлый раз: его же ставим. */
+  let pending: Update | null = null
+
   const checkUpdate = async (silent: boolean = false): Promise<AppUpdateInfo | null> => {
     if (silent && skipVersion.value && skipVersion.value === latestVersion.value) {
       return null
@@ -181,30 +186,35 @@ export const useUpdateStore = defineStore('update', () => {
         await fetchAppVersion(false)
       }
 
-      const updateInfo = await systemService.checkUpdate(
-        appVersion.value,
-        acceptPrerelease.value,
-        updateChannel.value,
-      )
+      // Спрашиваем наш бот (адрес в tauri.conf.json). Подпись файла Tauri
+      // сверит нашим ключом сам — чужое обновление не поставится.
+      pending = await check()
 
-      if (updateInfo) {
-        applyUpdateInfo(updateInfo)
-      }
-
-      if (updateInfo && updateInfo.has_update) {
-        updateState.value.message = i18n.global.t(
-          updateInfo.is_prerelease
-            ? 'notification.prereleaseAvailable'
-            : 'notification.updateAvailable',
-        )
-        return updateInfo
+      if (pending) {
+        hasUpdate.value = true
+        latestVersion.value = pending.version
+        releaseNotes.value = pending.body || ''
+        releaseDate.value = pending.date || ''
+        supportsInAppUpdate.value = true
+        updateState.value.message = i18n.global.t('notification.updateAvailable')
+        return {
+          has_update: true,
+          latest_version: pending.version,
+          download_url: '',
+          release_page_url: releasePageUrl.value,
+          release_notes: pending.body || '',
+          release_date: pending.date || '',
+          file_size: 0,
+          is_prerelease: false,
+          supports_in_app_update: true,
+        }
       }
 
       hasUpdate.value = false
       updateState.value.message = i18n.global.t('setting.update.alreadyLatest')
       return null
     } catch (error) {
-      console.error('检查更新失败:', error)
+      console.error('проверка обновления не удалась:', error)
       updateState.value.error = error instanceof Error ? error.message : String(error)
       updateState.value.message = i18n.global.t('setting.update.checkError')
       updateState.value.status = 'error'
@@ -219,16 +229,7 @@ export const useUpdateStore = defineStore('update', () => {
   }
 
   const downloadAndInstallUpdate = async () => {
-    if (!supportsInAppUpdate.value) {
-      const message = i18n.global.t('setting.update.openReleasePage')
-      updateState.value.downloading = false
-      updateState.value.error = message
-      updateState.value.status = 'error'
-      updateState.value.message = message
-      return false
-    }
-
-    if (!hasUpdate.value || !downloadUrl.value) return false
+    if (!pending) return false
 
     try {
       updateState.value.downloading = true
@@ -236,10 +237,25 @@ export const useUpdateStore = defineStore('update', () => {
       updateState.value.progress = 0
       updateState.value.error = null
 
-      const result = await systemService.downloadAndInstallUpdate(downloadUrl.value)
-      return result
+      let total = 0
+      let got = 0
+      await pending.downloadAndInstall((event) => {
+        if (event.event === 'Started') {
+          total = event.data.contentLength ?? 0
+        } else if (event.event === 'Progress') {
+          got += event.data.chunkLength
+          updateState.value.progress = total ? Math.round((got / total) * 100) : 0
+        } else if (event.event === 'Finished') {
+          updateState.value.progress = 100
+          updateState.value.status = 'installing'
+        }
+      })
+
+      // Windows закрывает приложение сам, на Маке перезапускаем руками.
+      await relaunch()
+      return true
     } catch (error) {
-      console.error('下载更新失败:', error)
+      console.error('установка обновления не удалась:', error)
       const message = error instanceof Error ? error.message : String(error)
       updateState.value.downloading = false
       updateState.value.error = message
