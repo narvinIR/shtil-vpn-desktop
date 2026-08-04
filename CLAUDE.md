@@ -52,16 +52,26 @@ sing-box отдельным файлом (`pnpm kernel:fetch` кладёт ег�
 ## Проверки
 
 ```bash
-pnpm type-check
 pnpm lint
+pnpm type-check
+pnpm test:scripts
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-Rust-часть **не собирается в WSL без системных библиотек** (`glib-2.0`,
-`webkit2gtk`) — их ставят через `apt` с правами администратора. Пока их нет,
-проверка Rust идёт в GitHub Actions (`.github/workflows/build.yml`); там же
-собираются установщики Windows и macOS — на своей машине собирается только та
-система, на которой сидишь.
+Это **весь** набор, который гоняет облако (`.github/workflows/ci.yml`) — с
+05.08.2026 он проходит и здесь: на Tiamat88 поставлены `glib-2.0` с
+`webkit2gtk` (через `apt`, права администратора) и компоненты `clippy` с
+`rustfmt` (через `rustup`, прав не нужно). Живой прогон даёт 192 теста Rust и
+16 тестов сборочных скриптов.
+
+**Гонять локально ДО коммита, а не ждать облако.** Чаще всего сборку роняет
+`clippy` с `-D warnings` — там даже неиспользованный импорт красный, и метка
+выпуска, поставленная вслепую, сжигает двадцать минут облака впустую.
+
+**Установщики** по-прежнему собираются только в облаке
+(`.github/workflows/build.yml`): Windows собирается на Windows, macOS — на
+Маке, на своей машине выходит только та система, на которой сидишь.
 
 ## Чего здесь НЕ делаем
 
