@@ -16,6 +16,7 @@ export default {
     loading: 'Загрузка...',
     enabled: 'Вкл',
     disabled: 'Выкл',
+    minimizedToTray: 'Штиль работает в области уведомлений',
   },
 
   // 导航菜单
@@ -62,7 +63,11 @@ export default {
     restartFailed: 'Ошибка перезапуска',
     nodeModeChangeSuccess: 'Смена режима узла выполнена успешно',
     nodeModeChangeFailed: 'Ошибка смены режима узла',
-    restartSuccess: 'Ядро успешно перезапущено.',
+    restartSuccess: 'Подключение восстановлено.',
+    memory: 'Память',
+    status: {
+      restarting: 'Перезапуск',
+    },
 
     // WebSocket状态
     wsStatus: {
@@ -86,13 +91,17 @@ export default {
       desc: 'Используйте эти адреса в расширениях браузера или других клиентах. HTTP и SOCKS5 используют один mixed inbound порт.',
     },
 
-    // 状态描述
-    status: {
-      startingDesc: 'Запуск ядра, пожалуйста подождите...',
-      stoppingDesc: 'Остановка ядра, пожалуйста подождите...',
-      runningDesc: 'Ядро запущено, сервис прокси доступен',
-      stoppedDesc: 'Ядро остановлено, сервис прокси недоступен',
-      disconnectedDesc: 'Ядро запущено, но соединение нарушено, пожалуйста проверьте конфигурацию',
+    // Подпись под состоянием на главном экране. Имена ключей задаёт HomeView.vue —
+    // здесь они разъехались, и русский клиент (язык по умолчанию!) видел на главном
+    // экране сырое «home.statusDescriptions.runningDesc» вместо фразы.
+    statusDescriptions: {
+      runningDesc: 'Защита включена — трафик идёт через наш сервер',
+      disconnectedDesc: 'Связь не установилась. Проверьте подписку и подключитесь заново',
+    },
+    kernelStatusDescriptions: {
+      startingDesc: 'Подключаемся…',
+      stoppingDesc: 'Отключаемся…',
+      stoppedDesc: 'VPN выключен — трафик идёт напрямую',
     },
 
     // 流量统计
@@ -159,6 +168,7 @@ export default {
 
   // 代理页面
   proxy: {
+    modeChangeFailed: 'Не удалось сменить режим',
     title: 'Настройки прокси',
     subtitle: 'Управление прокси-узлами и тестирование задержки',
     currentMode: 'Текущий режим',
@@ -728,6 +738,7 @@ export default {
   notification: {
     proxyModeChanged: 'Режим прокси изменён',
     proxyModeChangeFailed: 'Ошибка изменения режима прокси',
+    kernelRestarted: 'Подключение перезапущено',
     applyProxyFailed: 'Ошибка применения настроек прокси',
     systemProxyEnabled: 'Системный прокси включён',
     tunEnabled: 'Режим TUN включён',

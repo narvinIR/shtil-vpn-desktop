@@ -1,10 +1,14 @@
 import { createI18n } from 'vue-i18n'
-import zhCN from './zh-CN'
 import enUS from './en-US'
 import ruRU from './ru-RU'
-import jaJP from './ja-JP'
+import deDE from './de-DE'
+import esES from './es-ES'
+import faIR from './fa-IR'
 
-export type LocaleCode = 'zh-CN' | 'en-US' | 'ru-RU' | 'ja-JP'
+// Языки продукта — те же пять, что в боте и в приложении для телефона: русский,
+// английский, немецкий, испанский, персидский. Китайский и японский достались от
+// форка и убраны: чужой набор языков в списке выбора выдаёт, что программа не наша.
+export type LocaleCode = 'ru-RU' | 'en-US' | 'de-DE' | 'es-ES' | 'fa-IR'
 
 export interface SupportedLocale {
   code: LocaleCode
@@ -13,26 +17,31 @@ export interface SupportedLocale {
 
 export const DEFAULT_LOCALE: LocaleCode = 'ru-RU'
 
-// 支持的语言列表
 export const supportedLocales: SupportedLocale[] = [
-  { code: 'zh-CN', name: '简体中文' },
-  { code: 'en-US', name: 'English' },
   { code: 'ru-RU', name: 'Русский' },
-  { code: 'ja-JP', name: '日本語' },
+  { code: 'en-US', name: 'English' },
+  { code: 'de-DE', name: 'Deutsch' },
+  { code: 'es-ES', name: 'Español' },
+  { code: 'fa-IR', name: 'فارسی' },
 ]
 
-// 创建i18n实例
 const i18n = createI18n({
-  legacy: false, // 使用Vue 3 Composition API
-  locale: DEFAULT_LOCALE, // 默认语言
-  fallbackLocale: DEFAULT_LOCALE, // 备用语言
+  legacy: false,
+  locale: DEFAULT_LOCALE,
+  // Запасной язык — английский, а НЕ язык по умолчанию: раньше русский был
+  // запасным сам себе, и недостающий ключ выходил на экран сырым именем
+  // («home.statusDescriptions.runningDesc» на главной). Три новых словаря
+  // намеренно покрывают только наши экраны — глубокие настройки форка честно
+  // доезжают по-английски, а не половинчатым переводом.
+  fallbackLocale: ['en-US', DEFAULT_LOCALE],
   messages: {
-    'zh-CN': zhCN,
-    'en-US': enUS,
     'ru-RU': ruRU,
-    'ja-JP': jaJP,
+    'en-US': enUS,
+    'de-DE': deDE,
+    'es-ES': esES,
+    'fa-IR': faIR,
   },
-  globalInjection: true, // 全局注入$t方法
+  globalInjection: true,
 })
 
 export default i18n

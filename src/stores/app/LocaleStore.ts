@@ -44,14 +44,17 @@ export const useLocaleStore = defineStore(
       }
     }
 
-    // Язык окна. Как в боте: русский язык системы — русский интерфейс, любой
-    // другой — английский. Сравниваем по началу строки, иначе «ru» без региона
-    // или «en-GB» не совпадут ни с чем и человек увидит чужой язык.
+    // Язык окна. Как в боте: язык системы совпал с одним из наших пяти — берём
+    // его, любой другой — английский. Сравниваем по началу строки, иначе «ru»
+    // без региона или «de-AT» не совпадут ни с чем и человек увидит чужой язык.
     const currentLocale = computed<LocaleCode>(() => {
       if (locale.value === 'auto') {
         const systemLang = (navigator.language || '').toLowerCase()
         if (isLocaleCode(navigator.language)) return navigator.language
-        return systemLang.startsWith('ru') ? 'ru-RU' : 'en-US'
+        const match = supportedLocales.find((loc) =>
+          systemLang.startsWith(loc.code.slice(0, 2)),
+        )
+        return match ? match.code : 'en-US'
       }
       return isLocaleCode(locale.value) ? locale.value : DEFAULT_LOCALE
     })
@@ -70,7 +73,7 @@ export const useLocaleStore = defineStore(
     const getCurrentLocaleName = computed(() => {
       const currentCode = currentLocale.value
       const localeEntry = supportedLocales.find((loc) => loc.code === currentCode)
-      return localeEntry ? localeEntry.name : '简体中文'
+      return localeEntry ? localeEntry.name : 'Русский'
     })
 
     // 标记是否正在初始化

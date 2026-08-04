@@ -15,6 +15,7 @@ export default {
     loading: 'Loading...',
     enabled: 'On',
     disabled: 'Off',
+    minimizedToTray: 'Shtil keeps running in the notification area',
   },
   nav: {
     home: 'Home',
@@ -54,6 +55,9 @@ export default {
     nodeModeChangeFailed: 'Node mode change failed',
     restartSuccess: 'Kernel restarted successfully.',
     memory: 'Memory Usage',
+    status: {
+      restarting: 'Restarting',
+    },
     wsStatus: {
       connected: 'Connected',
       disconnected: 'Disconnected',
@@ -133,6 +137,7 @@ export default {
     },
   },
   proxy: {
+    modeChangeFailed: 'Could not change the mode',
     title: 'Proxy Settings',
     subtitle: 'Proxy node management and latency testing',
     currentMode: 'Current Mode',
@@ -658,6 +663,7 @@ export default {
   notification: {
     proxyModeChanged: 'Proxy mode changed',
     proxyModeChangeFailed: 'Proxy mode change failed',
+    kernelRestarted: 'Connection restarted',
     applyProxyFailed: 'Failed to apply proxy settings',
     systemProxyEnabled: 'System proxy enabled',
     tunEnabled: 'TUN mode enabled',
