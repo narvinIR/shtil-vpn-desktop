@@ -45,6 +45,10 @@ export const useKernelStore = defineStore('kernel', () => {
   let healthUnlisten: (() => void) | null = null
   let lastEventTime = 0
 
+  /// Как часто перепроверяем состояние ядра, если событий нет.
+  const STATUS_POLL_INTERVAL_MS = 5000
+  let statusPollTimer: number | null = null
+
   const applyStatus = (next: KernelStatus) => {
     if (typeof next.state_version === 'number') {
       // 避免旧状态覆盖新状态（事件乱序或请求返回较慢时尤其重要）。
@@ -137,8 +141,18 @@ export const useKernelStore = defineStore('kernel', () => {
     const snapshot = await kernelService.getKernelSnapshot()
     applyStatus(snapshot)
 
-    // 3. 移除主动轮询，完全依赖后端事件推送
-    // 用户反馈：直接选用推送即可，无需主动定时查询
+    // 3. Страховочный опрос состояния.
+    // Живая проверка 05.08.2026 на Маке владельца: связь шла через наш сервер,
+    // а экран показывал «Остановлено» — ядро подняла ветка, которая события не
+    // шлёт. Человек видит «не работает» при работающем VPN. Событие остаётся
+    // главным (refreshStatus уступает ему сам), опрос — только страховка.
+    if (statusPollTimer === null) {
+      statusPollTimer = window.setInterval(() => {
+        refreshStatus().catch(() => {
+          /* связь с ядром пропала — состояние обновит следующий заход */
+        })
+      }, STATUS_POLL_INTERVAL_MS)
+    }
 
     // 4. Eager load available versions for better UX (dropdown ready on open)
     if (availableVersions.value.length === 0) {
