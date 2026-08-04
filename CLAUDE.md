@@ -42,10 +42,12 @@ sing-box отдельным файлом (`pnpm kernel:fetch` кладёт ег�
    обновление не встанет.
 4. **Адреса выпусков — только наши** (`narvinIR/shtil-vpn-desktop`). Апстримный
    адрес в коде обновления = раздача чужой программы под нашим именем.
-5. **Версия живёт в пяти местах разом** — `package.json`, `src-tauri/tauri.conf.json`,
-   `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `docs/CHANGELOG.md`. Руками их не
-   правят: `python3 ../../scripts/release/desktop.py --version X.Y.Z`. Сверка —
-   `python3 ../../scripts/platforms/check.py`.
+5. **Версия живёт в четырёх местах разом** — `package.json`,
+   `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`.
+   Руками их не правят: `python3 ../../scripts/release/desktop.py --version X.Y.Z`.
+   Сверка — `python3 ../../scripts/platforms/check.py`. Что сказано клиенту —
+   лента выпусков в корне (`RELEASES.md`), а не `docs/CHANGELOG.md`: он остался
+   от апстрима, живёт на версиях 2.x по-китайски и нами не ведётся.
 
 ## Проверки
 
