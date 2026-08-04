@@ -21,6 +21,7 @@
           :collapsed="collapsed"
           :current-menu="currentMenu"
           :menu-items="menuItems"
+          :groups="menuGroups"
           :is-dark="themeStore.isDark"
           @select="onSelect"
           @toggle-theme="themeStore.toggleTheme"
@@ -67,20 +68,12 @@ import { useKernelStore } from '@/stores/kernel/KernelStore'
 import { useTrafficStore } from '@/stores/kernel/TrafficStore'
 import { useConnectionStore } from '@/stores/kernel/ConnectionStore'
 import { useI18n } from 'vue-i18n'
-import {
-  HomeOutline,
-  SwapHorizontalOutline,
-  LinkOutline,
-  DocumentTextOutline,
-  SettingsOutline,
-  FolderOutline,
-  AnalyticsOutline,
-} from '@vicons/ionicons5'
+import { HomeOutline, KeyOutline, SettingsOutline } from '@vicons/ionicons5'
 import { useMessage } from 'naive-ui'
 import mitt from 'mitt'
 import UpdateModal from '@/components/UpdateModal.vue'
 import AppHeader from './AppHeader.vue'
-import AppSidebar, { type NavItem } from './AppSidebar.vue'
+import AppSidebar, { type NavGroup, type NavItem } from './AppSidebar.vue'
 import { useKernelStatus } from '@/composables/useKernelStatus'
 
 defineOptions({
@@ -140,47 +133,41 @@ const updateInfo = ref({
 const theme = computed(() => themeStore.naiveTheme)
 const themeOverrides = computed(() => themeStore.themeOverrides)
 
-// 菜单
+// Меню: человеку нужны два экрана — главный и ключ. Журнал остался входом из
+// настроек: он нужен поддержке, а не на каждый день.
 const currentMenu = computed(() => {
   const path = route.path
   if (path === '/' || path === '/home') return 'home'
 
   const pathToMenuMap: Record<string, string> = {
-    '/log': 'logs',
-    '/sub': 'subscription',
+    '/sub': 'key',
     '/setting': 'settings',
-    '/connections': 'connections',
-    '/proxy': 'proxy',
-    '/rules': 'rules',
+    '/log': 'settings',
   }
   return pathToMenuMap[path] || path.slice(1)
 })
 
 const menuItems = computed<NavItem[]>(() => [
   { label: t('nav.home'), key: 'home', icon: HomeOutline },
-  { label: t('nav.subscription'), key: 'subscription', icon: FolderOutline },
-  { label: t('nav.proxy'), key: 'proxy', icon: SwapHorizontalOutline },
-  { label: t('nav.connections'), key: 'connections', icon: LinkOutline },
-  { label: t('nav.logs'), key: 'logs', icon: DocumentTextOutline },
-  { label: t('nav.rules'), key: 'rules', icon: AnalyticsOutline },
+  { label: t('nav.key'), key: 'key', icon: KeyOutline },
   { label: t('nav.settings'), key: 'settings', icon: SettingsOutline },
 ])
 
-// 导航
+const menuGroups = computed<NavGroup[]>(() => [
+  { key: 'main', items: menuItems.value.slice(0, 2) },
+  { key: 'more', items: menuItems.value.slice(2) },
+])
+
 const onSelect = (key: string) => {
   if (key === 'home') {
     router.push('/')
-  } else {
-    const routeMap: Record<string, string> = {
-      logs: '/log',
-      subscription: '/sub',
-      settings: '/setting',
-      connections: '/connections',
-      proxy: '/proxy',
-      rules: '/rules',
-    }
-    router.push(routeMap[key] || `/${key}`)
+    return
   }
+  const routeMap: Record<string, string> = {
+    key: '/sub',
+    settings: '/setting',
+  }
+  router.push(routeMap[key] || '/')
 }
 
 // 更新处理

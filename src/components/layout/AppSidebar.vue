@@ -79,9 +79,7 @@ import {
   ChevronForwardOutline,
 } from '@vicons/ionicons5'
 
-const { t, te } = useI18n()
-
-const tt = (key: string, fallback: string) => (te(key) ? t(key) : fallback)
+const { t } = useI18n()
 
 export interface NavItem {
   label: string
@@ -119,7 +117,7 @@ const groupedItems = computed<NavGroup[]>(() => {
 })
 
 const themeLabel = computed(() =>
-  props.isDark ? tt('nav.switchToLight', '切换到亮色') : tt('nav.switchToDark', '切换到暗色'),
+  props.isDark ? t('nav.switchToLight') : t('nav.switchToDark'),
 )
 const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav.collapse')))
 </script>

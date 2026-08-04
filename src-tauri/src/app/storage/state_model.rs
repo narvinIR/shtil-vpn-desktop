@@ -140,7 +140,8 @@ impl Default for ThemeConfig {
     fn default() -> Self {
         Self {
             is_dark: true,
-            mode: "system".to_string(),
+            // Тёмная по умолчанию — как на телефоне и телевизоре
+            mode: "dark".to_string(),
             accent_color: "#4f92ff".to_string(),
             compact_mode: false,
         }

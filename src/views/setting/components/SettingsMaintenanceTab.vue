@@ -193,10 +193,24 @@
     <div v-else class="empty-hint">
       {{ props.t('setting.backup.noPreview') }}
     </div>
+
+    <!-- Журнал убран из бокового меню: человеку он нужен только когда что-то не
+         работает, и приходит он сюда — в обслуживание. -->
+    <h3 class="setting-section-title">{{ props.t('log.entryTitle') }}</h3>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-desc">{{ props.t('log.entryDesc') }}</div>
+      </div>
+      <n-button size="small" secondary @click="router.push('/log')">
+        {{ props.t('log.entryOpen') }}
+      </n-button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import {
   DownloadOutline,
   OpenOutline,
@@ -235,6 +249,8 @@ const props = defineProps<{
   handleValidateBackup: () => void | Promise<void>
   handleRestoreBackup: () => void | Promise<void>
 }>()
+
+const router = useRouter()
 </script>
 
 <style scoped>

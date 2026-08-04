@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { darkTheme, type GlobalThemeOverrides, useOsTheme } from 'naive-ui'
 import { DatabaseService } from '@/services/database-service'
 import type { ThemeConfig } from '@/types/database'
-import baseThemeOverrides from '@/assets/naive-ui-theme-overrides.json'
+import { buildNaiveOverrides } from '@/assets/naive-theme'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -43,15 +43,14 @@ const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${Math.min(1, Math.max(0, alpha))})`
 }
 
-const cloneOverrides = (): GlobalThemeOverrides =>
-  JSON.parse(JSON.stringify(baseThemeOverrides)) as GlobalThemeOverrides
-
 export const useThemeStore = defineStore(
   'theme',
   () => {
     let isInitializing = true
     const osTheme = useOsTheme()
-    const mode = ref<ThemeMode>('system')
+    // Тёмная по умолчанию: продукт выглядит одинаково на всех носителях, а на
+    // телефоне и телевизоре светлой темы нет вовсе.
+    const mode = ref<ThemeMode>('dark')
     const accentColor = ref<string>(DEFAULT_ACCENT)
     const compactMode = ref(false)
 
@@ -64,10 +63,13 @@ export const useThemeStore = defineStore(
     const theme = computed(() => (isDark.value ? darkTheme : null))
 
     const buildOverrides = computed<GlobalThemeOverrides>(() => {
+      // Тема naive собирается из палитры (`tokens.css`), поэтому смена темы и
+      // акцента обязана её пересобрать — отсюда чтение обоих значений.
+      void isDark.value
       const primary = normalizeHexColor(accentColor.value)
       const primaryHover = adjustColor(primary, 10)
       const primaryPressed = adjustColor(primary, -8)
-      const overrides = cloneOverrides()
+      const overrides = buildNaiveOverrides()
 
       overrides.common = {
         ...overrides.common,
@@ -135,13 +137,13 @@ export const useThemeStore = defineStore(
         } else if (typeof themeConfig.is_dark === 'boolean') {
           mode.value = themeConfig.is_dark ? 'dark' : 'light'
         } else {
-          mode.value = 'system'
+          mode.value = 'dark'
         }
         accentColor.value = normalizeHexColor(themeConfig.accent_color)
         compactMode.value = themeConfig.compact_mode ?? false
       } catch (error) {
         console.error('从数据库加载主题配置失败:', error)
-        mode.value = 'system'
+        mode.value = 'dark'
         accentColor.value = DEFAULT_ACCENT
         compactMode.value = false
       }

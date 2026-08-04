@@ -166,6 +166,24 @@ export const useKernelStore = defineStore('kernel', () => {
     }
   }
 
+  const startKernel = async () => {
+    if (isLoading.value) return false
+    isLoading.value = true
+    try {
+      const result = await kernelService.startKernel()
+      if (!result.success) {
+        lastError.value = result.message
+        return false
+      }
+      return true
+    } catch (error) {
+      lastError.value = error instanceof Error ? error.message : '内核启动失败'
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   const stopKernel = async (options?: { force?: boolean }) => {
     try {
       const result = await kernelService.stopKernel({ force: options?.force ?? false })
@@ -317,6 +335,7 @@ export const useKernelStore = defineStore('kernel', () => {
     initializeStore,
     handleKernelFailureEvent,
     refreshStatus,
+    startKernel,
     restartKernel,
     stopKernel,
     switchProxyMode,

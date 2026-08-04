@@ -4,16 +4,16 @@ import Layout from '@/components/layout/MainLayout.vue'
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
-    // 空白页面 - 独立路由，用于托盘模式下减少内存占用
+    // Пустой экран для режима трея: свёрнутое окно не держит интерфейс в памяти
     {
       path: '/blank',
       name: 'Blank',
       component: () => import('@/views/BlankView.vue'),
       meta: {
-        isBlankPage: true, // 标记为空白页面
+        isBlankPage: true,
       },
     },
-    // 主应用布局 - 包含所有功能页面
+    // Главная раскладка: шапка, боковое меню, экраны
     {
       path: '/',
       name: 'index',
@@ -26,13 +26,8 @@ const router = createRouter({
         },
         {
           path: '/sub',
-          name: 'Sub',
-          component: () => import('@/views/SubView.vue'),
-        },
-        {
-          path: '/proxy',
-          name: 'Proxy',
-          component: () => import('@/views/ProxyView.vue'),
+          name: 'Key',
+          component: () => import('@/views/KeyView.vue'),
         },
         {
           path: '/log',
@@ -44,24 +39,15 @@ const router = createRouter({
           name: 'Setting',
           component: () => import('@/views/SettingView.vue'),
         },
-        {
-          path: '/rules',
-          name: 'Rules',
-          component: () => import('@/views/RulesView.vue'),
-        },
-        {
-          path: '/connections',
-          name: 'Connections',
-          component: () => import('@/views/ConnectionsView.vue'),
-        },
       ],
     },
+    // Трей помнит последний открытый экран. Экраны форка удалены, и без этого
+    // правила запомненный адрес открывал бы пустое окно вместо приложения.
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/',
+    },
   ],
-})
-
-// 路由守卫
-router.beforeEach((to, from, next) => {
-  next()
 })
 
 export default router

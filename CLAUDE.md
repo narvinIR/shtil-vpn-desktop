@@ -22,7 +22,9 @@ sing-box отдельным файлом (`pnpm kernel:fetch` кладёт ег�
 | Что | Где | Зачем |
 |---|---|---|
 | Подписка-конфиг применяется целиком | `src-tauri/src/app/network/subscription_service.rs` → `is_full_singbox_config` | Иначе из конфига брались только серверы, а маршруты подставлялись свои — на **скачиваемых** списках. Из России они не отвечают, и ядро не стартует вовсе |
-| Палитра и знак «Штиля» | `src/assets/tokens.css`, `naive-ui-theme-overrides.json`, `src-tauri/icons/`, `src/assets/icon.png` | Один вид с телефоном и телевизором |
+| Палитра и знак «Штиля» | `src/assets/tokens.css`, `src/assets/naive-theme.ts`, `src-tauri/icons/`, `src/assets/icon.png` | Один вид с телефоном и телевизором. Тема naive-ui собирается из тех же CSS-переменных: отдельный файл значений разъезжался с палитрой молча |
+| Экраны — только наши | `src/router/index.ts`, `src/views/HomeView.vue`, `src/views/KeyView.vue` | Главная (круг, сервер, три показателя) и «Ключ». Экраны форка — прокси, правила, соединения — сняты; журнал живёт входом из настроек. Последним правилом маршрутов стоит сторож: трей помнит удалённый адрес и без него открыл бы пустое окно |
+| Тёмная тема по умолчанию | `src/stores/app/ThemeStore.ts`, `src-tauri/src/app/storage/{state_model.rs,database.rs}`, `index.html` | Значение живёт и в базе настроек тоже: правка в одном месте перебивается при первом запуске |
 | Имя приложения | `src-tauri/tauri.conf.json`, `src/locales/*.ts` (`common.appName`) | — |
 | Обновление смотрит в НАШ репозиторий | `src-tauri/src/app/constants/network.rs` (`GITHUB_API_URL`), `.../system/update_service.rs` (`RELEASES_PAGE_URL`, список выпусков) | С апстримным адресом приложение видит чужой выпуск как «доступно обновление» и на Windows **ставит чужую программу само** (`autoCheckUpdate` включён по умолчанию). Стережёт тест `update_endpoints_must_point_to_our_repository` |
 | Наши имена пакета и выпусков | `src-tauri/Cargo.toml`, теги `desktop-v*` | Имя пакета = имя файла внутри установки; после первой раздачи не меняется |

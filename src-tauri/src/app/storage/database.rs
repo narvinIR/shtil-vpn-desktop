@@ -142,8 +142,8 @@ impl DatabaseService {
             r#"
             CREATE TABLE IF NOT EXISTS theme_config (
                 id INTEGER PRIMARY KEY,
-                is_dark BOOLEAN DEFAULT FALSE,
-                mode TEXT DEFAULT 'system',
+                is_dark BOOLEAN DEFAULT TRUE,
+                mode TEXT DEFAULT 'dark',
                 accent_color TEXT DEFAULT '#4f92ff',
                 compact_mode BOOLEAN DEFAULT FALSE,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -156,7 +156,7 @@ impl DatabaseService {
 
         // 主题配置表兼容字段补充
         let alter_theme_statements = [
-            "ALTER TABLE theme_config ADD COLUMN mode TEXT DEFAULT 'system'",
+            "ALTER TABLE theme_config ADD COLUMN mode TEXT DEFAULT 'dark'",
             "ALTER TABLE theme_config ADD COLUMN accent_color TEXT DEFAULT '#4f92ff'",
             "ALTER TABLE theme_config ADD COLUMN compact_mode BOOLEAN DEFAULT FALSE",
         ];
@@ -409,10 +409,10 @@ impl DatabaseService {
             .await?;
 
         if let Some(row) = row {
-            let stored_mode: String = row.try_get("mode").unwrap_or_else(|_| "system".to_string());
+            let stored_mode: String = row.try_get("mode").unwrap_or_else(|_| "dark".to_string());
             let normalized_mode = match stored_mode.as_str() {
                 "light" | "dark" | "system" => stored_mode,
-                _ => "system".to_string(),
+                _ => "dark".to_string(),
             };
 
             let accent_color: String = row
