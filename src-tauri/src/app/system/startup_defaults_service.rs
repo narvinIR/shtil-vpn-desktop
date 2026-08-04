@@ -13,6 +13,7 @@ use tauri::{AppHandle, Manager};
 use tracing::{info, warn};
 
 use crate::app::storage::enhanced_storage_service::get_enhanced_storage;
+use crate::utils::app_util::{LEGACY_WORK_DIR_NAME, WORK_DIR_NAME};
 use crate::utils::proxy_util::disable_system_proxy;
 
 /// Ключ записи в базе настроек: дефолты какой версии уже применены.
@@ -55,6 +56,52 @@ fn should_clear_leftover_proxy(system_proxy_enabled: bool) -> bool {
     system_proxy_enabled
 }
 
+/// Путь из старой папки форка — в нашу. `None`, если правка не нужна.
+fn rebase_legacy_path(path: &str) -> Option<String> {
+    if path.is_empty() || !path.contains(LEGACY_WORK_DIR_NAME) {
+        return None;
+    }
+    Some(path.replace(LEGACY_WORK_DIR_NAME, WORK_DIR_NAME))
+}
+
+/// Переписать сохранённые пути ключей после переименования рабочей папки.
+async fn rebase_saved_paths(
+    storage: &crate::app::storage::EnhancedStorageService,
+    app_config: &mut crate::app::storage::state_model::AppConfig,
+) -> Result<bool, String> {
+    let mut changed = false;
+
+    if let Some(path) = app_config.active_config_path.as_deref() {
+        if let Some(fixed) = rebase_legacy_path(path) {
+            app_config.active_config_path = Some(fixed);
+            changed = true;
+        }
+    }
+
+    let mut subscriptions = storage
+        .get_subscriptions()
+        .await
+        .map_err(|e| e.to_string())?;
+    let mut subscriptions_changed = false;
+    for subscription in subscriptions.iter_mut() {
+        if let Some(path) = subscription.config_path.as_deref() {
+            if let Some(fixed) = rebase_legacy_path(path) {
+                subscription.config_path = Some(fixed);
+                subscriptions_changed = true;
+            }
+        }
+    }
+    if subscriptions_changed {
+        storage
+            .save_subscriptions(&subscriptions)
+            .await
+            .map_err(|e| e.to_string())?;
+        info!("Пути ключей переписаны на новую рабочую папку");
+    }
+
+    Ok(changed || subscriptions_changed)
+}
+
 pub async fn apply_startup_defaults(app: &AppHandle) {
     if let Err(e) = run_startup_defaults(app).await {
         warn!(
@@ -84,6 +131,8 @@ async fn run_startup_defaults(app: &AppHandle) -> Result<(), String> {
         .await
         .map_err(|e| e.to_string())?;
 
+    let mut config_changed = rebase_saved_paths(&storage, &mut app_config).await?;
+
     if needs_system_mode(
         applied_version.as_deref(),
         app_config.system_proxy_enabled,
@@ -91,11 +140,15 @@ async fn run_startup_defaults(app: &AppHandle) -> Result<(), String> {
     ) {
         app_config.system_proxy_enabled = true;
         app_config.proxy_mode = "system".to_string();
+        config_changed = true;
+        info!("Установка переведена в системный режим: до этого трафик шёл мимо VPN");
+    }
+
+    if config_changed {
         storage
             .save_app_config(&app_config)
             .await
             .map_err(|e| e.to_string())?;
-        info!("Установка переведена в системный режим: до этого трафик шёл мимо VPN");
     }
 
     let current_version = app.package_info().version.to_string();

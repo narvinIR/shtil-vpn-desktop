@@ -4,6 +4,9 @@
 // Tratamiento de usted en todo el texto.
 export default {
   common: {
+    retry: 'Reintentar',
+    loadFailed: 'No se pudo abrir la pantalla',
+    unknownError: 'Error desconocido',
     appName: 'Shtil VPN',
     cancel: 'Cancelar',
     save: 'Guardar',
@@ -290,6 +293,7 @@ export default {
     quit: 'Salir',
   },
   notification: {
+    subscriptionRefreshFailed: 'No se pudo actualizar la clave tras la actualización de la aplicación. Abra la pantalla «Clave» y pulse Actualizar',
     proxyModeChanged: 'Modo cambiado',
     proxyModeChangeFailed: 'No se pudo cambiar el modo',
     applyProxyFailed: 'No se pudieron aplicar los ajustes del proxy',

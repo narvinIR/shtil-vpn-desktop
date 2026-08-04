@@ -1,6 +1,9 @@
 export default {
   // 通用词汇
   common: {
+    retry: 'Повторить',
+    loadFailed: 'Не удалось открыть экран',
+    unknownError: 'Неизвестная ошибка',
     appName: 'Штиль VPN',
     cancel: 'Отмена',
     save: 'Сохранить',
@@ -677,6 +680,7 @@ export default {
 
   // Уведомления
   notification: {
+    subscriptionRefreshFailed: 'Не удалось обновить ключ после обновления приложения. Откройте экран «Ключ» и нажмите «Обновить»',
     proxyModeChanged: 'Режим прокси изменён',
     proxyModeChangeFailed: 'Ошибка изменения режима прокси',
     kernelRestarted: 'Подключение перезапущено',

@@ -102,7 +102,7 @@ fn resolve_export_path(file_path: Option<String>) -> Result<PathBuf, String> {
         }
     }
 
-    let default_name = format!("sing-box-windows-backup-{}.json", now_millis());
+    let default_name = format!("shtil-vpn-backup-{}.json", now_millis());
     FileDialog::new()
         .set_title("导出备份")
         .set_file_name(&default_name)

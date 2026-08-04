@@ -1,5 +1,8 @@
 export default {
   common: {
+    retry: 'Retry',
+    loadFailed: 'The screen could not be opened',
+    unknownError: 'Unknown error',
     appName: 'Shtil VPN',
     cancel: 'Cancel',
     save: 'Save',
@@ -609,6 +612,7 @@ export default {
     quit: 'Quit Application',
   },
   notification: {
+    subscriptionRefreshFailed: 'The key could not be refreshed after the app update. Open the Key screen and press Refresh',
     proxyModeChanged: 'Proxy mode changed',
     proxyModeChangeFailed: 'Proxy mode change failed',
     kernelRestarted: 'Connection restarted',

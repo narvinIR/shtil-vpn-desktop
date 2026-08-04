@@ -1,3 +1,4 @@
+import i18n from '@/locales'
 /**
  * 内核管理服务
  * 职责：提供内核控制、状态查询、配置管理等功能
@@ -183,7 +184,9 @@ class KernelService {
         process_running: false,
         api_ready: false,
         websocket_ready: false,
-        error: error instanceof Error ? error.message : '获取状态失败',
+        error: error instanceof Error
+          ? error.message
+          : i18n.global.t('notification.kernelErrors.KERNEL_RUNTIME_ERROR'),
         kernel_state: 'failed',
       }
     }
@@ -260,12 +263,14 @@ class KernelService {
       }
 
       await invokeWithAppContext<string | void>('apply_proxy_settings', overrides)
-      return { success: true, message: `代理模式已切换到 ${mode}` }
+      return { success: true, message: i18n.global.t('notification.proxyModeChanged') }
     } catch (error) {
       console.error('切换代理模式失败:', error)
       return {
         success: false,
-        message: error instanceof Error ? error.message : '切换代理模式失败',
+        message: error instanceof Error
+          ? error.message
+          : i18n.global.t('notification.proxySwitchFailed'),
       }
     }
   }
@@ -287,12 +292,14 @@ class KernelService {
         'apply_proxy_settings',
         Object.keys(args).length ? args : undefined,
       )
-      return { success: true, message: '代理配置已应用' }
+      return { success: true, message: i18n.global.t('notification.proxyModeChanged') }
     } catch (error) {
       console.error('应用代理配置失败:', error)
       return {
         success: false,
-        message: error instanceof Error ? error.message : '应用代理配置失败',
+        message: error instanceof Error
+          ? error.message
+          : i18n.global.t('notification.applyProxyFailed'),
       }
     }
   }
@@ -324,13 +331,15 @@ class KernelService {
       )
       return {
         success: true,
-        message: preferIpv6 ? '已切换到IPv6优先模式' : '已切换到IPv4优先模式',
+        message: i18n.global.t('notification.proxyModeChanged'),
       }
     } catch (error) {
       console.error('切换IP版本失败:', error)
       return {
         success: false,
-        message: error instanceof Error ? error.message : '切换IP版本失败',
+        message: error instanceof Error
+          ? error.message
+          : i18n.global.t('notification.ipVersionChangeFailed'),
       }
     }
   }

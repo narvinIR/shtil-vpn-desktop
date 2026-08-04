@@ -5,6 +5,7 @@ import { kernelService, type KernelStatus } from '@/services/kernel-service'
 import { useAppStore, type ProxyMode } from '../app/AppStore'
 import { eventService } from '@/services/event-service'
 import type { KernelFailurePayload, KernelReadinessSnapshot, StartupDiagnosis } from '@/types/events'
+import i18n from '@/locales'
 
 const DEFAULT_STATUS: KernelStatus = {
   process_running: false,
@@ -102,7 +103,7 @@ export const useKernelStore = defineStore('kernel', () => {
       applyStatus(latest)
       return latest
     } catch (error) {
-      const message = error instanceof Error ? error.message : '获取内核状态失败'
+      const message = error instanceof Error ? error.message : i18n.global.t('notification.kernelErrors.KERNEL_RUNTIME_ERROR')
       lastError.value = message
       throw error
     }
@@ -159,7 +160,7 @@ export const useKernelStore = defineStore('kernel', () => {
       // await refreshStatus() // 移除主动刷新，依赖事件推送
       return true
     } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '内核重启失败'
+      lastError.value = error instanceof Error ? error.message : i18n.global.t('notification.kernelRestartFailed')
       return false
     } finally {
       isLoading.value = false
@@ -177,7 +178,7 @@ export const useKernelStore = defineStore('kernel', () => {
       }
       return true
     } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '内核启动失败'
+      lastError.value = error instanceof Error ? error.message : i18n.global.t('notification.kernelErrors.KERNEL_START_UNSTABLE')
       return false
     } finally {
       isLoading.value = false
@@ -194,7 +195,7 @@ export const useKernelStore = defineStore('kernel', () => {
       // await refreshStatus() // 移除主动刷新，依赖事件推送
       return true
     } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '内核停止失败'
+      lastError.value = error instanceof Error ? error.message : i18n.global.t('notification.kernelErrors.KERNEL_STOP_FAILED')
       return false
     }
   }
@@ -209,7 +210,7 @@ export const useKernelStore = defineStore('kernel', () => {
       // await refreshStatus() // 移除主动刷新，依赖事件推送
       return true
     } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '切换代理模式失败'
+      lastError.value = error instanceof Error ? error.message : i18n.global.t('notification.proxySwitchFailed')
       return false
     }
   }
@@ -227,7 +228,7 @@ export const useKernelStore = defineStore('kernel', () => {
       // await refreshStatus() // 移除主动刷新，依赖事件推送
       return true
     } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '应用代理配置失败'
+      lastError.value = error instanceof Error ? error.message : i18n.global.t('notification.applyProxyFailed')
       return false
     }
   }
@@ -241,7 +242,7 @@ export const useKernelStore = defineStore('kernel', () => {
       }
       return true
     } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '切换IP版本失败'
+      lastError.value = error instanceof Error ? error.message : i18n.global.t('notification.ipVersionChangeFailed')
       return false
     }
   }
@@ -256,7 +257,7 @@ export const useKernelStore = defineStore('kernel', () => {
       }
       return isKernelInstalled.value
     } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '检查内核安装失败'
+      lastError.value = error instanceof Error ? error.message : i18n.global.t('notification.kernelErrors.KERNEL_BINARY_MISSING')
       return false
     }
   }
@@ -309,13 +310,11 @@ export const useKernelStore = defineStore('kernel', () => {
     const minutes = Math.floor(seconds / 60)
     const hours = Math.floor(minutes / 60)
 
+    const pad = (value: number) => String(value).padStart(2, '0')
     if (hours > 0) {
-      return `${hours}小时${minutes % 60}分钟`
+      return `${hours}:${pad(minutes % 60)}:${pad(seconds % 60)}`
     }
-    if (minutes > 0) {
-      return `${minutes}分钟${seconds % 60}秒`
-    }
-    return `${seconds}秒`
+    return `${minutes}:${pad(seconds % 60)}`
   })
 
   return {

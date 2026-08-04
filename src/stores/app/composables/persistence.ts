@@ -82,7 +82,7 @@ export function createAppPersistence(state: PersistenceState) {
       await Promise.race([
         dataRestorePromise,
         new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('数据恢复超时')), timeout)
+          setTimeout(() => reject(new Error('data restore timeout')), timeout)
         }),
       ])
       return true

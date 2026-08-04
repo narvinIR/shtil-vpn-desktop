@@ -23,7 +23,7 @@ impl HttpClientManager {
             .pool_idle_timeout(Duration::from_secs(90))
             .connect_timeout(Duration::from_secs(10))
             .no_proxy()
-            .user_agent("sing-box-windows/1.0 (sing-box; compatible; Windows NT 10.0)")
+            .user_agent(concat!("ShtilVPN/", env!("CARGO_PKG_VERSION")))
             .build()
             .expect("创建HTTP客户端失败");
 
@@ -34,7 +34,7 @@ impl HttpClientManager {
             .pool_idle_timeout(Duration::from_secs(60))
             .connect_timeout(Duration::from_secs(5))
             .no_proxy()
-            .user_agent("sing-box-windows/1.0 (sing-box; compatible; Windows NT 10.0)")
+            .user_agent(concat!("ShtilVPN/", env!("CARGO_PKG_VERSION")))
             .build()
             .expect("创建代理测试HTTP客户端失败");
 

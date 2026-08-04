@@ -1,30 +1,69 @@
 use crate::app::constants::messages;
-use std::path::PathBuf;
-use tracing::error;
+use std::path::{Path, PathBuf};
+use tracing::{error, warn};
+
+/// Адрес для журнала: остаётся только «куда», исчезает «по какому ключу».
+///
+/// Токен подписки в пути — это платный ключ клиента: по нему конфиг забирают
+/// без бота и без пароля. Журнал же лежит файлом на диске, уезжает в резервную
+/// копию и приходит нам скриншотом в поддержку.
+pub fn safe_url(raw: &str) -> String {
+    match url::Url::parse(raw) {
+        Ok(parsed) => format!(
+            "{}://{}/…",
+            parsed.scheme(),
+            parsed.host_str().unwrap_or("?")
+        ),
+        Err(_) => "<адрес скрыт>".to_string(),
+    }
+}
+
+/// Имя нашей рабочей папки: там ядро, конфиги и журналы.
+pub const WORK_DIR_NAME: &str = "ShtilVPN";
+
+/// Как папка звалась у форка. Оставшиеся от него данные переносим один раз.
+pub const LEGACY_WORK_DIR_NAME: &str = "sing-box-windows";
+
+/// Куда система кладёт данные приложений.
+fn data_base_dir() -> PathBuf {
+    if cfg!(target_os = "windows") {
+        // Windows: %LOCALAPPDATA%
+        std::env::var("LOCALAPPDATA")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from(r"C:\ProgramData"))
+    } else if cfg!(any(target_os = "linux", target_os = "macos")) {
+        // Linux: ~/.local/share · macOS: ~/Library/Application Support
+        dirs::data_dir().unwrap_or_else(|| PathBuf::from("/tmp"))
+    } else {
+        dirs::cache_dir().unwrap_or_else(|| PathBuf::from("/tmp"))
+    }
+}
+
+/// Забрать папку форка под наше имя. Не вышло (файл занят работающим ядром) —
+/// работаем со старой: терять ключи и ядро человеку нельзя.
+fn adopt_legacy_dir(ours: &Path, legacy: &Path) -> PathBuf {
+    if ours.exists() || !legacy.exists() {
+        return ours.to_path_buf();
+    }
+
+    match std::fs::rename(legacy, ours) {
+        Ok(()) => ours.to_path_buf(),
+        Err(e) => {
+            warn!("Не удалось перенести рабочую папку под наше имя: {}", e);
+            legacy.to_path_buf()
+        }
+    }
+}
+
+/// Рабочая папка: наша, а если приложение стоит с прошлых версий — перенесённая.
+fn resolve_work_dir() -> PathBuf {
+    let base = data_base_dir();
+    adopt_legacy_dir(&base.join(WORK_DIR_NAME), &base.join(LEGACY_WORK_DIR_NAME))
+}
 
 // 获取工作目录（同步版本）
 pub fn get_work_dir_sync() -> String {
-    let cache_dir = if cfg!(target_os = "windows") {
-        // Windows: %LOCALAPPDATA%\sing-box-windows
-        std::env::var("LOCALAPPDATA")
-            .map(|p| PathBuf::from(p).join("sing-box-windows"))
-            .unwrap_or_else(|_| PathBuf::from(r"C:\ProgramData\sing-box-windows"))
-    } else if cfg!(target_os = "linux") {
-        // Linux: ~/.local/share/sing-box-windows
-        dirs::data_dir()
-            .unwrap_or_else(|| PathBuf::from("/tmp"))
-            .join("sing-box-windows")
-    } else if cfg!(target_os = "macos") {
-        // macOS: ~/Library/Application Support/sing-box-windows
-        dirs::data_dir()
-            .unwrap_or_else(|| PathBuf::from("/tmp"))
-            .join("sing-box-windows")
-    } else {
-        // 其他系统使用默认缓存目录
-        dirs::cache_dir()
-            .unwrap_or_else(|| PathBuf::from("/tmp"))
-            .join("sing-box-windows")
-    };
+    let cache_dir = resolve_work_dir();
 
     // 确保目录存在
     if let Err(e) = std::fs::create_dir_all(&cache_dir) {
@@ -36,27 +75,7 @@ pub fn get_work_dir_sync() -> String {
 
 // 获取工作目录
 pub async fn get_work_dir() -> String {
-    let cache_dir = if cfg!(target_os = "windows") {
-        // Windows: %LOCALAPPDATA%\sing-box-windows
-        std::env::var("LOCALAPPDATA")
-            .map(|p| PathBuf::from(p).join("sing-box-windows"))
-            .unwrap_or_else(|_| PathBuf::from(r"C:\ProgramData\sing-box-windows"))
-    } else if cfg!(target_os = "linux") {
-        // Linux: ~/.local/share/sing-box-windows
-        dirs::data_dir()
-            .unwrap_or_else(|| PathBuf::from("/tmp"))
-            .join("sing-box-windows")
-    } else if cfg!(target_os = "macos") {
-        // macOS: ~/Library/Application Support/sing-box-windows
-        dirs::data_dir()
-            .unwrap_or_else(|| PathBuf::from("/tmp"))
-            .join("sing-box-windows")
-    } else {
-        // 其他系统使用默认缓存目录
-        dirs::cache_dir()
-            .unwrap_or_else(|| PathBuf::from("/tmp"))
-            .join("sing-box-windows")
-    };
+    let cache_dir = resolve_work_dir();
 
     // 确保目录存在
     if let Err(e) = tokio::fs::create_dir_all(&cache_dir).await {

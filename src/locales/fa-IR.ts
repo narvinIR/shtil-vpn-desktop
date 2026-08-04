@@ -3,6 +3,9 @@
 // انگلیسیِ صادقانه بهتر از ترجمهٔ نیمه‌کاره است. لحن در همه‌جا رسمی («شما»).
 export default {
   common: {
+    retry: 'تلاش دوباره',
+    loadFailed: 'صفحه باز نشد',
+    unknownError: 'خطای ناشناخته',
     appName: 'Shtil VPN',
     cancel: 'انصراف',
     save: 'ذخیره',
@@ -287,6 +290,7 @@ export default {
     quit: 'خروج',
   },
   notification: {
+    subscriptionRefreshFailed: 'پس از به‌روزرسانی برنامه کلید تازه نشد. صفحه «کلید» را باز کنید و روی به‌روزرسانی بزنید',
     proxyModeChanged: 'حالت عوض شد',
     proxyModeChangeFailed: 'حالت عوض نشد',
     applyProxyFailed: 'تنظیمات پروکسی اعمال نشد',

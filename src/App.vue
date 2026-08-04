@@ -280,8 +280,7 @@ onMounted(async () => {
           payload && typeof payload === 'object' && 'message' in payload
             ? String((payload as { message?: unknown }).message ?? '')
             : ''
-        const fallback =
-          '应用升级后自动刷新当前订阅失败，请在订阅页手动点击“立即更新配置”。'
+        const fallback = t('notification.subscriptionRefreshFailed')
         appStore.showWarningMessage?.(messageText || fallback)
       },
     )

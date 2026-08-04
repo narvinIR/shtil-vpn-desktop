@@ -13,9 +13,9 @@
     <div v-else-if="hasError" class="lazy-error">
       <slot name="error" :error="error" :retry="retryLoad">
         <div class="error-content">
-          <n-result status="error" title="组件加载失败" :description="errorMessage">
+          <n-result status="error" :title="t('common.loadFailed')" :description="errorMessage">
             <template #footer>
-              <n-button @click="retryLoad">重试</n-button>
+              <n-button @click="retryLoad">{{ t('common.retry') }}</n-button>
             </template>
           </n-result>
         </div>
@@ -33,6 +33,7 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { ref, onMounted, computed, type Component } from 'vue'
 import { NSpin, NResult, NButton } from 'naive-ui'
 
@@ -58,6 +59,8 @@ const props = withDefaults(defineProps<Props>(), {
   timeout: 10000,
 })
 
+const { t } = useI18n()
+
 const isLoading = ref(false)
 const hasError = ref(false)
 const error = ref<Error | null>(null)
@@ -66,7 +69,7 @@ const retryCount = ref(0)
 
 const errorMessage = computed(() => {
   if (!error.value) return ''
-  return error.value.message || '未知错误'
+  return error.value.message || t('common.unknownError')
 })
 
 // 加载组件
@@ -81,7 +84,7 @@ async function loadComponent() {
     // 创建超时Promise
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
-        reject(new Error(`组件加载超时 (${props.timeout}ms)`))
+        reject(new Error(t('common.loadFailed')))
       }, props.timeout)
     })
 
@@ -91,7 +94,7 @@ async function loadComponent() {
     loadedComponent.value = component
   } catch (err) {
     console.error('懒加载组件加载失败:', err)
-    error.value = err instanceof Error ? err : new Error('组件加载失败')
+    error.value = err instanceof Error ? err : new Error(t('common.loadFailed'))
     hasError.value = true
   } finally {
     isLoading.value = false
@@ -101,7 +104,7 @@ async function loadComponent() {
 // 重试加载
 async function retryLoad() {
   if (retryCount.value >= props.maxRetries) {
-    error.value = new Error(`已达到最大重试次数 (${props.maxRetries})`)
+    error.value = new Error(t('common.loadFailed'))
     return
   }
 

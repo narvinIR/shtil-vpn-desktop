@@ -4,6 +4,9 @@
 // halbe Übersetzung. Ansprache durchgehend «Sie».
 export default {
   common: {
+    retry: 'Wiederholen',
+    loadFailed: 'Der Bildschirm konnte nicht geöffnet werden',
+    unknownError: 'Unbekannter Fehler',
     appName: 'Shtil VPN',
     cancel: 'Abbrechen',
     save: 'Speichern',
@@ -290,6 +293,7 @@ export default {
     quit: 'Beenden',
   },
   notification: {
+    subscriptionRefreshFailed: 'Der Schlüssel konnte nach dem Update nicht aktualisiert werden. Öffnen Sie den Bildschirm „Schlüssel“ und drücken Sie Aktualisieren',
     proxyModeChanged: 'Modus geändert',
     proxyModeChangeFailed: 'Modus konnte nicht geändert werden',
     applyProxyFailed: 'Die Proxy-Einstellungen ließen sich nicht anwenden',

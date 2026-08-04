@@ -5,6 +5,7 @@ import { systemService, type AppUpdateInfo } from '@/services/system-service'
 import { getVersion } from '@tauri-apps/api/app'
 import { DatabaseService } from '@/services/database-service'
 import type { UpdateConfig } from '@/types/database'
+import i18n from '@/locales'
 
 export type UpdateChannel = 'stable' | 'prerelease' | 'autobuild'
 type PlatformOs = 'windows' | 'linux' | 'macos' | 'unknown'
@@ -143,7 +144,7 @@ export const useUpdateStore = defineStore('update', () => {
   const formatReleaseDate = (dateStr: string): string => {
     try {
       const date = new Date(dateStr)
-      return date.toLocaleDateString('zh-CN', {
+      return date.toLocaleDateString(i18n.global.locale.value, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -174,7 +175,7 @@ export const useUpdateStore = defineStore('update', () => {
       updateState.value.checking = true
       updateState.value.status = 'checking'
       updateState.value.error = null
-      updateState.value.message = '正在检查更新...'
+      updateState.value.message = i18n.global.t('setting.update.checking')
 
       if (!appVersion.value) {
         await fetchAppVersion(false)
@@ -191,18 +192,21 @@ export const useUpdateStore = defineStore('update', () => {
       }
 
       if (updateInfo && updateInfo.has_update) {
-        const versionType = updateInfo.is_prerelease ? '测试版本' : '正式版本'
-        updateState.value.message = `发现新${versionType} ${updateInfo.latest_version}`
+        updateState.value.message = i18n.global.t(
+          updateInfo.is_prerelease
+            ? 'notification.prereleaseAvailable'
+            : 'notification.updateAvailable',
+        )
         return updateInfo
       }
 
       hasUpdate.value = false
-      updateState.value.message = '已是最新版本'
+      updateState.value.message = i18n.global.t('setting.update.alreadyLatest')
       return null
     } catch (error) {
       console.error('检查更新失败:', error)
       updateState.value.error = error instanceof Error ? error.message : String(error)
-      updateState.value.message = '检查更新失败'
+      updateState.value.message = i18n.global.t('setting.update.checkError')
       updateState.value.status = 'error'
       return null
     } finally {
@@ -216,7 +220,7 @@ export const useUpdateStore = defineStore('update', () => {
 
   const downloadAndInstallUpdate = async () => {
     if (!supportsInAppUpdate.value) {
-      const message = '当前平台暂不支持应用内更新，请前往版本页面下载最新版本'
+      const message = i18n.global.t('setting.update.openReleasePage')
       updateState.value.downloading = false
       updateState.value.error = message
       updateState.value.status = 'error'
@@ -240,14 +244,14 @@ export const useUpdateStore = defineStore('update', () => {
       updateState.value.downloading = false
       updateState.value.error = message
       updateState.value.status = 'error'
-      updateState.value.message = `下载更新失败: ${message}`
+      updateState.value.message = i18n.global.t('setting.update.updateFailed')
       return false
     }
   }
 
   const openReleasePage = async () => {
     if (!releasePageUrl.value) {
-      throw new Error('未获取到版本页面链接')
+      throw new Error(i18n.global.t('setting.update.updateFailed'))
     }
 
     await openUrl(releasePageUrl.value)
