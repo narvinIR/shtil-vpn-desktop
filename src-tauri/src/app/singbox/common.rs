@@ -88,7 +88,7 @@ pub fn normalize_default_outbound(app_config: &AppConfig) -> &'static str {
 pub fn normalize_download_detour(app_config: &AppConfig) -> &'static str {
     match app_config.singbox_download_detour.as_str() {
         "manual" => TAG_MANUAL,
-        // 默认值调整为直连：gh-proxy 已经加速，避免多余的代理链路
+        // По умолчанию напрямую: чужих зеркал в скачивании не осталось.
         _ => TAG_DIRECT,
     }
 }
