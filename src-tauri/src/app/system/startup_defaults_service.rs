@@ -9,7 +9,7 @@
 //! старте уже снято, значит настройка в системе никуда не ведёт и человек
 //! остался бы без интернета вовсе.
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tracing::{info, warn};
 
 use crate::app::storage::enhanced_storage_service::get_enhanced_storage;
