@@ -1,6 +1,6 @@
 [package]
 name = "shtil-vpn-desktop"
-version = "1.2.0"
+version = "1.2.1"
 description = "Штиль VPN — клиент для Windows и macOS"
 authors = ["narvinIR"]
 license = "MIT"
