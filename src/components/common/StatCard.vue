@@ -60,8 +60,8 @@ withDefaults(
 }
 
 .stat-metric[data-accent='pink'] .metric-icon {
-  background: rgba(236, 72, 153, 0.14);
-  color: #ec4899;
+  background: var(--info-soft);
+  color: var(--info-color);
 }
 
 .stat-metric[data-accent='blue'] .metric-icon {

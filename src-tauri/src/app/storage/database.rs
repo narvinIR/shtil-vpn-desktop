@@ -144,7 +144,7 @@ impl DatabaseService {
                 id INTEGER PRIMARY KEY,
                 is_dark BOOLEAN DEFAULT FALSE,
                 mode TEXT DEFAULT 'system',
-                accent_color TEXT DEFAULT '#6366f1',
+                accent_color TEXT DEFAULT '#4f92ff',
                 compact_mode BOOLEAN DEFAULT FALSE,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -157,7 +157,7 @@ impl DatabaseService {
         // 主题配置表兼容字段补充
         let alter_theme_statements = [
             "ALTER TABLE theme_config ADD COLUMN mode TEXT DEFAULT 'system'",
-            "ALTER TABLE theme_config ADD COLUMN accent_color TEXT DEFAULT '#6366f1'",
+            "ALTER TABLE theme_config ADD COLUMN accent_color TEXT DEFAULT '#4f92ff'",
             "ALTER TABLE theme_config ADD COLUMN compact_mode BOOLEAN DEFAULT FALSE",
         ];
 
@@ -170,7 +170,7 @@ impl DatabaseService {
             r#"
             CREATE TABLE IF NOT EXISTS locale_config (
                 id INTEGER PRIMARY KEY,
-                locale TEXT DEFAULT 'zh-CN',
+                locale TEXT DEFAULT 'auto',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -417,7 +417,7 @@ impl DatabaseService {
 
             let accent_color: String = row
                 .try_get("accent_color")
-                .unwrap_or_else(|_| "#6366f1".to_string());
+                .unwrap_or_else(|_| "#4f92ff".to_string());
 
             Ok(Some(ThemeConfig {
                 is_dark: row.try_get("is_dark").unwrap_or(true),

@@ -468,8 +468,8 @@ onBeforeUnmount(() => cleanup())
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: var(--error-soft);
+  color: var(--error-color);
   border-radius: 8px;
   font-size: 13px;
 }

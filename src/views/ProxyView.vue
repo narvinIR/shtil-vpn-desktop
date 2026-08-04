@@ -122,7 +122,7 @@
               </span>
               <n-button text size="tiny" class="node-fav-btn" @click.stop="proxyStore.toggleFavorite(node)">
                 <n-icon size="14">
-                  <Star v-if="proxyStore.isFavorite(node)" style="color: #f59e0b" />
+                  <Star v-if="proxyStore.isFavorite(node)" style="color: var(--warning-color)" />
                   <StarOutline v-else />
                 </n-icon>
               </n-button>

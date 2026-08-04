@@ -141,7 +141,7 @@ impl Default for ThemeConfig {
         Self {
             is_dark: true,
             mode: "system".to_string(),
-            accent_color: "#6366f1".to_string(),
+            accent_color: "#4f92ff".to_string(),
             compact_mode: false,
         }
     }
@@ -155,8 +155,11 @@ pub struct LocaleConfig {
 
 impl Default for LocaleConfig {
     fn default() -> Self {
+        // «auto» — язык берётся из системы (русская система → русский экран).
+        // У исходного проекта тут стоял китайский, и он перебивал определение:
+        // при первом запуске человек видел китайские надписи.
         Self {
-            locale: "zh-CN".to_string(),
+            locale: "auto".to_string(),
         }
     }
 }

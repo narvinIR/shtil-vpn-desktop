@@ -62,10 +62,10 @@ const getColors = () => {
   const style = getComputedStyle(document.documentElement)
   const read = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback
   return {
-    upload: read('--success-color', '#10b981'),
+    upload: read('--success-color', '#0e7a47'),
     download: read('--primary-color', '#4f92ff'),
     grid: read('--border-color', 'rgba(128, 128, 128, 0.2)'),
-    text: read('--text-secondary', '#64748b'),
+    text: read('--text-secondary', '#4a5b78'),
     tooltipBg: read('--bg-elevated', '#ffffff'),
     tooltipBorder: read('--border-color', 'rgba(148,163,184,0.3)'),
   }

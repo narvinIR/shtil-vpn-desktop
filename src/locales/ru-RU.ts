@@ -48,10 +48,10 @@ export default {
 
   // 首页
   home: {
-    kernelHealthy: 'Kernel healthy',
-    kernelUnhealthy: 'Kernel has issues',
-    kernelCheckedAt: 'Last checked',
-    noIssues: 'No issues',
+    kernelHealthy: 'Связь в порядке',
+    kernelUnhealthy: 'Со связью проблемы',
+    kernelCheckedAt: 'Последняя проверка',
+    noIssues: 'Замечаний нет',
     // 基础操作
     start: 'Запуск',
     stop: 'Остановка',
@@ -231,7 +231,7 @@ export default {
     inbound: 'Входящий',
     network: 'Сеть',
     type: 'Тип',
-    sniffHost: 'Sniff Host',
+    sniffHost: 'Определённый адрес',
     remote: 'Удалённый адрес',
     started: 'Начато',
     startTime: 'Время подключения',
@@ -496,9 +496,9 @@ export default {
       autoCheckDesc: 'Автоматически проверять обновления приложения при запуске',
       channel: 'Канал обновлений',
       channelDesc: 'Выберите канал: stable, prerelease или autobuild',
-      channelStable: 'Stable',
-      channelPrerelease: 'Prerelease',
-      channelAutobuild: 'Autobuild',
+      channelStable: 'Стабильный',
+      channelPrerelease: 'Предварительный',
+      channelAutobuild: 'Ежедневная сборка',
       acceptPrerelease: 'Принимать предварительные версии',
       acceptPrereleaseDesc:
         'Разрешить получение и установку предварительных версий (тестовых версий)',
@@ -637,7 +637,7 @@ export default {
       systemBypassDesc: 'Пример: localhost;127.*;10.*;192.168.*',
       tunTitle: 'Виртуальный адаптер TUN',
       tunAddressInfo: 'Диапазоны 172.19.0.1/30 и fdfe:dcba:9876::1/126 заданы по умолчанию.',
-      tunMtu: 'MTU',
+      tunMtu: 'Размер пакета (MTU)',
       tunStack: 'Сетевая стековая модель',
       tunRouteExcludeAddress: 'Исключённые адреса маршрутизации',
       tunRouteExcludeAddressPlaceholder:
@@ -669,7 +669,7 @@ export default {
       originalConfigHint:
         'Текущая подписка использует исходную конфигурацию, поэтому расширенные настройки ниже не будут записаны',
       routingTitle: 'Маршрутизация и загрузки',
-      dnsTitle: 'DNS',
+      dnsTitle: 'Адресация (DNS)',
       defaultOutbound: 'Исходящее соединение по умолчанию (не-CN трафик)',
       outboundManual: 'Ручной выбор (рекомендуется)',
       outboundAuto: 'Автовыбор (URLTest)',
@@ -679,7 +679,7 @@ export default {
       blockAds: 'Блокировка рекламы (geosite-category-ads-all)',
       dnsHijack: 'Перехват DNS (hijack-dns)',
       enableAppGroups: 'Включить группы приложений (TG/YouTube/Netflix/OpenAI)',
-      fakeDnsTitle: 'Fake DNS',
+      fakeDnsTitle: 'Подставные адреса',
       fakeDnsEnabled: 'Включить Fake DNS (fakeip)',
       fakeDnsFilterMode: 'Область Fake DNS',
       fakeDnsFilterProxyOnly: 'Только прокси-трафик (не-CN совпадения)',
@@ -689,7 +689,7 @@ export default {
       fakeDnsIpv4Invalid: 'Неверный формат диапазона Fake DNS IPv4 (пример: 198.18.0.0/15)',
       fakeDnsIpv6Invalid: 'Неверный формат диапазона Fake DNS IPv6 (пример: fc00::/18)',
       dnsProxy: 'Прокси DNS (не-CN)',
-      dnsCn: 'CN DNS',
+      dnsCn: 'Внутренний DNS',
       dnsResolver: 'Резолвер DNS (для разрешения DoH-хостов)',
       urltestUrl: 'URL для URLTest',
       save: 'Сохранить настройки профиля',
