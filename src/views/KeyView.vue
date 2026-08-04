@@ -51,6 +51,14 @@
         <template v-if="deviceLink.linked">
           <p class="card-text">{{ t('key.fromBot.linkedText') }}</p>
           <div class="card-actions">
+            <!-- Оплата, срок и поддержка живут в боте, поэтому вход туда
+                 нужен и после привязки, а не только в момент получения кода -->
+            <n-button type="primary" @click="openBot">
+              <template #icon>
+                <n-icon><PaperPlaneOutline /></n-icon>
+              </template>
+              {{ t('key.fromBot.open') }}
+            </n-button>
             <n-button secondary @click="unlink">{{ t('key.fromBot.unlink') }}</n-button>
           </div>
         </template>
