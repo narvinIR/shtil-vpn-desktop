@@ -92,9 +92,6 @@ export const systemService = {
     return invokeWithAppContext<void>('download_kernel', { version }, { skipDataRestore: true })
   },
 
-  openDevtools() {
-    return invokeWithAppContext<void>('open_devtools')
-  },
 
   waitForNetworkReady(options?: {
     timeoutMs?: number

@@ -5,4 +5,5 @@
 pub mod common;
 pub mod config_generator;
 mod config_schema;
+pub mod ru_routing;
 pub mod settings_patch;

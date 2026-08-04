@@ -93,14 +93,3 @@ pub(crate) struct RouteConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_domain_resolver: Option<Value>,
 }
-
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct RemoteRuleSetConfig {
-    pub tag: String,
-    #[serde(rename = "type")]
-    pub kind: String,
-    pub format: String,
-    pub url: String,
-    pub download_detour: String,
-    pub update_interval: String,
-}

@@ -63,48 +63,16 @@ pub async fn download_kernel(app_handle: AppHandle, version: Option<String>) -> 
         format!("sing-box-{}-linux-{}.tar.gz", version, arch)
     };
 
-    let download_urls = [
-        format!(
-            "https://v6.gh-proxy.com/https://github.com/SagerNet/sing-box/releases/download/v{}/{}",
-            version, filename
-        ),
-        format!(
-            "https://gh-proxy.com/https://github.com/SagerNet/sing-box/releases/download/v{}/{}",
-            version, filename
-        ),
-        format!(
-            "https://ghfast.top/https://github.com/SagerNet/sing-box/releases/download/v{}/{}",
-            version, filename
-        ),
-        format!(
-            "https://hub.fastgit.xyz/SagerNet/sing-box/releases/download/v{}/{}",
-            version, filename
-        ),
-        format!(
-            "https://hub.fgit.cf/SagerNet/sing-box/releases/download/v{}/{}",
-            version, filename
-        ),
-        format!(
-            "https://cdn.jsdelivr.net/gh/SagerNet/sing-box@releases/download/v{}/{}",
-            version, filename
-        ),
-        format!(
-            "https://github.com/SagerNet/sing-box/releases/download/v{}/{}",
-            version, filename
-        ),
-    ];
+    // Только первоисточник. Форк качал ядро через шесть чужих зеркал, и первым
+    // стояло китайское: кто владеет зеркалом, тот кладёт клиенту внутрь VPN
+    // свой исполняемый файл. Ядро и так едет вшитым в установщик — это путь
+    // ручного обновления из настроек, и запасных источников у него быть не может.
+    let download_urls = [format!(
+        "https://github.com/SagerNet/sing-box/releases/download/v{}/{}",
+        version, filename
+    )];
 
-    info!("内核版本: {}", version);
-    info!("平台: {}, 架构: {}", platform, arch);
-    info!("文件名: {}", filename);
-    info!("主要下载 URL (v6.gh-proxy 加速): {}", download_urls[0]);
-    info!("备用下载源 1 (gh-proxy): {}", download_urls[1]);
-    info!("备用下载源 2 (ghfast.top): {}", download_urls[2]);
-    info!("备用下载源 3 (hub.fastgit.xyz): {}", download_urls[3]);
-    info!("备用下载源 4 (hub.fgit.cf): {}", download_urls[4]);
-    info!("备用下载源 5 (jsdelivr CDN): {}", download_urls[5]);
-    info!("备用下载源 6 (GitHub 原始): {}", download_urls[6]);
-    info!("总共 {} 个下载源", download_urls.len());
+    info!("ядро {} для {} {}: {}", version, platform, arch, filename);
 
     let work_dir = crate::utils::app_util::get_work_dir_sync();
     let kernel_dir = Path::new(&work_dir).join("sing-box");
@@ -157,16 +125,7 @@ pub async fn download_kernel(app_handle: AppHandle, version: Option<String>) -> 
                 break;
             }
             Err(e) => {
-                let source_name = match index {
-                    0 => "v6.gh-proxy 镜像",
-                    1 => "gh-proxy 镜像",
-                    2 => "ghfast.top 加速",
-                    3 => "hub.fastgit.xyz",
-                    4 => "hub.fgit.cf",
-                    5 => "jsdelivr CDN",
-                    6 => "GitHub 原始",
-                    _ => "未知源",
-                };
+                let source_name = "GitHub";
 
                 let error_details = format!("{} 失败: {}", source_name, e);
                 warn!("下载源 {} 失败: {}", source_name, e);

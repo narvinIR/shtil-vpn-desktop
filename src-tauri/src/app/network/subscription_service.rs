@@ -13,6 +13,7 @@ use crate::app::storage::enhanced_storage_service::{
     db_save_app_config_internal, db_save_subscriptions,
 };
 use crate::app::storage::state_model::AppConfig;
+use crate::utils::app_util::safe_url;
 use crate::utils::http_client;
 use base64::{engine::general_purpose, Engine as _};
 use helpers::{backup_existing_config, resolve_target_config_path, runtime_state_from_config};
@@ -75,13 +76,12 @@ struct SubscriptionFetchResult {
 const SUBSCRIPTION_USERINFO_COMPAT_UAS: [&str; 2] = ["clash.meta", "clash-verge/1.7.7"];
 
 fn normalized_active_config_path(path: &Option<String>) -> Option<&str> {
-    path.as_deref().map(str::trim).filter(|value| !value.is_empty())
+    path.as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
 }
 
-fn active_config_change_requires_restart(
-    previous: &Option<String>,
-    next: &Option<String>,
-) -> bool {
+fn active_config_change_requires_restart(previous: &Option<String>, next: &Option<String>) -> bool {
     normalized_active_config_path(previous) != normalized_active_config_path(next)
 }
 
@@ -517,7 +517,8 @@ async fn download_and_process_subscription(
         }
     }
 
-    info!("开始下载订阅: {}", url);
+    // Адрес пишем без токена: он равен ключу клиента (`safe_url`).
+    info!("качаем подписку: {}", safe_url(url));
 
     let (response_text, userinfo) = fetch_subscription_content(url)
         .await

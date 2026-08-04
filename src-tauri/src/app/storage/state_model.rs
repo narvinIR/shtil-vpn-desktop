@@ -89,11 +89,13 @@ impl Default for AppConfig {
             active_config_path: None,
             installed_kernel_version: None,
 
-            // sing-box 配置生成高级选项默认值：
-            // - 适配国内网络：国内域名直连，其他走代理；DNS 使用 CN/Proxy 双路分流
-            singbox_dns_proxy: "https://1.1.1.1/dns-query".to_string(),
-            singbox_dns_cn: "h3://dns.alidns.com/dns-query".to_string(),
-            singbox_dns_resolver: "114.114.114.114".to_string(),
+            // Профиль DNS совпадает с подпиской бота: зарубежное имя
+            // спрашиваем через туннель, российское — у российского резолвера
+            // напрямую (иначе сайт уводит на зарубежный узел раздачи), а имена
+            // самих серверов разрешает третий, простой.
+            singbox_dns_proxy: "https://dns.google/dns-query".to_string(),
+            singbox_dns_cn: "https://dns.yandex.ru/dns-query".to_string(),
+            singbox_dns_resolver: "77.88.8.8".to_string(),
             singbox_urltest_url: "http://cp.cloudflare.com/generate_204".to_string(),
             singbox_default_proxy_outbound: "manual".to_string(),
             singbox_block_ads: true,

@@ -5,7 +5,6 @@ use std::os::windows::process::CommandExt;
 
 use reqwest::Client;
 use std::time::{Duration, Instant};
-use tauri::Manager;
 use tokio::net::TcpStream;
 use tokio::time::{sleep, timeout};
 use tracing::{debug, info, warn};
@@ -346,18 +345,9 @@ fn check_admin_macos() -> bool {
     nix::unistd::geteuid().is_root()
 }
 
-// 打开开发者工具
-#[tauri::command]
-pub fn open_devtools(app_handle: tauri::AppHandle) -> Result<(), String> {
-    let main_window = app_handle
-        .get_webview_window("main")
-        .ok_or("无法获取主窗口".to_string())?;
-
-    main_window.open_devtools();
-    Ok(())
-}
-
-const TCP_PROBE_TARGETS: [(&str, u16); 3] = [("1.1.1.1", 443), ("8.8.8.8", 53), ("223.5.5.5", 53)];
+// Третьим стоит российский резолвер, а не китайский: проверка связи идёт
+// с реального адреса человека, до туннеля.
+const TCP_PROBE_TARGETS: [(&str, u16); 3] = [("1.1.1.1", 443), ("8.8.8.8", 53), ("77.88.8.8", 53)];
 
 const HTTP_PROBE_URLS: [&str; 3] = [
     "https://connectivitycheck.gstatic.com/generate_204",

@@ -18,12 +18,9 @@ pub(super) async fn get_latest_kernel_version(
         .user_agent("sing-box-windows/1.8.2")
         .build()?;
 
-    let api_urls = [
-        "https://api.github.com/repos/SagerNet/sing-box/releases/latest",
-        "https://v6.gh-proxy.com/https://api.github.com/repos/SagerNet/sing-box/releases/latest",
-        "https://gh-proxy.com/https://api.github.com/repos/SagerNet/sing-box/releases/latest",
-        "https://ghfast.top/https://api.github.com/repos/SagerNet/sing-box/releases/latest",
-    ];
+    // Только первоисточник: чужое зеркало подсказывает, какую версию ядра
+    // ставить, и подменяет ответ так же легко, как сам файл.
+    let api_urls = ["https://api.github.com/repos/SagerNet/sing-box/releases/latest"];
 
     for (index, api_url) in api_urls.iter().enumerate() {
         info!("尝试第 {} 个 API 源获取版本: {}", index + 1, api_url);
@@ -72,12 +69,9 @@ pub(super) async fn get_kernel_releases(
         .user_agent("sing-box-windows/1.8.2")
         .build()?;
 
-    let api_urls = [
-        "https://api.github.com/repos/SagerNet/sing-box/releases",
-        "https://v6.gh-proxy.com/https://api.github.com/repos/SagerNet/sing-box/releases",
-        "https://gh-proxy.com/https://api.github.com/repos/SagerNet/sing-box/releases",
-        "https://ghfast.top/https://api.github.com/repos/SagerNet/sing-box/releases",
-    ];
+    // Только первоисточник: чужое зеркало подсказывает, какую версию ядра
+    // ставить, и подменяет ответ так же легко, как сам файл.
+    let api_urls = ["https://api.github.com/repos/SagerNet/sing-box/releases"];
 
     for (index, api_url) in api_urls.iter().enumerate() {
         info!("尝试第 {} 个 API 源获取版本列表: {}", index + 1, api_url);

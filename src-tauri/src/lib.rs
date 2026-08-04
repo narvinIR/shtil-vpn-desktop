@@ -263,7 +263,6 @@ pub fn run() {
             crate::app::system::system_service::restart_as_admin,
             crate::app::system::system_service::check_network_connectivity,
             crate::app::system::system_service::wait_for_network_ready,
-            crate::app::system::system_service::open_devtools,
             crate::app::system::backup_service::backup_export_snapshot,
             crate::app::system::backup_service::backup_import_snapshot,
             // System - Sudo service commands (Linux/macOS TUN 提权)

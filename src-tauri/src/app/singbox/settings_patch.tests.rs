@@ -336,3 +336,79 @@ fn apply_app_settings_should_fallback_to_canonical_tun_route_exclude_address_def
         Some(&json!(default_tun_route_exclude_addresses()))
     );
 }
+
+/// Чужой конфиг со скачиваемыми наборами приходит к нам обеззараженным.
+///
+/// Настройки накладываются на ЛЮБОЙ конфиг — и на нашу подписку, и на ключ,
+/// принесённый человеком со стороны. Если оставить в нём набор с чужого
+/// адреса, ядро полезет за ним при старте и не поднимется вовсе, когда адрес
+/// не отвечает. Приложение на телефоне поступает так же (`RuRouting.apply`).
+#[test]
+fn foreign_config_loses_its_downloadable_rule_sets() {
+    let mut config = json!({
+        "route": {
+            "rule_set": [
+                {
+                    "tag": "geosite-cn",
+                    "type": "remote",
+                    "format": "binary",
+                    "url": "https://gh-proxy.com/https://raw.githubusercontent.com/x/geosite-cn.srs",
+                    "download_detour": "direct"
+                },
+                { "tag": "мой-список", "type": "local", "format": "binary", "path": "a.srs" }
+            ],
+            "rules": [
+                { "rule_set": "geosite-cn", "outbound": "direct" },
+                { "rule_set": ["geosite-cn", "мой-список"], "outbound": "direct" },
+                { "rule_set": "мой-список", "outbound": "direct" }
+            ],
+            "final": "manual"
+        },
+        "dns": {
+            "servers": [],
+            "rules": [{ "rule_set": "geosite-cn", "server": "dns-direct" }]
+        }
+    });
+
+    apply_app_settings_to_config(&mut config, &AppConfig::default());
+
+    let text = serde_json::to_string(&config).expect("конфиг должен сериализоваться");
+    assert!(
+        !text.contains("geosite-cn") && !text.contains("gh-proxy"),
+        "скачиваемый набор остался в конфиге: {text}"
+    );
+    assert!(
+        text.contains("мой-список"),
+        "выбросили лишнее: местные наборы трогать нельзя"
+    );
+}
+
+/// Правило, которому оставили только чужой набор, уходит вместе с ним.
+#[test]
+fn rules_that_lose_their_only_rule_set_are_dropped() {
+    let mut config = json!({
+        "route": {
+            "rule_set": [{
+                "tag": "geosite-ads",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://example.invalid/ads.srs",
+                "download_detour": "direct"
+            }],
+            "rules": [{ "rule_set": "geosite-ads", "action": "reject" }],
+            "final": "manual"
+        }
+    });
+
+    apply_app_settings_to_config(&mut config, &AppConfig::default());
+
+    let rules = config
+        .get("route")
+        .and_then(|route| route.get("rules"))
+        .and_then(|value| value.as_array())
+        .expect("route.rules 应存在");
+    assert!(
+        !rules.iter().any(|rule| rule.get("rule_set").is_some()),
+        "осталось правило с висячим набором: {rules:?}"
+    );
+}

@@ -1,15 +1,12 @@
 use super::common::{
     build_dns_server_config, dns_strategy, kernel_log_output_path, node_domain_resolver_strategy,
-    normalize_default_outbound, normalize_download_detour, normalize_fake_dns_filter_mode, DNS_CN,
-    DNS_FAKEIP, DNS_PROXY, DNS_RESOLVER, FAKE_DNS_FILTER_GLOBAL_NON_CN, PRIVATE_IP_CIDRS,
-    RS_GEOIP_CN, RS_GEOSITE_ADS, RS_GEOSITE_CN, RS_GEOSITE_GEOLOCATION_NOT_CN, RS_GEOSITE_GOOGLE,
-    RS_GEOSITE_NETFLIX, RS_GEOSITE_OPENAI, RS_GEOSITE_PRIVATE, RS_GEOSITE_TELEGRAM,
-    RS_GEOSITE_YOUTUBE,
+    normalize_default_outbound, DNS_CN, DNS_FAKEIP, DNS_PROXY, DNS_RESOLVER, PRIVATE_IP_CIDRS,
 };
 use super::config_schema::{
     CacheFileConfig, ClashApiConfig, DnsConfig, DnsServerConfig, ExperimentalConfig, LogConfig,
-    RemoteRuleSetConfig, RouteConfig, SingBoxConfig,
+    RouteConfig, SingBoxConfig,
 };
+use super::ru_routing::{ru_domain_suffix, RU_TUNNEL_ALWAYS, RU_ZONES};
 use crate::app::singbox::settings_patch::apply_app_settings_to_config;
 use crate::app::storage::state_model::AppConfig;
 use serde_json::{json, Value};
@@ -19,17 +16,15 @@ pub use super::common::{
     TAG_YOUTUBE,
 };
 
-/// 生成一份“通用且更适合国内环境”的 sing-box 配置骨架（不依赖模板文件）。
+/// Собирает основу конфига sing-box: что идёт мимо туннеля, а что в него.
 ///
-/// 目标：
-/// - 默认规则：国内域名/IP 直连，其他走代理（可“绕过国内域名”）。
-/// - DNS：国内用国内 DNS，非国内用 DoH（尽量避免污染）。
-/// - 兼容：保留 Clash API（前端节点选择/延迟测试依赖）。
+/// Российские сайты и домашняя сеть — напрямую, всё остальное — в туннель.
+/// Списки доменов лежат рядом (`ru_routing.rs`) и приезжают из приложения:
+/// качать их при старте нельзя, недоступный адрес роняет старт целиком.
 pub fn generate_base_config(app_config: &AppConfig) -> Value {
     let dns_strategy = dns_strategy(app_config);
 
     let default_outbound = normalize_default_outbound(app_config);
-    let download_detour = normalize_download_detour(app_config);
 
     let mut outbounds: Vec<Value> = vec![
         json!({
@@ -52,129 +47,35 @@ pub fn generate_base_config(app_config: &AppConfig) -> Value {
         }),
     ];
 
-    // 应用分流组：默认开启（对大多数用户比较实用），可在设置页关闭。
-    if app_config.singbox_enable_app_groups {
-        outbounds.extend([
-            json!({
-                "type": "selector",
-                "tag": TAG_TELEGRAM,
-                "outbounds": [TAG_MANUAL, TAG_AUTO]
-            }),
-            json!({
-                "type": "selector",
-                "tag": TAG_YOUTUBE,
-                "outbounds": [TAG_MANUAL, TAG_AUTO]
-            }),
-            json!({
-                "type": "selector",
-                "tag": TAG_NETFLIX,
-                "outbounds": [TAG_MANUAL, TAG_AUTO]
-            }),
-            json!({
-                "type": "selector",
-                "tag": TAG_OPENAI,
-                "outbounds": [TAG_MANUAL, TAG_AUTO]
-            }),
-            json!({
-                "type": "selector",
-                "tag": TAG_GOOGLE,
-                "outbounds": [TAG_MANUAL, TAG_AUTO]
-            }),
-        ]);
-    }
-
+    // Отдельных групп под Telegram, YouTube и прочее у нас нет: их разделение
+    // держалось на скачиваемых списках, которые из России не приезжают. Всё
+    // зарубежное идёт в туннель одинаково.
     outbounds.extend([
         json!({ "type": "direct", "tag": TAG_DIRECT }),
         json!({ "type": "block", "tag": TAG_BLOCK }),
     ]);
 
+    // Списки везём с собой (`ru_routing.rs`, собран из приложения). Скачиваемых
+    // наборов правил здесь нет и быть не может: недоступный адрес роняет старт
+    // ядра целиком, а из России первоисточник не отвечает с мая 2026.
+    //
+    // Отказ на AAAA идёт ПЕРЕД правилом выдачи адреса — иначе устройство
+    // спросит шестую версию, получит настоящий адрес российского сайта и уйдёт
+    // туда напрямую, где маршрута нет: разом ложатся банки, госуслуги и
+    // маркетплейсы. Поле strategy этого не лечит.
+    let ru_direct = ru_domain_suffix();
     let mut dns_rules: Vec<Value> = vec![
         json!({ "clash_mode": "direct", "server": DNS_CN }),
         json!({ "clash_mode": "global", "server": DNS_PROXY }),
-        json!({ "rule_set": [RS_GEOSITE_CN, RS_GEOIP_CN], "server": DNS_CN }),
-        json!({ "rule_set": RS_GEOSITE_GEOLOCATION_NOT_CN, "server": DNS_PROXY }),
+        json!({ "domain_suffix": ru_direct, "query_type": ["AAAA"], "action": "reject" }),
+        json!({ "domain_suffix": RU_ZONES, "query_type": ["AAAA"], "action": "reject" }),
+        json!({ "domain_suffix": ru_direct, "server": DNS_CN }),
+        json!({ "domain_suffix": RU_ZONES, "server": DNS_CN }),
     ];
-
-    if app_config.singbox_block_ads {
-        dns_rules.insert(2, json!({ "rule_set": RS_GEOSITE_ADS, "action": "reject" }));
-    }
 
     apply_fake_dns_rules(&mut dns_rules, app_config);
 
-    let mut rule_sets: Vec<Value> = Vec::new();
-    if app_config.singbox_block_ads {
-        rule_sets.push(remote_rule_set_value(
-            RS_GEOSITE_ADS,
-            "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs",
-            download_detour,
-            "1d",
-        ));
-    }
-
-    rule_sets.extend([
-        remote_rule_set_value(
-            RS_GEOSITE_CN,
-            "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
-            download_detour,
-            "1d",
-        ),
-        remote_rule_set_value(
-            RS_GEOSITE_GEOLOCATION_NOT_CN,
-            "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
-            download_detour,
-            "1d",
-        ),
-    ]);
-
-    if app_config.singbox_enable_app_groups {
-        rule_sets.extend([
-            remote_rule_set_value(
-                RS_GEOSITE_TELEGRAM,
-                "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-telegram.srs",
-                download_detour,
-                "7d",
-            ),
-            remote_rule_set_value(
-                RS_GEOSITE_YOUTUBE,
-                "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-youtube.srs",
-                download_detour,
-                "7d",
-            ),
-            remote_rule_set_value(
-                RS_GEOSITE_NETFLIX,
-                "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-netflix.srs",
-                download_detour,
-                "7d",
-            ),
-            remote_rule_set_value(
-                RS_GEOSITE_OPENAI,
-                "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-openai.srs",
-                download_detour,
-                "7d",
-            ),
-            remote_rule_set_value(
-                RS_GEOSITE_GOOGLE,
-                "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google.srs",
-                download_detour,
-                "7d",
-            ),
-        ]);
-    }
-
-    rule_sets.extend([
-        remote_rule_set_value(
-            RS_GEOSITE_PRIVATE,
-            "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-private.srs",
-            TAG_DIRECT,
-            "7d",
-        ),
-        remote_rule_set_value(
-            RS_GEOIP_CN,
-            "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
-            download_detour,
-            "1d",
-        ),
-    ]);
+    let rule_sets: Vec<Value> = Vec::new();
 
     let mut route_rules: Vec<Value> = vec![json!({ "action": "sniff" })];
 
@@ -187,27 +88,16 @@ pub fn generate_base_config(app_config: &AppConfig) -> Value {
         json!({ "clash_mode": "direct", "outbound": TAG_DIRECT }),
     ]);
 
-    if app_config.singbox_block_ads {
-        route_rules.push(json!({ "rule_set": RS_GEOSITE_ADS, "action": "reject" }));
-    }
-
-    if app_config.singbox_enable_app_groups {
-        route_rules.extend([
-            json!({ "rule_set": RS_GEOSITE_TELEGRAM, "outbound": TAG_TELEGRAM }),
-            json!({ "rule_set": RS_GEOSITE_YOUTUBE, "outbound": TAG_YOUTUBE }),
-            json!({ "rule_set": RS_GEOSITE_NETFLIX, "outbound": TAG_NETFLIX }),
-            json!({ "rule_set": RS_GEOSITE_OPENAI, "outbound": TAG_OPENAI }),
-            // Google 服务分流（包含 Gemini、DeepMind、搜索、云服务等所有 Google 相关域名）
-            json!({ "rule_set": RS_GEOSITE_GOOGLE, "outbound": TAG_GOOGLE }),
-        ]);
-    }
-
-    // 直接内置私网段，避免依赖不存在的 geoip-private 规则集导致启动 404 退出
+    // Домашняя сеть и российские сайты — мимо туннеля. Всё остальное уходит в
+    // туннель последним правилом (`final`), поэтому перечислять зарубежное не
+    // нужно: список «что в обход» короче и не устаревает.
     route_rules.extend([
-        json!({ "rule_set": RS_GEOSITE_PRIVATE, "outbound": TAG_DIRECT }),
         json!({ "ip_cidr": PRIVATE_IP_CIDRS, "outbound": TAG_DIRECT }),
-        json!({ "rule_set": [RS_GEOSITE_CN, RS_GEOIP_CN], "outbound": TAG_DIRECT }),
-        json!({ "rule_set": RS_GEOSITE_GEOLOCATION_NOT_CN, "outbound": default_outbound }),
+        // Первым — то, что в России закрыто, хотя и живёт в зоне .ru: иначе
+        // правило «всё российское напрямую» увело бы эти сайты мимо туннеля.
+        json!({ "domain_suffix": RU_TUNNEL_ALWAYS, "outbound": default_outbound }),
+        json!({ "domain_suffix": ru_direct, "outbound": TAG_DIRECT }),
+        json!({ "domain_suffix": RU_ZONES, "outbound": TAG_DIRECT }),
     ]);
 
     if app_config.singbox_fake_dns_enabled {
@@ -243,12 +133,13 @@ pub fn generate_base_config(app_config: &AppConfig) -> Value {
             },
             clash_api: ClashApiConfig {
                 external_controller: format!("127.0.0.1:{}", app_config.api_port),
-                external_ui: "metacubexd".to_string(),
-                // 让 sing-box 自动下载 UI（国内网络可能被墙，下载走代理可提高成功率）
-                external_ui_download_url:
-                    "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip"
-                        .to_string(),
-                external_ui_download_detour: download_detour.to_string(),
+                // Чужой веб-панели внутри нашего приложения нет: форк тянул её
+                // из постороннего репозитория и открывал ей полные права над
+                // ядром. Экраны у нас свои, а показатели берутся тем же Clash
+                // API напрямую.
+                external_ui: String::new(),
+                external_ui_download_url: String::new(),
+                external_ui_download_detour: String::new(),
                 default_mode: "rule".to_string(),
             },
         },
@@ -292,7 +183,7 @@ fn build_dns_servers(
             Some(dns_strategy),
             Some(default_outbound),
             Some(DNS_RESOLVER),
-            "https://1.1.1.1/dns-query",
+            "https://dns.google/dns-query",
         ),
         build_dns_server_with_fallback(
             DNS_CN,
@@ -300,7 +191,7 @@ fn build_dns_servers(
             Some(dns_strategy),
             Some(TAG_DIRECT),
             Some(DNS_RESOLVER),
-            "h3://dns.alidns.com/dns-query",
+            "https://dns.yandex.ru/dns-query",
         ),
         build_dns_server_with_fallback(
             DNS_RESOLVER,
@@ -308,7 +199,7 @@ fn build_dns_servers(
             Some(dns_strategy),
             Some(TAG_DIRECT),
             None,
-            "114.114.114.114",
+            "77.88.8.8",
         ),
     ];
 
@@ -371,49 +262,12 @@ fn apply_fake_dns_rules(dns_rules: &mut Vec<Value>, app_config: &AppConfig) {
         return;
     }
 
-    match normalize_fake_dns_filter_mode(app_config) {
-        FAKE_DNS_FILTER_GLOBAL_NON_CN => {
-            // 全局非 CN：保留前面的 CN 规则，其他 A/AAAA 查询统一落到 fakeip。
-            dns_rules.push(json!({
-                "query_type": ["A", "AAAA"],
-                "server": DNS_FAKEIP
-            }));
-        }
-        _ => {
-            // 仅代理流量：非 CN 域名走 fakeip，国内域名仍按原逻辑直连解析。
-            let rule = json!({
-                "query_type": ["A", "AAAA"],
-                "rule_set": RS_GEOSITE_GEOLOCATION_NOT_CN,
-                "server": DNS_FAKEIP
-            });
-
-            let insert_idx = dns_rules
-                .iter()
-                .position(|item| {
-                    item.get("rule_set").and_then(|v| v.as_str())
-                        == Some(RS_GEOSITE_GEOLOCATION_NOT_CN)
-                })
-                .unwrap_or(dns_rules.len());
-            dns_rules.insert(insert_idx, rule);
-        }
-    }
-}
-
-fn remote_rule_set_value(
-    tag: &str,
-    url: &str,
-    download_detour: &str,
-    update_interval: &str,
-) -> Value {
-    let rs = RemoteRuleSetConfig {
-        tag: tag.to_string(),
-        kind: "remote".to_string(),
-        format: "binary".to_string(),
-        url: url.to_string(),
-        download_detour: download_detour.to_string(),
-        update_interval: update_interval.to_string(),
-    };
-    serde_json::to_value(rs).expect("RemoteRuleSetConfig 序列化失败")
+    // Правило идёт последним: российские домены отсеяны выше и решаются
+    // настоящим адресом, всё остальное уходит в туннель через подменный.
+    dns_rules.push(json!({
+        "query_type": ["A", "AAAA"],
+        "server": DNS_FAKEIP
+    }));
 }
 
 /// 基于骨架配置注入节点，并更新“自动选择/手动切换”等组的候选列表。

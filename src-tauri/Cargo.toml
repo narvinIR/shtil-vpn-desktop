@@ -32,7 +32,9 @@ semver = "1.0"
 serde_yaml = "0.9"
 
 # Tauri 2.0 最新版本
-tauri = { version = "2.10.2", features = ["tray-icon", "unstable", "devtools"] }
+# Отладочная консоль в релизной сборке — лишняя поверхность: она даёт полный
+# доступ к окну приложения. В отладочных сборках Tauri включает её сам.
+tauri = { version = "2.10.2", features = ["tray-icon", "unstable"] }
 reqwest = { version = "0.12", features = ["json", "stream", "native-tls-vendored"] }
 dirs = "5.0.1"
 tokio = { version = "1.48", features = ["full"] }

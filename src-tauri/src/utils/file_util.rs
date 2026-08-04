@@ -174,7 +174,11 @@ pub async fn unzip_file(path: &str, to: &str) -> Result<(), String> {
     Ok(())
 }
 
-// 从代理下载，失败后尝试直接下载
+/// Скачивание с первоисточника.
+///
+/// Раньше здесь первым шло китайское зеркало `gh-proxy.com`, и только потом
+/// прямой адрес. Через эту же дорогу приезжало обновление приложения — то есть
+/// владелец зеркала мог поставить клиенту что угодно.
 pub async fn download_with_fallback<F>(
     original_url: &str,
     path: &str,
@@ -183,19 +187,5 @@ pub async fn download_with_fallback<F>(
 where
     F: Fn(u32) + Send + Clone + 'static,
 {
-    // 首先尝试通过代理下载 https://gh-proxy.com/https://github.com/...
-    let proxy_url = format!("https://gh-proxy.com/{}", original_url);
-    info!("尝试通过代理下载: {}", proxy_url);
-
-    match download_file(proxy_url, path, progress_callback.clone()).await {
-        Ok(_) => {
-            info!("通过代理下载成功");
-            Ok(())
-        }
-        Err(e) => {
-            info!("代理下载失败: {}，尝试直接下载", e);
-            // 代理下载失败，尝试直接下载
-            download_file(original_url.to_string(), path, progress_callback).await
-        }
-    }
+    download_file(original_url.to_string(), path, progress_callback).await
 }

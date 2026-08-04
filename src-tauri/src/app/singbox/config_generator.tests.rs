@@ -121,32 +121,6 @@ fn generated_log_should_write_to_kernel_work_dir_file() {
 }
 
 #[test]
-fn ads_dns_rule_should_use_reject_action() {
-    let app_config = AppConfig {
-        singbox_block_ads: true,
-        ..AppConfig::default()
-    };
-
-    let config = generate_base_config(&app_config);
-    let rules = config
-        .get("dns")
-        .and_then(|v| v.get("rules"))
-        .and_then(|v| v.as_array())
-        .expect("dns.rules 应存在");
-
-    let ads_rule = rules
-        .iter()
-        .find(|rule| rule.get("rule_set").and_then(|v| v.as_str()) == Some(RS_GEOSITE_ADS))
-        .expect("启用广告拦截时应包含 geosite ads DNS 规则");
-
-    assert_eq!(
-        ads_rule.get("action").and_then(|v| v.as_str()),
-        Some("reject")
-    );
-    assert!(ads_rule.get("server").is_none());
-}
-
-#[test]
 fn fake_dns_should_append_fakeip_server_and_enable_reverse_mapping() {
     let app_config = AppConfig {
         singbox_fake_dns_enabled: true,
@@ -195,11 +169,14 @@ fn fake_dns_should_append_fakeip_server_and_enable_reverse_mapping() {
     );
 }
 
+/// Подменные адреса выдаются всему, что идёт в туннель.
+///
+/// Раньше зарубежное отличалось от российского по скачиваемому списку; теперь
+/// российские домены отсеиваются правилами выше и решаются настоящим адресом.
 #[test]
-fn fake_dns_global_non_cn_should_add_catch_all_query_rule() {
+fn fake_dns_adds_a_catch_all_query_rule() {
     let app_config = AppConfig {
         singbox_fake_dns_enabled: true,
-        singbox_fake_dns_filter_mode: "global_non_cn".to_string(),
         ..AppConfig::default()
     };
 
@@ -215,10 +192,7 @@ fn fake_dns_global_non_cn_should_add_catch_all_query_rule() {
             && rule.get("rule_set").is_none()
             && rule.get("query_type").is_some()
     });
-    assert!(
-        catch_all.is_some(),
-        "global_non_cn 模式应生成 A/AAAA catch-all fakeip 规则"
-    );
+    assert!(catch_all.is_some(), "нет правила подменных адресов");
 }
 
 #[test]
@@ -294,5 +268,136 @@ fn generated_tun_inbound_should_use_explicit_route_exclude_address_override() {
     assert_eq!(
         tun_in.get("route_exclude_address"),
         Some(&serde_json::json!(["203.0.113.0/24"]))
+    );
+}
+
+/// Списки правил не качаются: недоступный адрес роняет старт ядра целиком.
+///
+/// Форк тянул одиннадцать наборов `.srs` через китайское зеркало
+/// `gh-proxy.com`. Из России первоисточник не отвечает с мая 2026, а зеркало
+/// вдобавок видит реальный адрес человека — то есть ровно то, от чего он
+/// включает VPN. Списки везём с собой, как в боте и на телефоне (правило
+/// `no-remote-rulesets-in-config`).
+#[test]
+fn generated_config_should_not_download_anything_at_startup() {
+    let config = generate_base_config(&AppConfig::default());
+    let text = serde_json::to_string(&config).expect("конфиг должен сериализоваться");
+
+    for forbidden in [
+        "gh-proxy",
+        "raw.githubusercontent",
+        "\"type\":\"remote\"",
+        ".srs",
+    ] {
+        assert!(
+            !text.contains(forbidden),
+            "конфиг всё ещё качает списки при старте ({forbidden})"
+        );
+    }
+}
+
+/// Ни одно правило не ссылается на набор, которого нет.
+///
+/// Висячий тег ядро отвергает вместе со всем конфигом — VPN не включится
+/// вовсе. Тест страхует от половинчатой правки: наборы убрали, а правила,
+/// которые на них ссылались, забыли.
+#[test]
+fn no_rule_may_point_to_a_missing_rule_set() {
+    let config = generate_base_config(&AppConfig::default());
+    let declared: Vec<String> = config
+        .get("route")
+        .and_then(|route| route.get("rule_set"))
+        .and_then(|value| value.as_array())
+        .map(|sets| {
+            sets.iter()
+                .filter_map(|set| set.get("tag").and_then(|tag| tag.as_str()))
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut used: Vec<String> = Vec::new();
+    for section in [
+        config.get("route").and_then(|route| route.get("rules")),
+        config.get("dns").and_then(|dns| dns.get("rules")),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        for rule in section.as_array().into_iter().flatten() {
+            match rule.get("rule_set") {
+                Some(Value::String(tag)) => used.push(tag.clone()),
+                Some(Value::Array(tags)) => used.extend(
+                    tags.iter()
+                        .filter_map(|tag| tag.as_str())
+                        .map(str::to_string),
+                ),
+                _ => {}
+            }
+        }
+    }
+
+    for tag in used {
+        assert!(
+            declared.contains(&tag),
+            "правило ссылается на набор «{tag}», которого нет в route.rule_set"
+        );
+    }
+}
+
+/// Чужой резолвер по умолчанию — это утечка запросов клиента.
+///
+/// Форк по умолчанию слал прямые запросы в Alibaba (`dns.alidns.com`) и в
+/// China Telecom (`114.114.114.114`) — мимо туннеля, с реального адреса.
+/// Наш профиль совпадает с ботом: зарубежное имя спрашиваем через туннель,
+/// российское — у российского резолвера напрямую.
+#[test]
+fn default_dns_must_not_leak_to_foreign_resolvers() {
+    let config = generate_base_config(&AppConfig::default());
+    let text = serde_json::to_string(&config).expect("конфиг должен сериализоваться");
+
+    for forbidden in ["alidns", "114.114.114.114", "223.5.5.5", "119.29.29.29"] {
+        assert!(
+            !text.contains(forbidden),
+            "запросы клиента по умолчанию уходят в чужой резолвер ({forbidden})"
+        );
+    }
+}
+
+/// Заблокированные сайты в зоне `.ru` обязаны идти ЧЕРЕЗ туннель.
+///
+/// Их 35 — «Новая газета», «Дождь», The Insider и подобные. Правило «всё
+/// российское напрямую» отправило бы их мимо туннеля, и человек не открыл бы
+/// ровно то, ради чего платит. У бота такое правило стоит первым, здесь тоже.
+#[test]
+fn blocked_ru_sites_must_go_through_the_tunnel() {
+    let config = generate_base_config(&AppConfig::default());
+    let rules = config
+        .get("route")
+        .and_then(|route| route.get("rules"))
+        .and_then(|value| value.as_array())
+        .expect("route.rules 应存在");
+
+    let position = |needle: &str| {
+        rules.iter().position(|rule| {
+            rule.get("domain_suffix")
+                .and_then(|value| value.as_array())
+                .map(|list| list.iter().any(|d| d.as_str() == Some(needle)))
+                .unwrap_or(false)
+        })
+    };
+
+    let blocked = position("novayagazeta.ru").expect("нет правила для заблокированных сайтов");
+    let zones = position(".ru").expect("нет правила для российских зон");
+
+    assert!(
+        blocked < zones,
+        "правило «{}» стоит после правила зон — сайт уйдёт напрямую",
+        "novayagazeta.ru"
+    );
+    assert_eq!(
+        rules[blocked].get("outbound").and_then(|v| v.as_str()),
+        Some(TAG_MANUAL),
+        "заблокированный сайт отправлен не в туннель"
     );
 }

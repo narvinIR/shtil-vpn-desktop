@@ -1,16 +1,66 @@
 use super::common::{
     build_dns_server_config, dns_strategy, ensure_kernel_log_output, normalize_default_outbound,
-    normalize_download_detour, normalize_fake_dns_filter_mode, DNS_CN, DNS_FAKEIP, DNS_PROXY,
-    DNS_RESOLVER, FAKE_DNS_FILTER_GLOBAL_NON_CN, RS_GEOSITE_ADS, RS_GEOSITE_GEOLOCATION_NOT_CN,
-    RS_GEOSITE_GOOGLE, RS_GEOSITE_NETFLIX, RS_GEOSITE_OPENAI, RS_GEOSITE_TELEGRAM,
-    RS_GEOSITE_YOUTUBE, TAG_AUTO, TAG_DIRECT, TAG_GOOGLE, TAG_NETFLIX, TAG_OPENAI, TAG_TELEGRAM,
-    TAG_YOUTUBE,
+    DNS_CN, DNS_FAKEIP, DNS_PROXY, DNS_RESOLVER, TAG_AUTO, TAG_DIRECT,
 };
 use crate::app::core::tun_profile::{
     default_tun_route_exclude_addresses, normalize_persisted_tun_route_exclude_address,
 };
 use crate::app::storage::state_model::AppConfig;
 use serde_json::{json, Map, Value};
+
+/// Выбрасывает из конфига наборы правил, которые ядро качало бы при старте.
+///
+/// Недоступный адрес роняет старт целиком — не «разделение трафика хуже», а
+/// VPN не включился вовсе. Из России первоисточник этих наборов не отвечает с
+/// мая 2026, поэтому чистим и свой конфиг, и любой принесённый со стороны.
+/// Вместе с набором уходят правила, которые на него ссылались: висячий тег
+/// ядро отвергает так же строго, как недоступный адрес.
+fn strip_remote_rule_sets(config_obj: &mut Map<String, Value>) {
+    let mut dropped: Vec<String> = Vec::new();
+
+    if let Some(rule_sets) = config_obj
+        .get_mut("route")
+        .and_then(|route| route.get_mut("rule_set"))
+        .and_then(|value| value.as_array_mut())
+    {
+        rule_sets.retain(|rs| {
+            if rs.get("type").and_then(|v| v.as_str()) != Some("remote") {
+                return true;
+            }
+            if let Some(tag) = rs.get("tag").and_then(|v| v.as_str()) {
+                dropped.push(tag.to_string());
+            }
+            false
+        });
+    }
+
+    if dropped.is_empty() {
+        return;
+    }
+
+    for section in ["route", "dns"] {
+        let Some(rules) = config_obj
+            .get_mut(section)
+            .and_then(|value| value.get_mut("rules"))
+            .and_then(|value| value.as_array_mut())
+        else {
+            continue;
+        };
+
+        rules.retain_mut(|rule| match rule.get_mut("rule_set") {
+            Some(Value::String(tag)) => !dropped.contains(tag),
+            Some(Value::Array(tags)) => {
+                tags.retain(|tag| {
+                    tag.as_str()
+                        .map(|tag| !dropped.contains(&tag.to_string()))
+                        .unwrap_or(true)
+                });
+                !tags.is_empty()
+            }
+            _ => true,
+        });
+    }
+}
 
 fn proxy_listen_address(app_config: &AppConfig) -> &'static str {
     if app_config.allow_lan_access {
@@ -28,6 +78,7 @@ fn proxy_listen_address(app_config: &AppConfig) -> &'static str {
 pub fn apply_app_settings_to_config(config: &mut Value, app_config: &AppConfig) {
     if let Some(config_obj) = config.as_object_mut() {
         ensure_kernel_log_output(config_obj);
+        strip_remote_rule_sets(config_obj);
         apply_inbounds_settings(config_obj, app_config);
 
         // 针对“本程序生成的订阅配置”，尝试同步高级选项。
@@ -44,11 +95,6 @@ pub fn apply_app_settings_to_config(config: &mut Value, app_config: &AppConfig) 
                 clash_api_obj.insert(
                     "external_controller".to_string(),
                     json!(format!("127.0.0.1:{}", app_config.api_port)),
-                );
-                // 允许用户指定 UI/规则集下载走哪个出站（国内网络通常需要走代理）
-                clash_api_obj.insert(
-                    "external_ui_download_detour".to_string(),
-                    json!(normalize_download_detour(app_config)),
                 );
             }
 
@@ -127,7 +173,6 @@ pub fn apply_port_settings_only(config: &mut Value, app_config: &AppConfig) {
 
 fn apply_profile_settings_if_present(config_obj: &mut Map<String, Value>, app_config: &AppConfig) {
     let default_outbound = normalize_default_outbound(app_config);
-    let download_detour = normalize_download_detour(app_config);
     let mut fake_dns_route_cleanup_pairs = vec![
         (
             normalize_fakeip_range(&app_config.singbox_fake_dns_ipv4_range, "198.18.0.0/15"),
@@ -224,35 +269,13 @@ fn apply_profile_settings_if_present(config_obj: &mut Map<String, Value>, app_co
             sync_fake_dns_server(servers, app_config);
         }
 
-        // 3) 广告拦截：同步 dns.rules（如果存在/可定位）
+        // Блокировки рекламы у нас нет: она держалась на скачиваемом наборе.
         if let Some(rules) = dns_obj.get_mut("rules").and_then(|v| v.as_array_mut()) {
-            let mut ads_rule_index: Option<usize> = None;
-            for (idx, rule) in rules.iter().enumerate() {
-                if rule.get("rule_set").and_then(|v| v.as_str()) == Some(RS_GEOSITE_ADS) {
-                    ads_rule_index = Some(idx);
-                    break;
-                }
-            }
-
-            if app_config.singbox_block_ads {
-                if ads_rule_index.is_none() {
-                    // 尽量插入在前面：优先拦截广告域名的解析
-                    rules.insert(0, json!({ "rule_set": RS_GEOSITE_ADS, "action": "reject" }));
-                } else if let Some(i) = ads_rule_index {
-                    if let Some(obj) = rules.get_mut(i).and_then(|v| v.as_object_mut()) {
-                        obj.insert("action".to_string(), json!("reject"));
-                        obj.remove("server");
-                    }
-                }
-            } else if let Some(i) = ads_rule_index {
-                rules.remove(i);
-            }
-
             sync_fake_dns_rules(rules, app_config);
         }
     }
 
-    // 4) route：同步 final / hijack-dns / ads reject / rule_set download_detour
+    // 4) route: финальный выход, перехват DNS, подменные адреса
     if let Some(route_obj) = config_obj.get_mut("route").and_then(|v| v.as_object_mut()) {
         route_obj.insert("final".to_string(), json!(default_outbound));
         route_obj.insert(
@@ -265,36 +288,6 @@ fn apply_profile_settings_if_present(config_obj: &mut Map<String, Value>, app_co
         // 兼容旧配置残留字段，避免触发 1.14 前置报错。
         route_obj.remove("default_domain_strategy");
 
-        if let Some(rule_sets) = route_obj.get_mut("rule_set").and_then(|v| v.as_array_mut()) {
-            // 仅对 remote 规则集更新 download_detour，避免影响本地文件规则集
-            for rs in rule_sets.iter_mut() {
-                if let Some(obj) = rs.as_object_mut() {
-                    if obj.get("type").and_then(|v| v.as_str()) == Some("remote") {
-                        obj.insert("download_detour".to_string(), json!(download_detour));
-                    }
-                }
-            }
-
-            // 按开关移除不再需要的规则集，避免后台持续下载无用文件
-            if !app_config.singbox_block_ads {
-                rule_sets
-                    .retain(|rs| rs.get("tag").and_then(|v| v.as_str()) != Some(RS_GEOSITE_ADS));
-            }
-            if !app_config.singbox_enable_app_groups {
-                rule_sets.retain(|rs| {
-                    let tag = rs.get("tag").and_then(|v| v.as_str()).unwrap_or("");
-                    !matches!(
-                        tag,
-                        RS_GEOSITE_TELEGRAM
-                            | RS_GEOSITE_YOUTUBE
-                            | RS_GEOSITE_NETFLIX
-                            | RS_GEOSITE_OPENAI
-                            | RS_GEOSITE_GOOGLE
-                    )
-                });
-            }
-        }
-
         if let Some(rules) = route_obj.get_mut("rules").and_then(|v| v.as_array_mut()) {
             let sniff_index = ensure_sniff_route_rule(rules);
 
@@ -302,11 +295,6 @@ fn apply_profile_settings_if_present(config_obj: &mut Map<String, Value>, app_co
             for rule in rules.iter_mut() {
                 if let Some(obj) = rule.as_object_mut() {
                     if obj.get("clash_mode").and_then(|v| v.as_str()) == Some("global") {
-                        obj.insert("outbound".to_string(), json!(default_outbound));
-                    }
-                    if obj.get("rule_set").and_then(|v| v.as_str())
-                        == Some(RS_GEOSITE_GEOLOCATION_NOT_CN)
-                    {
                         obj.insert("outbound".to_string(), json!(default_outbound));
                     }
                 }
@@ -335,56 +323,7 @@ fn apply_profile_settings_if_present(config_obj: &mut Map<String, Value>, app_co
                 rules.remove(i);
             }
 
-            // 广告拦截 route.rules（按 rule_set + action 定位）
-            let mut ads_index: Option<usize> = None;
-            for (idx, rule) in rules.iter().enumerate() {
-                if rule.get("rule_set").and_then(|v| v.as_str()) == Some(RS_GEOSITE_ADS)
-                    && rule.get("action").and_then(|v| v.as_str()).is_some()
-                {
-                    ads_index = Some(idx);
-                    break;
-                }
-            }
-            if app_config.singbox_block_ads {
-                if ads_index.is_none() {
-                    rules.push(json!({ "rule_set": RS_GEOSITE_ADS, "action": "reject" }));
-                }
-            } else if let Some(i) = ads_index {
-                rules.remove(i);
-            }
-
-            // 业务分流组：关闭后移除相关规则，避免"空组/无意义分流"
-            if !app_config.singbox_enable_app_groups {
-                rules.retain(|rule| {
-                    let rs = rule.get("rule_set").and_then(|v| v.as_str()).unwrap_or("");
-                    !matches!(
-                        rs,
-                        RS_GEOSITE_TELEGRAM
-                            | RS_GEOSITE_YOUTUBE
-                            | RS_GEOSITE_NETFLIX
-                            | RS_GEOSITE_OPENAI
-                            | RS_GEOSITE_GOOGLE
-                    )
-                });
-            }
-
             sync_fake_dns_route_rules(rules, app_config, &fake_dns_route_cleanup_pairs);
-        }
-    }
-
-    // 5) outbounds：按开关移除业务分流组（如果存在）
-    if let Some(outbounds) = config_obj
-        .get_mut("outbounds")
-        .and_then(|v| v.as_array_mut())
-    {
-        if !app_config.singbox_enable_app_groups {
-            outbounds.retain(|ob| {
-                let tag = ob.get("tag").and_then(|v| v.as_str()).unwrap_or("");
-                !matches!(
-                    tag,
-                    TAG_TELEGRAM | TAG_YOUTUBE | TAG_NETFLIX | TAG_OPENAI | TAG_GOOGLE
-                )
-            });
         }
     }
 }
@@ -435,30 +374,12 @@ fn sync_fake_dns_rules(rules: &mut Vec<Value>, app_config: &AppConfig) {
         return;
     }
 
-    match normalize_fake_dns_filter_mode(app_config) {
-        FAKE_DNS_FILTER_GLOBAL_NON_CN => {
-            rules.push(json!({
-                "query_type": ["A", "AAAA"],
-                "server": DNS_FAKEIP
-            }));
-        }
-        _ => {
-            let rule = json!({
-                "query_type": ["A", "AAAA"],
-                "rule_set": RS_GEOSITE_GEOLOCATION_NOT_CN,
-                "server": DNS_FAKEIP
-            });
-
-            let insert_idx = rules
-                .iter()
-                .position(|item| {
-                    item.get("rule_set").and_then(|v| v.as_str())
-                        == Some(RS_GEOSITE_GEOLOCATION_NOT_CN)
-                })
-                .unwrap_or(rules.len());
-            rules.insert(insert_idx, rule);
-        }
-    }
+    // Правило идёт последним: российские домены отсеяны выше и решаются
+    // настоящим адресом, всё остальное уходит в туннель через подменный.
+    rules.push(json!({
+        "query_type": ["A", "AAAA"],
+        "server": DNS_FAKEIP
+    }));
 }
 
 fn sync_fake_dns_route_rules(
