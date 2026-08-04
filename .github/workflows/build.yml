@@ -10,7 +10,10 @@ name: Сборка «Штиль» для компьютера
 
 on:
   push:
-    tags: ['v*']
+    # Своё пространство имён, не общее `v*`: апстрим живёт на версиях 2.x, и его
+    # тег, попав сюда при следующем подтягивании, выглядел бы «новее» нашего 1.0.0
+    # и запускал бы выкладку чужой сборки под нашим именем.
+    tags: ['desktop-v*']
   workflow_dispatch:
 
 jobs:
@@ -65,13 +68,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Ядро sing-box в сборку
         run: pnpm kernel:fetch
+      - name: Версия из тега
+        id: ver
+        # Тег зовётся desktop-v1.0.1, но на странице скачивания человек должен
+        # видеть «Штиль VPN 1.0.1», а не наше служебное пространство имён.
+        run: echo "value=${GITHUB_REF_NAME#desktop-v}" >> "$GITHUB_OUTPUT"
+        shell: bash
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: ${{ matrix.args }}
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          releaseName: 'Штиль VPN ${{ github.ref_name }}'
+          releaseName: 'Штиль VPN ${{ steps.ver.outputs.value }}'
           releaseDraft: true
           releaseBody: |
             Приложение «Штиль» для компьютера.
