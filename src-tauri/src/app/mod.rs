@@ -16,6 +16,8 @@ pub mod core {
 
 // Network services
 pub mod network {
+    pub mod device_link;
+    pub mod guest;
     pub mod subscription_service;
 }
 
@@ -24,6 +26,7 @@ pub mod system {
     pub mod background_tasks;
     pub mod backup_service;
     pub mod config_service;
+    pub mod startup_defaults_service;
     pub mod startup_restore_service;
     pub mod startup_refresh_service;
     pub mod sudo_service;

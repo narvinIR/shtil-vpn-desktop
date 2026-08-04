@@ -147,6 +147,7 @@ import { useConnectionStore } from '@/stores/kernel/ConnectionStore'
 import { useProxyStore } from '@/stores/kernel/ProxyStore'
 import { useSubStore } from '@/stores/subscription/SubStore'
 import { useDeviceLinkStore } from '@/stores/subscription/DeviceLinkStore'
+import { useGuestStore } from '@/stores/subscription/GuestStore'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import BrandWave from '@/components/common/BrandWave.vue'
 import { useKernelStatus } from '@/composables/useKernelStatus'
@@ -166,6 +167,7 @@ const connectionStore = useConnectionStore()
 const proxyStore = useProxyStore()
 const subStore = useSubStore()
 const deviceLink = useDeviceLinkStore()
+const guest = useGuestStore()
 
 const { statusState, isReady } = useKernelStatus(kernelStore)
 
@@ -248,6 +250,10 @@ const newsText = computed(() => {
 
 /** «Сколько осталось» словами: дата, а не число секунд. */
 const subscriptionLine = computed(() => {
+  // Пробный доступ идёт часами, поэтому у него своя строка и свой остаток.
+  if (guest.active) {
+    return t('key.guest.left', { left: guest.remaining, traffic: guest.trafficGb })
+  }
   if (!deviceLink.linked) return ''
   if (deviceLink.subscription === 'expired') return t('home.subscription.over')
   if (deviceLink.subscription !== 'active') return ''

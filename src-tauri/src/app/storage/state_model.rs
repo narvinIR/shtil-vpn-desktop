@@ -70,8 +70,10 @@ impl Default for AppConfig {
             allow_lan_access: false,
             proxy_port: 12080,
             api_port: 12081,
-            proxy_mode: "manual".to_string(),
-            system_proxy_enabled: false,
+            // Системный режим с первого запуска: в ручном приложение писало
+            // «Подключено», а трафик системы шёл мимо VPN.
+            proxy_mode: "system".to_string(),
+            system_proxy_enabled: true,
             tun_enabled: false,
             tray_instance_id: None,
             system_proxy_bypass: DEFAULT_BYPASS_LIST.to_string(),

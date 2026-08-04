@@ -101,8 +101,19 @@ pub struct LinkSnapshot {
     pub code: Option<String>,
 }
 
-fn backend(path: &str) -> String {
+pub fn backend(path: &str) -> String {
     format!("{}{}", api::BACKEND_URL.trim_end_matches('/'), path)
+}
+
+/// Отпечаток этого компьютера, общий для привязки и гостя: по нему сервер
+/// гасит гостевой ключ, когда устройство привязали к оплаченной подписке.
+pub async fn ensure_device_id(app: &AppHandle) -> Result<String, String> {
+    let mut record = load_record(app).await?;
+    if record.device_id.is_empty() {
+        record.device_id = new_device_id();
+        save_record(app, &record).await?;
+    }
+    Ok(record.device_id)
 }
 
 fn now_secs() -> i64 {
@@ -237,7 +248,7 @@ async fn save_record(app: &AppHandle, record: &LinkRecord) -> Result<(), String>
 }
 
 /// Имя компьютера, каким его увидит человек в списке устройств бота.
-fn device_name() -> String {
+pub fn device_name() -> String {
     let host = hostname();
     let system = if cfg!(target_os = "windows") {
         "Windows"

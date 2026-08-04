@@ -40,6 +40,7 @@ import {
   useUpdateStore,
   useSubStore,
   useDeviceLinkStore,
+  useGuestStore,
   useTrafficStore,
   useConnectionStore,
   useLogStore,
@@ -212,6 +213,10 @@ onMounted(async () => {
     const deviceLinkStore = useDeviceLinkStore()
     void deviceLinkStore.initialize()
     cleanupFunctions.push(() => deviceLinkStore.cleanup())
+
+    const guestStore = useGuestStore()
+    void guestStore.initialize()
+    cleanupFunctions.push(() => guestStore.cleanup())
 
     // 全局监听 kernel-error：所有页面统一提示失败信息，并保留 Linux/macOS 的 sudo 提示流程。
     const sudoStore = useSudoStore()

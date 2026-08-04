@@ -43,6 +43,28 @@
         <p v-else class="card-text">{{ t('key.current.none') }}</p>
       </section>
 
+      <!-- Ключа нет вовсе: дать связь сразу, иначе до бота не дойти — он тоже за границей -->
+      <section v-if="!activeKey && !guest.active" class="card">
+        <h2 class="card-title">{{ t('key.guest.title') }}</h2>
+        <p class="card-text">
+          {{ t('key.guest.text', { hours: GUEST_HOURS, traffic: GUEST_TRAFFIC_GB }) }}
+        </p>
+        <div class="card-actions">
+          <n-button :loading="guest.requesting" @click="takeGuest">
+            {{ t('key.guest.take') }}
+          </n-button>
+        </div>
+        <p v-if="guestFailure" class="card-note warn">{{ guestFailure }}</p>
+      </section>
+
+      <!-- Пробный доступ идёт: человеку важно видеть, сколько его осталось -->
+      <section v-else-if="guest.active" class="card">
+        <h2 class="card-title">{{ t('key.guest.title') }}</h2>
+        <p class="card-text">
+          {{ t('key.guest.left', { left: guest.remaining, traffic: guest.trafficGb }) }}
+        </p>
+      </section>
+
       <!-- Главный путь: ключ выдаёт бот по коду, руками ничего не переносят -->
       <section class="card primary">
         <h2 class="card-title">{{ t('key.fromBot.title') }}</h2>
@@ -162,6 +184,7 @@ import { readText } from '@tauri-apps/plugin-clipboard-manager'
 import QRCode from 'qrcode'
 import { useSubStore } from '@/stores/subscription/SubStore'
 import { useDeviceLinkStore } from '@/stores/subscription/DeviceLinkStore'
+import { useGuestStore } from '@/stores/subscription/GuestStore'
 import { useAppStore } from '@/stores'
 import { subscriptionService } from '@/services/subscription-service'
 import type { SubscriptionPersistResult } from '@/services/subscription-service'
@@ -183,11 +206,16 @@ defineOptions({
 /** Бот — единственное место, где выдают ключ и принимают оплату. */
 const BOT_URL = 'https://t.me/RealityVPNBot_bot'
 
+/** Сколько длится пробный доступ. Точный срок всё равно приходит от сервера. */
+const GUEST_HOURS = 2
+const GUEST_TRAFFIC_GB = 1
+
 const { t } = useI18n()
 const message = useMessage()
 const subStore = useSubStore()
 const appStore = useAppStore()
 const deviceLink = useDeviceLinkStore()
+const guest = useGuestStore()
 
 const linkUrl = ref('')
 const botQr = ref('')
@@ -232,6 +260,29 @@ const askCode = async () => {
 const unlink = async () => {
   await deviceLink.forget()
   message.success(t('key.fromBot.unlinked'))
+}
+
+/** Сырой код отказа сервера человеку не показываем — подбираем слова. */
+const guestFailure = computed(() => {
+  switch (guest.failure) {
+    case '':
+      return ''
+    case 'already_issued':
+      return t('key.guest.alreadyIssued')
+    case 'ip_limit':
+    case 'daily_cap':
+    case 'rate_limited':
+      return t('key.guest.limit')
+    case 'disabled':
+    case 'bad_platform':
+      return t('key.guest.disabled')
+    default:
+      return t('key.guest.failed')
+  }
+})
+
+const takeGuest = async () => {
+  if (await guest.take()) message.success(t('key.added'))
 }
 
 /** Код рисуется прямо в приложении: интернет для этого не нужен. */

@@ -156,6 +156,11 @@ pub fn run() {
                     tracing::warn!("启动时清理内核进程失败: {}", e);
                 }
 
+                // Ядро снято, значит системный прокси от прошлого падения осиротел;
+                // здесь же старые установки один раз переводятся в системный режим.
+                crate::app::system::startup_defaults_service::apply_startup_defaults(&app_handle)
+                    .await;
+
                 // 应用升级后：尝试刷新当前活动订阅一次，尽量在首次拉起内核前完成配置迁移。
                 crate::app::system::startup_refresh_service::start_upgrade_subscription_refresh(
                     &app_handle,
@@ -250,6 +255,9 @@ pub fn run() {
             crate::app::network::device_link::device_link_poll,
             crate::app::network::device_link::device_link_snapshot,
             crate::app::network::device_link::device_link_forget,
+            // Network - гостевой доступ без Telegram
+            crate::app::network::guest::guest_start,
+            crate::app::network::guest::guest_snapshot,
             // System - System service commands
             crate::app::system::system_service::check_admin,
             crate::app::system::system_service::restart_as_admin,
