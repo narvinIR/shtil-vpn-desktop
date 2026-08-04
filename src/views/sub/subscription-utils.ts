@@ -55,6 +55,15 @@ export const formatTrafficSummary = (item: FrontendSubscription, t: TranslateFn)
   const used = upload + download
   const total = item.subscriptionTotal
 
+  // Ноль в заголовке подписки означает «лимита нет», а не «ноль байт»: у наших
+  // клиентов лимита не бывает вовсе, и человек читал «осталось 0 B» как пустой
+  // ключ (iMac владельца, 05.08.2026).
+  if (!total) {
+    return used > 0
+      ? t('sub.trafficNoLimitUsed', { used: formatBytes(used) })
+      : t('sub.trafficNoLimit')
+  }
+
   if (total !== undefined) {
     const remaining = Math.max(total - used, 0)
     return t('sub.trafficWithTotal', {
@@ -67,11 +76,20 @@ export const formatTrafficSummary = (item: FrontendSubscription, t: TranslateFn)
   return t('sub.trafficUsedOnly', { used: formatBytes(used) })
 }
 
+/// Дальше этого срока дата перестаёт быть сроком: «до 31.07.2108» человек читает
+/// как ошибку, а не как бессрочный ключ (iMac владельца, 05.08.2026).
+const FOREVER_AFTER_YEARS = 10
+
 export const formatExpireTime = (timestamp: number | undefined, t: TranslateFn) => {
   if (!timestamp) return ''
   const date = new Date(timestamp * 1000)
   if (Number.isNaN(date.getTime())) return ''
-  return t('sub.expireAt', { time: date.toLocaleString() })
+
+  const horizon = new Date()
+  horizon.setFullYear(horizon.getFullYear() + FOREVER_AFTER_YEARS)
+  if (date > horizon) return t('sub.expireNever')
+
+  return t('sub.expireAt', { time: date.toLocaleDateString() })
 }
 
 export const formatLocalTime = (timestamp: number) => {

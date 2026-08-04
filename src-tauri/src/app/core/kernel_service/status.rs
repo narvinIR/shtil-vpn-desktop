@@ -1,4 +1,5 @@
 use crate::app::constants::paths;
+use crate::app::core::kernel_service::event::{relay_tasks_active, start_websocket_relay};
 use crate::app::core::kernel_service::orchestrator::current_state_version;
 use crate::app::core::kernel_service::state::KERNEL_STATE;
 use crate::app::core::kernel_service::utils::KernelStatusPayload;
@@ -92,6 +93,22 @@ pub async fn kernel_get_status_enhanced(
             error = Some("内核进程运行中但API服务不可用".to_string());
         }
     }
+    // Ядро могло подняться веткой, которая ретрансляцию не поднимает, — тогда
+    // событий нет вовсе и экран показывает нули при живой связи. Опрос это
+    // замечает и включает ретрансляцию сам (iMac владельца, 05.08.2026).
+    // Переходное состояние не трогаем: человек нажал «Отключить», а опрос вернул
+    // бы экран в «Подключено» — кнопка мигала бы под рукой.
+    if process_running && api_ready && !KERNEL_STATE.get_state().is_transitioning() {
+        KERNEL_STATE.mark_running(port);
+        if !relay_tasks_active().await {
+            if let Err(e) = start_websocket_relay(app_handle.clone(), Some(port)).await {
+                info!("не удалось поднять ретрансляцию по опросу: {}", e);
+            }
+            // Готовой ретрансляцию здесь НЕ объявляем: запуск задач — ещё не
+            // подключение, правду скажет проба следующего опроса.
+        }
+    }
+
     readiness.process_alive = process_running;
     readiness.api_ready = api_ready;
     readiness.relay_ready = websocket_ready;
@@ -139,7 +156,7 @@ pub async fn kernel_get_status_enhanced(
         "process_running": process_running,
         "api_ready": api_ready,
         "websocket_ready": websocket_ready,
-        "uptime_ms": 0,
+        "uptime_ms": KERNEL_STATE.uptime_ms(),
         "version": version,
         "error": startup_diagnosis
             .as_ref()

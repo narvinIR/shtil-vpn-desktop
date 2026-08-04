@@ -415,6 +415,31 @@ pub fn emit_kernel_error(app_handle: &AppHandle, error: &str) {
     emit_kernel_error_with_context(app_handle, "KERNEL_RUNTIME_ERROR", error, None, None, true);
 }
 
+/// Что делать с уже работающим ядром, которое запустили не мы.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ForeignKernelOutcome {
+    /// Остановлено, дальше запускаем своё.
+    Cleaned,
+    /// Остановить не смогли, но оно наше и отвечает — берём его себе.
+    Adopt,
+    /// Остановить не смогли и связи с ним нет — это настоящий сбой.
+    Blocked,
+}
+
+/// Обновление приложения оставляет прежнее ядро работать от имени системы:
+/// снять его правами пользователя нельзя, а порт оно держит. Живой iMac
+/// владельца 05.08.2026 показывал «Сбой: порт занят» при работающей связи.
+/// Отвечающее ядро на нашем порту — не чужая программа, а наше же, осиротевшее.
+pub fn decide_foreign_kernel(cleanup_succeeded: bool, api_responds: bool) -> ForeignKernelOutcome {
+    if cleanup_succeeded {
+        ForeignKernelOutcome::Cleaned
+    } else if api_responds {
+        ForeignKernelOutcome::Adopt
+    } else {
+        ForeignKernelOutcome::Blocked
+    }
+}
+
 #[cfg(test)]
 #[path = "utils.tests.rs"]
 mod tests;

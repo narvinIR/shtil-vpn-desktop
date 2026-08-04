@@ -261,8 +261,11 @@ export default {
     autoUpdate12h: 'Every 12 hours',
     autoUpdate1d: 'Daily',
     trafficUsedOnly: 'Traffic used {used}',
+    trafficNoLimit: 'Traffic unlimited',
+    trafficNoLimitUsed: 'Traffic unlimited, {used} used',
     trafficWithTotal: 'Traffic {used} / {total} (remaining {remaining})',
     expireAt: 'Expires {time}',
+    expireNever: 'No end date',
     autoUpdateHealthFailed: 'Auto-update failed {count} times: {reason}',
     autoUpdateHealthBackoff: 'Auto-update failed {count} times, retry in {remaining}: {reason}',
   },
@@ -591,6 +594,9 @@ export default {
       placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
       apply: 'Apply the key',
       needLink: 'Paste the link or the key',
+    },
+    other: {
+      title: 'Another way',
     },
     file: {
       title: 'Load from a file',

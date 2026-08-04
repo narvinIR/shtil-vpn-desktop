@@ -110,3 +110,31 @@ fn test_restart_stats_accumulates_and_records_reason_and_time() {
     // 时间戳单调非减（快机器上两次调用可能在同一毫秒）
     assert!(after_two.last_restart_at >= after_one.last_restart_at);
 }
+
+/// Экран показывал «Подключено 00:00:00» при живой связи: длительность нигде не
+/// считалась. Отсчёт ведёт состояние ядра, а не экран.
+#[test]
+fn test_uptime_counts_from_running() {
+    let manager = KernelStateManager::new();
+    assert_eq!(manager.uptime_ms(), 0);
+
+    manager.mark_running(12081);
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    assert!(manager.uptime_ms() >= 20);
+
+    manager.mark_stopped();
+    assert_eq!(manager.uptime_ms(), 0);
+}
+
+/// Повторная отметка «работает» не сбрасывает отсчёт: страховочный опрос
+/// проходит каждые пять секунд, и таймер обнулялся бы на каждом заходе.
+#[test]
+fn test_uptime_survives_repeated_mark_running() {
+    let manager = KernelStateManager::new();
+
+    manager.mark_running(12081);
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    manager.mark_running(12081);
+
+    assert!(manager.uptime_ms() >= 20);
+}

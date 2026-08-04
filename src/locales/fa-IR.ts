@@ -217,8 +217,11 @@ export default {
     autoUpdate12h: 'هر ۱۲ ساعت',
     autoUpdate1d: 'هر روز',
     trafficUsedOnly: 'مصرف {used}',
+    trafficNoLimit: 'ترافیک بدون محدودیت',
+    trafficNoLimitUsed: 'ترافیک بدون محدودیت، {used} مصرف شده',
     trafficWithTotal: 'مصرف {used} از {total} (باقی {remaining})',
     expireAt: 'پایان {time}',
+    expireNever: 'بدون تاریخ پایان',
     autoUpdateHealthFailed: 'به‌روزرسانی خودکار {count} بار ناموفق بود: {reason}',
     autoUpdateHealthBackoff:
       'به‌روزرسانی خودکار {count} بار ناموفق بود، تلاش بعدی تا {remaining}: {reason}',
@@ -269,6 +272,9 @@ export default {
       placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
       apply: 'اعمال کلید',
       needLink: 'پیوند یا کلید را بچسبانید',
+    },
+    other: {
+      title: 'راه دیگر',
     },
     file: {
       title: 'بارگذاری از پرونده',

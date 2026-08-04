@@ -296,8 +296,11 @@ export default {
     autoUpdate12h: 'Каждые 12 часов',
     autoUpdate1d: 'Ежедневно',
     trafficUsedOnly: 'Трафик использовано {used}',
+    trafficNoLimit: 'Трафик без ограничения',
+    trafficNoLimitUsed: 'Трафик без ограничения, израсходовано {used}',
     trafficWithTotal: 'Трафик {used} / {total} (осталось {remaining})',
     expireAt: 'Истекает {time}',
+    expireNever: 'Бессрочно',
     autoUpdateHealthFailed: 'Автообновление не удалось {count} раз: {reason}',
     autoUpdateHealthBackoff:
       'Автообновление не удалось {count} раз, повтор через {remaining}: {reason}',
@@ -656,6 +659,9 @@ export default {
       placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
       apply: 'Применить ключ',
       needLink: 'Вставьте ссылку или ключ',
+    },
+    other: {
+      title: 'Другой способ',
     },
     file: {
       title: 'Загрузить из файла',

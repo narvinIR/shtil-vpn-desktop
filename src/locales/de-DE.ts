@@ -220,8 +220,11 @@ export default {
     autoUpdate12h: 'Alle 12 Stunden',
     autoUpdate1d: 'Täglich',
     trafficUsedOnly: 'Verbraucht {used}',
+    trafficNoLimit: 'Datenvolumen unbegrenzt',
+    trafficNoLimitUsed: 'Datenvolumen unbegrenzt, {used} verbraucht',
     trafficWithTotal: 'Verbraucht {used} / {total} (übrig {remaining})',
     expireAt: 'Läuft ab {time}',
+    expireNever: 'Unbefristet',
     autoUpdateHealthFailed: 'Automatische Aktualisierung {count}× fehlgeschlagen: {reason}',
     autoUpdateHealthBackoff:
       'Automatische Aktualisierung {count}× fehlgeschlagen, nächster Versuch in {remaining}: {reason}',
@@ -272,6 +275,9 @@ export default {
       placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
       apply: 'Schlüssel übernehmen',
       needLink: 'Fügen Sie den Link oder den Schlüssel ein',
+    },
+    other: {
+      title: 'Anderer Weg',
     },
     file: {
       title: 'Aus einer Datei laden',

@@ -75,3 +75,30 @@ fn test_build_kernel_error_payload_should_include_structured_api_http_error_diag
     assert_eq!(payload["startup_diagnosis"]["stage"], "readiness");
     assert_eq!(payload["startup_diagnosis"]["http_status"], 400);
 }
+
+/// Осиротевшее ядро после обновления приложения: снять правами пользователя
+/// нельзя, но оно отвечает на нашем порту — значит его берут себе, а не
+/// показывают человеку «порт занят другой программой».
+#[test]
+fn test_orphan_kernel_is_adopted_not_reported_as_conflict() {
+    assert_eq!(
+        decide_foreign_kernel(false, true),
+        ForeignKernelOutcome::Adopt
+    );
+}
+
+#[test]
+fn test_foreign_kernel_without_api_stays_a_failure() {
+    assert_eq!(
+        decide_foreign_kernel(false, false),
+        ForeignKernelOutcome::Blocked
+    );
+}
+
+#[test]
+fn test_stopped_foreign_kernel_lets_us_start_our_own() {
+    assert_eq!(
+        decide_foreign_kernel(true, false),
+        ForeignKernelOutcome::Cleaned
+    );
+}

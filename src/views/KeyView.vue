@@ -43,28 +43,6 @@
         <p v-else class="card-text">{{ t('key.current.none') }}</p>
       </section>
 
-      <!-- Ключа нет вовсе: дать связь сразу, иначе до бота не дойти — он тоже за границей -->
-      <section v-if="!activeKey && !guest.active" class="card">
-        <h2 class="card-title">{{ t('key.guest.title') }}</h2>
-        <p class="card-text">
-          {{ t('key.guest.text', { hours: GUEST_HOURS, traffic: GUEST_TRAFFIC_GB }) }}
-        </p>
-        <div class="card-actions">
-          <n-button :loading="guest.requesting" @click="takeGuest">
-            {{ t('key.guest.take') }}
-          </n-button>
-        </div>
-        <p v-if="guestFailure" class="card-note warn">{{ guestFailure }}</p>
-      </section>
-
-      <!-- Пробный доступ идёт: человеку важно видеть, сколько его осталось -->
-      <section v-else-if="guest.active" class="card">
-        <h2 class="card-title">{{ t('key.guest.title') }}</h2>
-        <p class="card-text">
-          {{ t('key.guest.left', { left: guest.remaining, traffic: guest.trafficGb }) }}
-        </p>
-      </section>
-
       <!-- Главный путь: ключ выдаёт бот по коду, руками ничего не переносят -->
       <section class="card primary">
         <h2 class="card-title">{{ t('key.fromBot.title') }}</h2>
@@ -130,12 +108,35 @@
         </template>
       </section>
 
-      <!-- Поле ввода стоит открытым: под свёрнутой строкой человек его не находит
-           и спрашивает «куда вставлять ключ» (04.08.2026) -->
-      <section class="card">
-        <h2 class="card-title">{{ t('key.link.title') }}</h2>
-        <p class="card-text">{{ t('key.link.text') }}</p>
+      <!-- Ключа нет вовсе: дать связь сразу, иначе до бота не дойти — он тоже за границей -->
+      <section v-if="!activeKey && !guest.active" class="card">
+        <h2 class="card-title">{{ t('key.guest.title') }}</h2>
+        <p class="card-text">
+          {{ t('key.guest.text', { hours: GUEST_HOURS, traffic: GUEST_TRAFFIC_GB }) }}
+        </p>
+        <div class="card-actions">
+          <n-button :loading="guest.requesting" @click="takeGuest">
+            {{ t('key.guest.take') }}
+          </n-button>
+        </div>
+        <p v-if="guestFailure" class="card-note warn">{{ guestFailure }}</p>
+      </section>
+
+      <!-- Пробный доступ идёт: человеку важно видеть, сколько его осталось -->
+      <section v-else-if="guest.active" class="card">
+        <h2 class="card-title">{{ t('key.guest.title') }}</h2>
+        <p class="card-text">
+          {{ t('key.guest.left', { left: guest.remaining, traffic: guest.trafficGb }) }}
+        </p>
+      </section>
+
+      <!-- Остальные пути — под одной свёрнутой строкой. Открытыми они спорили с
+           главным действием, и человек не понимал, куда нажимать (05.08.2026) -->
+      <details class="card fold">
+        <summary>{{ t('key.other.title') }}</summary>
         <div class="fold-body">
+          <h3 class="card-title">{{ t('key.link.title') }}</h3>
+          <p class="card-text">{{ t('key.link.text') }}</p>
           <n-input
             v-model:value="linkUrl"
             type="textarea"
@@ -151,12 +152,8 @@
               {{ t('key.link.apply') }}
             </n-button>
           </div>
-        </div>
-      </section>
 
-      <details class="card fold">
-        <summary>{{ t('key.file.title') }}</summary>
-        <div class="fold-body">
+          <h3 class="card-title">{{ t('key.file.title') }}</h3>
           <p class="card-text">{{ t('key.file.text') }}</p>
           <input
             ref="fileInput"

@@ -5,7 +5,7 @@
 use crate::app::core::tun_profile::TunProxyOptions;
 use crate::app::storage::state_model::AppConfig;
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicU16, AtomicU32, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicU16, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -179,6 +179,8 @@ impl KernelState {
 pub struct KernelStateManager {
     state: AtomicU8,
     api_port: AtomicU16,
+    /// Когда связь поднялась, мс от эпохи. 0 — не работает.
+    running_since: AtomicU64,
     startup_diagnosis: RwLock<Option<StartupDiagnosis>>,
     readiness: RwLock<KernelReadinessSnapshot>,
     current_attempt_id: RwLock<Option<String>>,
@@ -192,6 +194,7 @@ impl KernelStateManager {
         Self {
             state: AtomicU8::new(KernelState::Stopped as u8),
             api_port: AtomicU16::new(0),
+            running_since: AtomicU64::new(0),
             startup_diagnosis: RwLock::new(None),
             readiness: RwLock::new(KernelReadinessSnapshot::default()),
             current_attempt_id: RwLock::new(None),
@@ -266,6 +269,14 @@ impl KernelStateManager {
     /// 标记为运行中
     pub fn mark_running(&self, api_port: u16) {
         self.api_port.store(api_port, Ordering::SeqCst);
+        // Отсчёт начинается один раз: страховочный опрос отмечает «работает»
+        // каждые пять секунд, и таймер на экране обнулялся бы на каждом заходе.
+        let _ = self.running_since.compare_exchange(
+            0,
+            Self::now_millis(),
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        );
         self.set_state(KernelState::Running);
         self.clear_startup_diagnosis();
         self.update_readiness(|readiness| {
@@ -279,6 +290,7 @@ impl KernelStateManager {
     /// 标记为已停止
     pub fn mark_stopped(&self) {
         self.api_port.store(0, Ordering::SeqCst);
+        self.running_since.store(0, Ordering::SeqCst);
         self.set_state(KernelState::Stopped);
         self.update_readiness(|readiness| {
             readiness.process_alive = false;
@@ -289,6 +301,7 @@ impl KernelStateManager {
 
     /// 标记为失败
     pub fn mark_failed(&self) {
+        self.running_since.store(0, Ordering::SeqCst);
         self.set_state(KernelState::Failed);
         self.update_readiness(|readiness| {
             readiness.process_alive = false;
@@ -305,6 +318,15 @@ impl KernelStateManager {
     /// 获取 API 端口
     pub fn get_api_port(&self) -> u16 {
         self.api_port.load(Ordering::SeqCst)
+    }
+
+    /// Сколько держится связь, мс. 0 — не работает.
+    pub fn uptime_ms(&self) -> u64 {
+        let since = self.running_since.load(Ordering::SeqCst);
+        if since == 0 {
+            return 0;
+        }
+        Self::now_millis().saturating_sub(since)
     }
 
     pub fn get_readiness(&self) -> KernelReadinessSnapshot {

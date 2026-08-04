@@ -77,6 +77,13 @@ pub(super) async fn start_websocket_relay(
     Ok(())
 }
 
+/// Работает ли ретрансляция сейчас. Без неё экран не получает ни трафика, ни
+/// состояния — при живой связи там остаются нули.
+pub(super) async fn relay_tasks_active() -> bool {
+    let tasks = EVENT_RELAY_TASKS.lock().await;
+    tasks.iter().any(|task| !task.is_finished())
+}
+
 pub(super) async fn cleanup_event_relay_tasks() {
     SHOULD_STOP_EVENTS.store(true, Ordering::Relaxed);
 

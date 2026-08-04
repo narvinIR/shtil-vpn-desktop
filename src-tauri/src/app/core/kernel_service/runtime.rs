@@ -7,8 +7,9 @@ use crate::app::core::kernel_service::orchestrator::execute_kernel_operation;
 use crate::app::core::kernel_service::state::{KernelState, KERNEL_STATE};
 use crate::app::core::kernel_service::status::is_kernel_running;
 use crate::app::core::kernel_service::utils::{
-    emit_kernel_error_with_context, emit_kernel_started, emit_kernel_starting, emit_kernel_status,
-    emit_kernel_stopped, KernelStatusPayload, resolve_config_path,
+    decide_foreign_kernel, emit_kernel_error_with_context, emit_kernel_started,
+    emit_kernel_starting, emit_kernel_status, emit_kernel_stopped, ForeignKernelOutcome,
+    KernelStatusPayload, resolve_config_path,
 };
 use crate::app::core::kernel_service::PROCESS_MANAGER;
 use crate::app::core::proxy_service::{
@@ -166,6 +167,41 @@ async fn verify_kernel_startup_stability(api_port: u16, proxy_port: u16) -> Resu
     }
 
     Err(last_error)
+}
+
+/// Отвечает ли ядро на нашем порту. Отличает наше осиротевшее ядро от чужой
+/// программы, случайно занявшей порт.
+async fn kernel_api_responds(api_port: u16) -> bool {
+    let client = http_client::get_client();
+    matches!(
+        client
+            .get(format!("http://127.0.0.1:{}/version", api_port))
+            .timeout(Duration::from_millis(800))
+            .send()
+            .await,
+        Ok(response) if response.status().is_success()
+    )
+}
+
+/// Взять работающее ядро себе: событий оно само не шлёт, поэтому счётчики и
+/// состояние оживают только после подъёма ретрансляции.
+async fn adopt_running_kernel(app_handle: &AppHandle, resolved: &ResolvedProxyState) {
+    KERNEL_STATE.mark_running(resolved.api_port);
+    apply_os_proxy(&resolved.proxy);
+
+    match start_websocket_relay(app_handle.clone(), Some(resolved.api_port)).await {
+        Ok(_) => {
+            KERNEL_STATE.update_readiness(|readiness| {
+                readiness.relay_ready = true;
+            });
+        }
+        Err(e) => {
+            warn!("не удалось подключиться к работающему ядру: {}", e);
+            KERNEL_STATE.update_readiness(|readiness| {
+                readiness.relay_ready = false;
+            });
+        }
+    }
 }
 
 async fn try_cleanup_conflicting_kernel(app_handle: &AppHandle) -> Result<(), String> {
@@ -356,12 +392,10 @@ pub(super) async fn start_kernel_impl(
     }
 
     if PROCESS_MANAGER.is_running().await {
-        KERNEL_STATE.mark_running(resolved.api_port);
-        KERNEL_STATE.update_readiness(|readiness| {
-            readiness.relay_ready = true;
-        });
-        // 内核已在运行（端口已监听），安全地应用 OS 代理设置。
-        apply_os_proxy(&resolved.proxy);
+        // Ретрансляцию здесь помечали готовой, не поднимая её: событий с
+        // трафиком не приходило вовсе, и экран показывал нули при живой связи
+        // (iMac владельца, 05.08.2026). Поднимаем по-настоящему.
+        adopt_running_kernel(&app_handle, resolved).await;
         if reactivate_guard {
             enable_kernel_guard(
                 app_handle.clone(),
@@ -378,7 +412,38 @@ pub(super) async fn start_kernel_impl(
     }
 
     if is_kernel_running().await.unwrap_or(false) {
-        if let Err(err) = try_cleanup_conflicting_kernel(&app_handle).await {
+        let cleanup = try_cleanup_conflicting_kernel(&app_handle).await;
+        let outcome = match &cleanup {
+            Ok(_) => ForeignKernelOutcome::Cleaned,
+            Err(_) => decide_foreign_kernel(false, kernel_api_responds(resolved.api_port).await),
+        };
+
+        if outcome == ForeignKernelOutcome::Adopt {
+            info!("ядро уже работает и отвечает — берём его себе");
+            adopt_running_kernel(&app_handle, resolved).await;
+            if reactivate_guard {
+                enable_kernel_guard(
+                    app_handle.clone(),
+                    resolved.api_port,
+                    resolved.proxy.tun_enabled,
+                )
+                .await;
+            }
+            emit_kernel_started(
+                &app_handle,
+                &resolved.derived_mode(),
+                resolved.api_port,
+                resolved.proxy.proxy_port,
+                false,
+                KERNEL_STATE.get_readiness().relay_ready,
+            );
+            return Ok(json!({
+                "success": true,
+                "message": "内核已在运行中".to_string()
+            }));
+        }
+
+        if let Err(err) = cleanup {
             KERNEL_STATE.mark_failed();
             let kernel_name = crate::platform::get_kernel_executable_name();
             let user_message = format!(
