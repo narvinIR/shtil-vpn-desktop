@@ -9,10 +9,13 @@ fn sanitize_file_name(raw: &str) -> String {
     let mut sanitized: String = raw
         .chars()
         .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' {
-                c
-            } else {
+            // Запрещаем только то, что ломает путь на файловой системе. Буквы любого
+            // алфавита оставляем: имя профиля у клиента русское, и раньше оно целиком
+            // вырождалось в дефисы.
+            if c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
                 '-'
+            } else {
+                c
             }
         })
         .collect();
