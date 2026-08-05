@@ -4,6 +4,7 @@ use super::common::{
 };
 use crate::app::core::tun_profile::{
     default_tun_route_exclude_addresses, normalize_persisted_tun_route_exclude_address,
+    normalize_stack,
 };
 use crate::app::storage::state_model::AppConfig;
 use serde_json::{json, Map, Value};
@@ -449,7 +450,7 @@ fn apply_inbounds_settings(config_obj: &mut Map<String, Value>, app_config: &App
             "address": tun_addresses,
             "auto_route": app_config.tun_auto_route,
             "strict_route": app_config.tun_strict_route,
-            "stack": app_config.tun_stack,
+            "stack": normalize_stack(&app_config.tun_stack),
             "mtu": app_config.tun_mtu,
             "route_exclude_address": tun_route_exclude_address
         }));

@@ -412,3 +412,44 @@ fn rules_that_lose_their_only_rule_set_are_dropped() {
         "осталось правило с висячим набором: {rules:?}"
     );
 }
+
+#[test]
+fn apply_app_settings_should_normalize_tun_stack_for_this_platform() {
+    let mut config = json!({
+        "dns": { "servers": [], "rules": [] },
+        "experimental": { "clash_api": {}, "cache_file": {} },
+        "inbounds": [],
+        "route": {
+            "rule_set": [],
+            "rules": [{ "action": "sniff" }],
+            "final": "direct",
+            "auto_detect_interface": true
+        }
+    });
+    let app_config = AppConfig {
+        tun_enabled: true,
+        tun_stack: "mixed".to_string(),
+        ..AppConfig::default()
+    };
+
+    apply_app_settings_to_config(&mut config, &app_config);
+
+    let tun_in = config
+        .get("inbounds")
+        .and_then(|value| value.as_array())
+        .and_then(|inbounds| {
+            inbounds
+                .iter()
+                .find(|inbound| inbound.get("tag").and_then(|v| v.as_str()) == Some("tun-in"))
+        })
+        .expect("tun-in должен быть в конфиге");
+
+    // Сохранённое значение не уезжает в конфиг сырьём: на macOS «смешанный»
+    // стек не везёт соединения вовсе, поэтому его подменяет gvisor.
+    let expected = if cfg!(target_os = "macos") {
+        "gvisor"
+    } else {
+        "mixed"
+    };
+    assert_eq!(tun_in.get("stack"), Some(&json!(expected)));
+}

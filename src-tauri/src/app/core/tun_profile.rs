@@ -206,11 +206,30 @@ fn validate_cidr(value: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn normalize_stack(stack: &str) -> String {
-    match stack {
-        "system" | "gvisor" | "mixed" => stack.to_string(),
-        _ => "mixed".to_string(),
+/// Приводит стек туннеля к тому, что на этой системе действительно везёт трафик.
+///
+/// На macOS половина «смешанного» стека, отвечающая за обычные соединения,
+/// пакеты не разбирает: туннель поднимается, имена резолвятся, а из соединений
+/// до ядра не доходит ни одно — у человека на экране «Подключено», но не
+/// работает ничего, кроме браузера через системный прокси. Проверено живьём
+/// 05.08.2026 на iMac владельца: со «смешанным» — ноль соединений и пустой
+/// список у ядра, с gvisor — весь трафик уходит через наш сервер. На Windows
+/// смешанный стек работает, там оставляем как было.
+pub fn normalize_stack(stack: &str) -> String {
+    normalize_stack_for(stack, cfg!(target_os = "macos"))
+}
+
+fn normalize_stack_for(stack: &str, is_macos: bool) -> String {
+    let stack = match stack {
+        "system" | "gvisor" | "mixed" => stack,
+        _ => "mixed",
+    };
+
+    if is_macos {
+        return "gvisor".to_string();
     }
+
+    stack.to_string()
 }
 
 fn default_interface_name() -> String {
@@ -233,8 +252,28 @@ fn default_interface_name() -> String {
 mod tests {
     use super::{
         default_tun_route_exclude_addresses, normalize_persisted_tun_route_exclude_address,
-        normalize_tun_route_exclude_address, TunProfile, TunProxyOptions,
+        normalize_stack_for, normalize_tun_route_exclude_address, TunProfile, TunProxyOptions,
     };
+
+    #[test]
+    fn normalize_stack_should_force_gvisor_on_macos() {
+        for stored in ["mixed", "system", "gvisor", "невнятица"] {
+            assert_eq!(
+                normalize_stack_for(stored, true),
+                "gvisor",
+                "на macOS стек {} обязан стать gvisor: остальные не везут соединения",
+                stored
+            );
+        }
+    }
+
+    #[test]
+    fn normalize_stack_should_keep_stored_choice_outside_macos() {
+        assert_eq!(normalize_stack_for("mixed", false), "mixed");
+        assert_eq!(normalize_stack_for("system", false), "system");
+        assert_eq!(normalize_stack_for("gvisor", false), "gvisor");
+        assert_eq!(normalize_stack_for("невнятица", false), "mixed");
+    }
 
     #[test]
     fn normalize_tun_route_exclude_address_should_trim_and_drop_blank_entries() {
