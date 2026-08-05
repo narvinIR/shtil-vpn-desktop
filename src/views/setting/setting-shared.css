@@ -37,6 +37,26 @@
   border-top: 1px solid var(--border-color);
 }
 
+/* Ряды, лежащие прямо в разделе, собираются в такую же плиту, как группы в
+   карточках: у Apple настройки живут списком внутри карточки, а строки на голом
+   фоне рядом с карточкой читаются как две разные системы на одном экране. */
+.setting-section > .setting-row {
+  background: var(--bg-surface-2);
+  border-left: 1px solid var(--panel-border);
+  border-right: 1px solid var(--panel-border);
+  padding: var(--space-3) var(--space-4);
+}
+
+.setting-section > .setting-row:first-of-type {
+  border-top: 1px solid var(--panel-border);
+  border-radius: 12px 12px 0 0;
+}
+
+.setting-section > .setting-row:last-of-type {
+  border-bottom: 1px solid var(--panel-border);
+  border-radius: 0 0 12px 12px;
+}
+
 .setting-row.top-align {
   align-items: flex-start;
 }

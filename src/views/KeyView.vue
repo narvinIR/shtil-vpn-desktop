@@ -548,15 +548,17 @@ onUnmounted(() => {
   gap: var(--space-4);
 }
 
+/* Заголовок экрана прижат влево: на Маке взгляд идёт по левому краю, а
+   заголовок посреди страницы читается как рекламная полоса, а не как раздел. */
 .key-head {
-  text-align: center;
   margin-bottom: var(--space-2);
 }
 
 .key-title {
   margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
 }
 
@@ -573,9 +575,11 @@ onUnmounted(() => {
   padding: var(--space-4);
 }
 
+/* Главную карточку выделяем фоном, а не яркой рамкой: обводка в цвет акцента
+   кричит громче самой кнопки внутри и спорит с ней за внимание. */
 .card.primary {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 1px var(--primary-soft);
+  background: var(--primary-soft);
+  border-color: var(--border-color);
 }
 
 .card-head {
