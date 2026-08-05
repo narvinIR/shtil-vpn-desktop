@@ -6,8 +6,9 @@ use std::net::IpAddr;
 use url::Url;
 
 // 代理组/出站标签（这些标签会暴露在 Clash API 里，尽量保持稳定，避免前端/用户习惯被破坏）。
-pub const TAG_AUTO: &str = "自动选择";
-pub const TAG_MANUAL: &str = "手动切换";
+// Имена групп видны человеку на экране — от форка они приезжали иероглифами.
+pub const TAG_AUTO: &str = "Автовыбор";
+pub const TAG_MANUAL: &str = "Вручную";
 pub const TAG_DIRECT: &str = "direct";
 pub const TAG_BLOCK: &str = "block";
 
