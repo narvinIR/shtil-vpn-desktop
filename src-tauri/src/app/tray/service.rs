@@ -574,6 +574,16 @@ pub fn should_prevent_exit() -> bool {
     with_state_read(|state| state.keep_alive_without_windows && !state.allow_app_exit)
 }
 
+/// Разрешение на выход ставит только `request_app_exit` — он же останавливает
+/// ядро. Значит любой другой выход пришёл мимо остановки, и ядро надо гасить.
+fn needs_kernel_stop_before_exit(state: &TrayRuntimeState) -> bool {
+    !state.allow_app_exit
+}
+
+pub fn should_stop_kernel_before_exit() -> bool {
+    with_state_read(needs_kernel_stop_before_exit)
+}
+
 fn destroy_main_window_for_tray(app: &AppHandle) -> Result<(), String> {
     let main_window = app
         .get_webview_window("main")
@@ -942,6 +952,21 @@ mod tests {
         assert!(state.allow_app_exit);
         assert!(state.tun_enabled);
         assert_eq!(state.close_behavior, TrayCloseBehavior::Hide);
+    }
+
+    /// Выход мимо трея (Cmd+Q, меню системы, конец сеанса) до 05.08.2026 уходил
+    /// прямо в `exit`: ядро под туннелем работает от администратора, оставалось
+    /// жить сиротой и держало маршруты — человек уходил с мёртвой сетью до
+    /// перезагрузки. Разворачиваем такой выход на остановку ядра.
+    #[test]
+    fn exit_bypassing_tray_is_turned_into_kernel_stop() {
+        assert!(needs_kernel_stop_before_exit(&TrayRuntimeState::default()));
+
+        let after_request = TrayRuntimeState {
+            allow_app_exit: true,
+            ..TrayRuntimeState::default()
+        };
+        assert!(!needs_kernel_stop_before_exit(&after_request));
     }
 
     #[test]

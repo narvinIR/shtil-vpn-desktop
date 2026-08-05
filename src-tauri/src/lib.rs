@@ -315,11 +315,21 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_, event| {
+        .run(|app_handle, event| {
             if let RunEvent::ExitRequested { api, .. } = event {
                 if crate::app::tray::should_prevent_exit() {
                     tracing::info!("主窗口已销毁，保留托盘与后台任务，阻止应用退出");
                     api.prevent_exit();
+                } else if crate::app::tray::should_stop_kernel_before_exit() {
+                    // Cmd+Q, меню системы и конец сеанса приходят сюда, минуя трей.
+                    // Отпустить выход сразу — оставить ядро от администратора живым:
+                    // маршруты остаются, и человек уходит с мёртвой сетью.
+                    tracing::info!("выход мимо трея: сначала останавливаем ядро");
+                    api.prevent_exit();
+                    if let Err(err) = crate::app::tray::request_app_exit(app_handle) {
+                        tracing::warn!("остановка ядра перед выходом не запустилась: {}", err);
+                        app_handle.exit(0);
+                    }
                 }
             }
         });
