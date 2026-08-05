@@ -43,6 +43,34 @@ fn assert_route_rules_keep_sniff_action(config: &Value) {
     );
 }
 
+/// Резолвер для российских сайтов, идущих напрямую, задаётся АДРЕСОМ, а не
+/// именем: имя пришлось бы сперва разрешить, и вся ветка «напрямую» повисала бы
+/// на этом шаге. Здесь стоял dns.yandex.ru — сайт-визитка, которая на запрос DoH
+/// отдаёт страницу с капчей: ни один российский сайт не разрешался (05.08.2026).
+#[test]
+fn direct_dns_server_must_be_an_ip_literal() {
+    let config = generate_base_config(&AppConfig::default());
+    let servers = config
+        .get("dns")
+        .and_then(|v| v.get("servers"))
+        .and_then(|v| v.as_array())
+        .expect("dns.servers 应存在");
+
+    let direct = servers
+        .iter()
+        .find(|s| s.get("tag").and_then(|v| v.as_str()) == Some(DNS_CN))
+        .expect("прямой резолвер должен быть в конфиге");
+    let server = direct
+        .get("server")
+        .and_then(|v| v.as_str())
+        .expect("у прямого резолвера должен быть адрес");
+
+    assert!(
+        server.parse::<std::net::IpAddr>().is_ok(),
+        "адрес прямого резолвера должен быть литералом IP, а не именем: {server}"
+    );
+}
+
 #[test]
 fn generated_dns_servers_should_use_new_format() {
     let config = generate_base_config(&AppConfig::default());

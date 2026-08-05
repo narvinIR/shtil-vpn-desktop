@@ -75,7 +75,7 @@ impl DatabaseService {
                 active_config_path TEXT,
                 installed_kernel_version TEXT,
                 singbox_dns_proxy TEXT DEFAULT 'https://dns.google/dns-query',
-                singbox_dns_cn TEXT DEFAULT 'https://dns.yandex.ru/dns-query',
+                singbox_dns_cn TEXT DEFAULT 'https://77.88.8.8/dns-query',
                 singbox_dns_resolver TEXT DEFAULT '77.88.8.8',
                 singbox_urltest_url TEXT DEFAULT 'http://cp.cloudflare.com/generate_204',
                 singbox_default_proxy_outbound TEXT DEFAULT 'manual',
@@ -117,7 +117,7 @@ impl DatabaseService {
             "ALTER TABLE app_config ADD COLUMN active_config_path TEXT",
             "ALTER TABLE app_config ADD COLUMN installed_kernel_version TEXT",
             "ALTER TABLE app_config ADD COLUMN singbox_dns_proxy TEXT DEFAULT 'https://dns.google/dns-query'",
-            "ALTER TABLE app_config ADD COLUMN singbox_dns_cn TEXT DEFAULT 'https://dns.yandex.ru/dns-query'",
+            "ALTER TABLE app_config ADD COLUMN singbox_dns_cn TEXT DEFAULT 'https://77.88.8.8/dns-query'",
             "ALTER TABLE app_config ADD COLUMN singbox_dns_resolver TEXT DEFAULT '77.88.8.8'",
             "ALTER TABLE app_config ADD COLUMN singbox_urltest_url TEXT DEFAULT 'http://cp.cloudflare.com/generate_204'",
             "ALTER TABLE app_config ADD COLUMN singbox_default_proxy_outbound TEXT DEFAULT 'manual'",
@@ -136,6 +136,18 @@ impl DatabaseService {
         for statement in alter_statements {
             sqlx::query(statement).execute(pool).await.ok();
         }
+
+        // Починка уже установленных копий: у поставивших 1.2.x в базе лежит
+        // адрес dns.yandex.ru, который на запрос DoH отдаёт страницу с капчей,
+        // а не DNS-ответ. С ним не разрешался НИ ОДИН российский сайт, идущий
+        // напрямую. Смены умолчания мало — значение уже записано (05.08.2026).
+        sqlx::query(
+            "UPDATE app_config SET singbox_dns_cn = 'https://77.88.8.8/dns-query' \
+             WHERE singbox_dns_cn = 'https://dns.yandex.ru/dns-query'",
+        )
+        .execute(pool)
+        .await
+        .ok();
 
         // 主题配置表
         sqlx::query(
