@@ -38,7 +38,7 @@
 
     <!-- Кнопки окна. На Маке их рисует сама система слева — свои прячем, иначе
          на одном окне окажется два набора кнопок. -->
-    <div v-if="!isMacOS" class="window-controls">
+    <div class="window-controls">
       <button class="control-btn minimize" :aria-label="t('common.windowMinimize')" @click="emit('minimize')">
         <n-icon size="16"><RemoveOutline /></n-icon>
       </button>
@@ -64,7 +64,6 @@ import {
 import { useI18n } from 'vue-i18n'
 import logo from '@/assets/icon.png'
 import { formatSpeed } from '@/utils'
-import { isMacOS } from '@/boot/platform'
 
 const { t } = useI18n()
 
