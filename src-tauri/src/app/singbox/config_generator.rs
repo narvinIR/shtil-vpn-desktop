@@ -191,7 +191,7 @@ fn build_dns_servers(
             Some(dns_strategy),
             Some(TAG_DIRECT),
             Some(DNS_RESOLVER),
-            "https://dns.yandex.ru/dns-query",
+            "https://77.88.8.8/dns-query",
         ),
         build_dns_server_with_fallback(
             DNS_RESOLVER,

@@ -192,7 +192,7 @@
             <n-form-item :label="props.t('setting.singboxProfile.dnsCn')">
               <n-input
                 v-model:value="singboxProfileForm.dnsCn"
-                placeholder="https://dns.yandex.ru/dns-query"
+                placeholder="https://77.88.8.8/dns-query"
               />
             </n-form-item>
           </div>

@@ -94,7 +94,7 @@ impl Default for AppConfig {
             // напрямую (иначе сайт уводит на зарубежный узел раздачи), а имена
             // самих серверов разрешает третий, простой.
             singbox_dns_proxy: "https://dns.google/dns-query".to_string(),
-            singbox_dns_cn: "https://dns.yandex.ru/dns-query".to_string(),
+            singbox_dns_cn: "https://77.88.8.8/dns-query".to_string(),
             singbox_dns_resolver: "77.88.8.8".to_string(),
             singbox_urltest_url: "http://cp.cloudflare.com/generate_204".to_string(),
             singbox_default_proxy_outbound: "manual".to_string(),
