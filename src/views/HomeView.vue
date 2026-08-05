@@ -212,9 +212,24 @@ const steps = computed(() => {
   ]
 })
 
+/**
+ * Ядро сообщает свой возраст редко — между ответами счётчик шёл бы по старому
+ * числу: стоял на месте, а потом прыгал сразу на несколько секунд. Поэтому
+ * запоминаем последнее сказанное ядром вместе с моментом, когда оно пришло, и
+ * между ответами досчитываем по местным часам.
+ */
+const uptimeAnchor = ref({ ms: 0, at: Date.now() })
+watch(
+  () => kernelStore.status.uptime_ms,
+  (reported) => {
+    uptimeAnchor.value = { ms: reported || 0, at: Date.now() }
+  },
+  { immediate: true },
+)
+
 const uptime = computed(() => {
-  void now.value
-  const ms = kernelStore.status.uptime_ms || 0
+  const anchor = uptimeAnchor.value
+  const ms = anchor.ms > 0 ? anchor.ms + (now.value - anchor.at) : 0
   const total = Math.max(0, Math.floor(ms / 1000))
   const hours = Math.floor(total / 3600)
   const minutes = Math.floor((total % 3600) / 60)
