@@ -17,6 +17,11 @@
         </div>
       </div>
 
+      <!-- Одна плита по центру: состояние, круг, сервер и показатели живут вместе,
+           как карточка в приложениях Мака, а не россыпью по пустому полю. -->
+      <section class="stage">
+        <h1 class="stage-title">{{ stateTitle }}</h1>
+
       <!-- Круг в центре — он же кнопка. Язык, на котором говорят платные VPN:
            один крупный объект, всё остальное подчинено ему. -->
       <div class="ring-wrap">
@@ -37,12 +42,10 @@
           </template>
           <template v-else-if="!hasKey">
             <n-icon :size="42" class="ring-icon"><KeyOutline /></n-icon>
-            <span class="ring-action">{{ t('home.action.addKey') }}</span>
           </template>
           <template v-else>
             <n-icon :size="42" class="ring-icon"><PowerOutline /></n-icon>
             <span class="ring-action">{{ t('home.action.connect') }}</span>
-            <span class="ring-note">{{ t('home.state.disconnected') }}</span>
           </template>
         </button>
       </div>
@@ -69,6 +72,7 @@
           <span class="stat-label">{{ t('home.stats.sent') }}</span>
         </div>
       </div>
+      </section>
 
       <!-- Сколько осталось: второй из трёх ответов, которые человек ищет на экране.
            Рядом — куда идти платить, чтобы третий ответ не пришлось искать. -->
@@ -348,6 +352,13 @@ const canRenew = computed(
 /** Поддержка живёт в боте — там же, где оплата и ключ. */
 const openSupportInBot = () => openUrl('https://t.me/RealityVPNBot_bot')
 
+/** Крупная строка над кругом: человек читает состояние раньше, чем ищет кнопку. */
+const stateTitle = computed(() => {
+  if (!hasKey.value) return t('home.action.addKey')
+  if (busy.value) return busyWord.value
+  return connected.value ? t('home.state.connected') : t('home.state.disconnected')
+})
+
 const hint = computed(() => {
   if (!hasKey.value) return t('home.hint.noKey')
   if (connected.value) return t('home.hint.connected')
@@ -536,6 +547,29 @@ onUnmounted(() => {
   text-align: center;
 }
 
+/* ============ Плита ============ */
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-8) var(--space-10) var(--space-6);
+  border-radius: 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-lg);
+}
+
+.stage-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
 /* ============ Круг ============ */
 .ring-wrap {
   position: relative;
@@ -677,14 +711,22 @@ onUnmounted(() => {
 /* ============ Показатели ============ */
 .stats {
   display: flex;
-  gap: clamp(24px, 6vw, 64px);
+  align-items: stretch;
+  align-self: stretch;
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-4);
 }
 
 .stat {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 72px;
+}
+
+.stat + .stat {
+  border-left: 1px solid var(--border-color);
 }
 
 .stat-value {
@@ -817,8 +859,8 @@ onUnmounted(() => {
 
 /* ============ Для опытных ============ */
 .advanced {
-  width: min(520px, 100%);
-  border-radius: var(--radius-md);
+  width: min(420px, 100%);
+  border-radius: 12px;
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   text-align: left;
