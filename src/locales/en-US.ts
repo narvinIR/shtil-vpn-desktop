@@ -95,12 +95,12 @@ export default {
       total: 'Total',
     },
     proxyMode: {
-      system: 'System Proxy',
-      tun: 'TUN Mode',
+      system: 'Normal mode',
+      tun: 'All traffic',
       manual: 'Manual Mode',
-      systemTip: 'Automatically set system proxy',
+      systemTip: 'Your browser and most apps go through the VPN',
       tunTip:
-        'Use TUN virtual network card to proxy all traffic, requires administrator privileges',
+        'Every single app goes through the VPN. The system will ask for administrator rights once',
       manualTip: 'Requires manual configuration of system proxy',
     },
     nodeMode: {
@@ -561,9 +561,11 @@ export default {
       title: 'Key from the bot',
       text: 'The Shtil bot in Telegram issues the key — payment and subscription term live there too.',
       open: 'Open the bot',
-      getCode: 'Get the key by code',
-      getCodeHint: 'The app shows a code, you send it to the bot — the key arrives on its own',
-      codeText: 'Send this code to the Shtil bot — the key will arrive here by itself',
+      getCode: 'Get the key',
+      getCodeHint:
+        'Nothing to copy or paste: the app shows a code, and the bot sends the key straight here',
+      codeText:
+        'Press “Open the bot” — the code travels with the link, you never type it in by hand',
       codeQrHint: 'Or point your phone camera here: the bot opens with this code',
       waiting: 'Waiting for confirmation in the bot…',
       cancel: 'Cancel',

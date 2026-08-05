@@ -80,14 +80,23 @@ export const formatTrafficSummary = (item: FrontendSubscription, t: TranslateFn)
 /// как ошибку, а не как бессрочный ключ (iMac владельца, 05.08.2026).
 const FOREVER_AFTER_YEARS = 10
 
-export const formatExpireTime = (timestamp: number | undefined, t: TranslateFn) => {
-  if (!timestamp) return ''
+/** Дата окончания подписки, если она вообще осмысленна: у бессрочного ключа — `null`. */
+export const subscriptionExpiryDate = (timestamp: number | undefined): Date | null => {
+  if (!timestamp) return null
   const date = new Date(timestamp * 1000)
-  if (Number.isNaN(date.getTime())) return ''
+  if (Number.isNaN(date.getTime())) return null
 
   const horizon = new Date()
   horizon.setFullYear(horizon.getFullYear() + FOREVER_AFTER_YEARS)
-  if (date > horizon) return t('sub.expireNever')
+  return date > horizon ? null : date
+}
+
+export const formatExpireTime = (timestamp: number | undefined, t: TranslateFn) => {
+  if (!timestamp) return ''
+  const date = subscriptionExpiryDate(timestamp)
+  if (!date) {
+    return Number.isNaN(new Date(timestamp * 1000).getTime()) ? '' : t('sub.expireNever')
+  }
 
   return t('sub.expireAt', { time: date.toLocaleDateString() })
 }

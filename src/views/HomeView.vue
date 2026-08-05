@@ -94,6 +94,7 @@
           <div class="advanced-row">
             <div class="advanced-info">
               <span class="advanced-name">{{ t('home.proxyMode.system') }}</span>
+              <span class="advanced-note">{{ t('home.proxyMode.systemTip') }}</span>
               <code class="advanced-note">{{ proxyAddress }}</code>
             </div>
             <n-switch
@@ -150,6 +151,7 @@ import { useDeviceLinkStore } from '@/stores/subscription/DeviceLinkStore'
 import { useGuestStore } from '@/stores/subscription/GuestStore'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import BrandWave from '@/components/common/BrandWave.vue'
+import { subscriptionExpiryDate } from '@/views/sub/subscription-utils'
 import { useKernelStatus } from '@/composables/useKernelStatus'
 import { formatBytes } from '@/utils'
 
@@ -264,23 +266,33 @@ const newsText = computed(() => {
 })
 
 /** «Сколько осталось» словами: дата, а не число секунд. */
+const formatUntil = (date: Date) =>
+  date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+
+/**
+ * Срок, известный самому ключу. Нужен, когда ключ вставлен ссылкой, а не получен
+ * по коду: привязки к боту нет, и без этой строки ответа «сколько осталось» на
+ * главном экране не было вовсе.
+ */
+const keyExpiryLine = () => {
+  const key = subStore.activeIndex !== null ? subStore.list[subStore.activeIndex] : subStore.list[0]
+  const date = subscriptionExpiryDate(key?.subscriptionExpire)
+  return date ? t('home.subscription.activeUntil', { date: formatUntil(date) }) : ''
+}
+
 const subscriptionLine = computed(() => {
   // Пробный доступ идёт часами, поэтому у него своя строка и свой остаток.
   if (guest.active) {
     return t('key.guest.left', { left: guest.remaining, traffic: guest.trafficGb })
   }
-  if (!deviceLink.linked) return ''
+  if (!deviceLink.linked) return keyExpiryLine()
   if (deviceLink.subscription === 'expired') return t('home.subscription.over')
-  if (deviceLink.subscription !== 'active') return ''
+  if (deviceLink.subscription !== 'active') return keyExpiryLine()
   const raw = deviceLink.expiresAt
-  if (!raw) return ''
+  if (!raw) return keyExpiryLine()
   const date = new Date(raw)
   if (Number.isNaN(date.getTime())) return ''
-  const text = date.toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+  const text = formatUntil(date)
   return deviceLink.isTrial
     ? t('home.subscription.trialUntil', { date: text })
     : t('home.subscription.activeUntil', { date: text })

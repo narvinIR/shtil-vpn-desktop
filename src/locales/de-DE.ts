@@ -100,12 +100,12 @@ export default {
       total: 'Gesamt',
     },
     proxyMode: {
-      system: 'Systemweit',
-      tun: 'TUN-Modus',
+      system: 'Normaler Modus',
+      tun: 'Gesamter Verkehr',
       manual: 'Manuell',
-      systemTip: 'Der System-Proxy wird automatisch gesetzt',
+      systemTip: 'Browser und die meisten Programme laufen über das VPN',
       tunTip:
-        'Leitet den gesamten Verkehr über einen virtuellen Netzwerkadapter — dafür sind Administratorrechte nötig',
+        'Jedes einzelne Programm läuft über das VPN. Das System fragt einmal nach Administratorrechten',
       manualTip: 'Den System-Proxy tragen Sie selbst ein',
     },
     nodeMode: {
@@ -242,9 +242,11 @@ export default {
       title: 'Schlüssel aus dem Bot',
       text: 'Den Schlüssel stellt der Shtil-Bot in Telegram aus — dort laufen auch Zahlung und Laufzeit.',
       open: 'Bot öffnen',
-      getCode: 'Schlüssel per Code holen',
-      getCodeHint: 'Die App zeigt einen Code, Sie senden ihn an den Bot — der Schlüssel kommt von selbst',
-      codeText: 'Senden Sie diesen Code an den Shtil-Bot — der Schlüssel kommt von selbst hierher',
+      getCode: 'Schlüssel holen',
+      getCodeHint:
+        'Nichts kopieren, nichts einfügen: Die App zeigt einen Code, und der Bot schickt den Schlüssel direkt hierher',
+      codeText:
+        'Tippen Sie auf „Bot öffnen“ — der Code reist mit dem Link mit, eintippen müssen Sie ihn nie',
       codeQrHint: 'Oder richten Sie die Handykamera hierher: Der Bot öffnet sich mit diesem Code',
       waiting: 'Warten auf die Bestätigung im Bot…',
       cancel: 'Abbrechen',

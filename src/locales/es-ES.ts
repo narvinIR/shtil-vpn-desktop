@@ -100,12 +100,12 @@ export default {
       total: 'Total',
     },
     proxyMode: {
-      system: 'Todo el sistema',
-      tun: 'Modo TUN',
+      system: 'Modo normal',
+      tun: 'Todo el tráfico',
       manual: 'Manual',
-      systemTip: 'El proxy del sistema se configura solo',
+      systemTip: 'El navegador y la mayoría de los programas van por la VPN',
       tunTip:
-        'Lleva todo el tráfico por un adaptador de red virtual — hacen falta permisos de administrador',
+        'Todos los programas, sin excepción, van por la VPN. El sistema pedirá permisos de administrador una vez',
       manualTip: 'El proxy del sistema lo configura usted',
     },
     nodeMode: {
@@ -242,9 +242,11 @@ export default {
       title: 'Clave desde el bot',
       text: 'La clave la entrega el bot Shtil en Telegram: allí están también el pago y el plazo.',
       open: 'Abrir el bot',
-      getCode: 'Obtener la clave por código',
-      getCodeHint: 'La aplicación muestra un código, usted se lo envía al bot y la clave llega sola',
-      codeText: 'Envíe este código al bot Shtil: la clave llegará aquí sola',
+      getCode: 'Obtener la clave',
+      getCodeHint:
+        'No hay que copiar ni pegar nada: la aplicación muestra un código y el bot envía la clave aquí mismo',
+      codeText:
+        'Pulse «Abrir el bot»: el código viaja con el enlace, nunca hay que escribirlo a mano',
       codeQrHint: 'O apunte aquí la cámara del teléfono: el bot se abrirá con este código',
       waiting: 'Esperando la confirmación en el bot…',
       cancel: 'Cancelar',
