@@ -16,6 +16,61 @@ use tracing::{debug, error, info, warn};
 
 const STDERR_TAIL_LIMIT: usize = 200;
 
+/// Сколько ждём после мягкого сигнала: ядру нужно снять маршруты и вернуть
+/// разрешение имён. Худший ход всей лестницы — 3 + 3 + 2 + 2 секунды, и сроки
+/// у тех, кто зовёт остановку (перезапуск 20 с, выход из приложения 15 с), взяты
+/// с запасом от этой суммы: короче нельзя — остановку оборвут на середине, и
+/// сирота вернётся другим путём.
+const STOP_SOFT_WAIT_MS: u64 = 3_000;
+/// После жёсткого сигнала ждать долго незачем — процесс уходит сразу.
+const STOP_HARD_WAIT_MS: u64 = 2_000;
+const STOP_POLL_INTERVAL_MS: u64 = 200;
+
+/// Шаг лестницы остановки, от самого мягкого к самому грубому.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StopStep {
+    /// Мягкий сигнал своими правами.
+    PlainTerm,
+    /// Мягкий сигнал с правами администратора.
+    SudoTerm,
+    /// Жёсткий сигнал своими правами.
+    PlainKill,
+    /// Жёсткий сигнал с правами администратора.
+    SudoKill,
+}
+
+const STOP_LADDER_PRIVILEGED: &[StopStep] = &[
+    StopStep::PlainTerm,
+    StopStep::SudoTerm,
+    StopStep::PlainKill,
+    StopStep::SudoKill,
+];
+const STOP_LADDER_PLAIN: &[StopStep] = &[StopStep::PlainTerm, StopStep::PlainKill];
+
+/// Какие шаги остановки доступны.
+///
+/// Ядро под туннелем работает от root, а приложение — нет: без пути повышения прав
+/// остаются только свои сигналы, и тогда остановка обязана честно вернуть отказ,
+/// а не сделать вид, что всё вышло.
+pub fn stop_ladder(has_privileged_path: bool) -> &'static [StopStep] {
+    if has_privileged_path {
+        STOP_LADDER_PRIVILEGED
+    } else {
+        STOP_LADDER_PLAIN
+    }
+}
+
+/// Первый номер процесса из вывода `pgrep`.
+///
+/// Вывод бывает многострочным и с мусором, поэтому разбор вынесен отдельно и покрыт
+/// тестами: ошибка здесь означает, что мы будем останавливать не тот процесс.
+pub fn parse_first_pid(output: &str) -> Option<u32> {
+    output
+        .lines()
+        .filter_map(|line| line.trim().parse::<u32>().ok())
+        .find(|pid| *pid > 0)
+}
+
 pub struct ProcessManager {
     process: Arc<RwLock<Option<Child>>>,
     stderr_tail: Arc<StdMutex<VecDeque<String>>>,
@@ -215,13 +270,91 @@ impl ProcessManager {
             }
         }
 
-        #[cfg(not(target_os = "linux"))]
+        // На macOS под туннелем ядро запускается через обёртку sudo, и `spawn` возвращает
+        // номер ОБЁРТКИ. Раньше он и записывался: остановка била по обёртке жёстким
+        // сигналом, та гибла мгновенно и ничего не передавала ядру — ядро оставалось
+        // сиротой от root и продолжало держать сетевой канал и маршруты.
+        #[cfg(target_os = "macos")]
+        {
+            if tun_enabled {
+                match self
+                    .resolve_macos_managed_kernel_pid(child_pid, kernel_name)
+                    .await
+                {
+                    Some(real_pid) => {
+                        if let Err(e) = self.persist_managed_pid(real_pid) {
+                            warn!("не записан номер ядра (pid={}): {}", real_pid, e);
+                        } else {
+                            info!(
+                                "записан номер ядра: {} (номер обёртки sudo: {})",
+                                real_pid, child_pid
+                            );
+                        }
+                    }
+                    None => {
+                        // Номер обёртки писать нельзя — по нему остановка бьёт мимо.
+                        // Пусто в файле = остановка пойдёт запасным путём, по имени
+                        // процесса с повышением прав.
+                        warn!("настоящий номер ядра не определился — остаётся путь по имени");
+                        self.clear_managed_pid();
+                    }
+                }
+                return;
+            }
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         let _ = tun_enabled;
 
         let _ = kernel_name;
         if let Err(e) = self.persist_managed_pid(child_pid) {
             warn!("记录托管内核 PID 失败 (pid={}): {}", child_pid, e);
         }
+    }
+
+    /// Настоящий номер ядра под обёрткой sudo (macOS).
+    ///
+    /// `pgrep -P` спрашивает систему, кто у обёртки потомок. Пока sudo читает пароль,
+    /// потомка ещё нет — отсюда попытки. Не нашли за отведённое время (пароль не подошёл,
+    /// ядро не поднялось) — честно возвращаем «нет», и остановка пойдёт по имени.
+    #[cfg(target_os = "macos")]
+    async fn resolve_macos_managed_kernel_pid(
+        &self,
+        child_pid: u32,
+        kernel_name: &str,
+    ) -> Option<u32> {
+        const RESOLVE_ATTEMPTS: usize = 10;
+        const RESOLVE_INTERVAL_MS: u64 = 100;
+
+        for attempt in 1..=RESOLVE_ATTEMPTS {
+            // Ядро могло стартовать и напрямую, без обёртки: тогда номер уже настоящий.
+            if self.is_pid_matching_kernel_name(child_pid, kernel_name) {
+                return Some(child_pid);
+            }
+
+            let output = std::process::Command::new("pgrep")
+                .args(["-P", &child_pid.to_string()])
+                .output();
+
+            match output {
+                Ok(output) => {
+                    let text = String::from_utf8_lossy(&output.stdout);
+                    if let Some(pid) = parse_first_pid(&text) {
+                        if self.is_pid_matching_kernel_name(pid, kernel_name) {
+                            return Some(pid);
+                        }
+                        debug!("попытка {}: потомок {} — это не ядро", attempt, pid);
+                    }
+                }
+                Err(e) => {
+                    warn!("попытка {}: pgrep не отработал: {}", attempt, e);
+                }
+            }
+
+            sleep(Duration::from_millis(RESOLVE_INTERVAL_MS)).await;
+        }
+
+        None
     }
 
     async fn is_managed_kernel_pid_active(&self, pid: u32, kernel_name: &str) -> bool {
@@ -285,6 +418,89 @@ impl ProcessManager {
         }
 
         warn!("PID {} 在终止后仍处于活跃状态", pid);
+    }
+
+    /// Ждём, пока процесс уйдёт. `true` — ушёл, `false` — бюджет вышел, а он жив.
+    async fn wait_until_pid_gone(&self, pid: u32, kernel_name: &str, budget_ms: u64) -> bool {
+        let mut waited = 0;
+        loop {
+            if !self.is_managed_kernel_pid_active(pid, kernel_name).await {
+                return true;
+            }
+            if waited >= budget_ms {
+                return false;
+            }
+            sleep(Duration::from_millis(STOP_POLL_INTERVAL_MS)).await;
+            waited += STOP_POLL_INTERVAL_MS;
+        }
+    }
+
+    /// Остановка ядра по лестнице: мягко → мягко с правами → жёстко → жёстко с правами.
+    ///
+    /// `Ok` возвращается ТОЛЬКО когда смерть процесса подтверждена. Иначе наверх уходит
+    /// отказ: человеку нельзя показывать «отключено» при живом туннеле.
+    async fn stop_managed_kernel(
+        &self,
+        app_handle: Option<&AppHandle>,
+        pid: u32,
+        kernel_name: &str,
+    ) -> std::result::Result<(), String> {
+        let has_privileged_path =
+            app_handle.is_some() && cfg!(any(target_os = "linux", target_os = "macos"));
+
+        for step in stop_ladder(has_privileged_path) {
+            let attempt = match step {
+                StopStep::PlainTerm => crate::platform::terminate_process_by_pid(pid),
+                StopStep::PlainKill => crate::platform::kill_process_by_pid(pid),
+                StopStep::SudoTerm => match app_handle {
+                    Some(handle) => {
+                        crate::app::system::sudo_service::terminate_process_by_pid_with_saved_password(
+                            handle, pid,
+                        )
+                        .await
+                    }
+                    None => Err("нет доступа к правам администратора".to_string()),
+                },
+                StopStep::SudoKill => match app_handle {
+                    Some(handle) => {
+                        crate::app::system::sudo_service::kill_process_by_pid_with_saved_password(
+                            handle, pid,
+                        )
+                        .await
+                    }
+                    None => Err("нет доступа к правам администратора".to_string()),
+                },
+            };
+
+            if let Err(err) = attempt {
+                // Сигнал не доставлен (чаще всего «нет прав» на ядро от root) — ждать
+                // тут нечего, процесс его не получал. Сразу следующий шаг: иначе
+                // обычный случай на Маке стоил бы трёх секунд впустую на каждом шаге,
+                // и лестница не успевала бы уложиться в срок того, кто её позвал.
+                warn!("шаг остановки {:?} для ядра PID {}: {}", step, pid, err);
+                // Отказ бывает и оттого, что процесс уже ушёл — проверяем без ожидания.
+                if self.wait_until_pid_gone(pid, kernel_name, 0).await {
+                    info!("ядро уже не работает (PID {})", pid);
+                    return Ok(());
+                }
+                continue;
+            }
+
+            let budget = match step {
+                StopStep::PlainTerm | StopStep::SudoTerm => STOP_SOFT_WAIT_MS,
+                StopStep::PlainKill | StopStep::SudoKill => STOP_HARD_WAIT_MS,
+            };
+
+            if self.wait_until_pid_gone(pid, kernel_name, budget).await {
+                info!("ядро остановлено шагом {:?} (PID {})", step, pid);
+                return Ok(());
+            }
+        }
+
+        Err(format!(
+            "ядро PID {} не остановилось: не хватило прав или процесс не отвечает",
+            pid
+        ))
     }
 
     async fn has_active_managed_kernel_pid(&self) -> bool {
@@ -760,7 +976,7 @@ impl ProcessManager {
         let kernel_name = crate::platform::get_kernel_executable_name();
         info!("按进程名强制清理内核进程: {}", kernel_name);
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         let _ = app_handle;
 
         let plain_kill_result = crate::platform::kill_processes_by_name(kernel_name)
@@ -834,13 +1050,46 @@ impl ProcessManager {
 
         #[cfg(not(target_os = "linux"))]
         {
-            plain_kill_result?;
+            if let Err(err) = plain_kill_result {
+                warn!("普通权限按名称终止内核失败: {}", err);
+            }
+
             sleep(Duration::from_millis(350)).await;
             match crate::platform::is_process_running(kernel_name).await {
-                Ok(true) => Err(format!(
-                    "强制清理后仍检测到 {} 进程在运行，可能存在权限不足",
-                    kernel_name
-                )),
+                Ok(true) => {
+                    // На macOS ядро под туннелем работает от root, и своими правами его не
+                    // снять. Ветка повышения прав была скомпилирована только под Linux —
+                    // здесь оставался бессильный pkill от имени пользователя.
+                    #[cfg(target_os = "macos")]
+                    if let Some(app_handle) = app_handle {
+                        warn!("своими правами ядро не снялось, пробуем с правами администратора");
+                        match crate::app::system::sudo_service::kill_processes_by_name_with_saved_password(
+                            app_handle,
+                            kernel_name,
+                        )
+                        .await
+                        {
+                            Ok(_) => {
+                                sleep(Duration::from_millis(350)).await;
+                                if !crate::platform::is_process_running(kernel_name)
+                                    .await
+                                    .unwrap_or(false)
+                                {
+                                    info!("ядро снято по имени с правами администратора");
+                                    return Ok(());
+                                }
+                            }
+                            Err(err) => {
+                                warn!("снятие по имени с правами не удалось: {}", err);
+                            }
+                        }
+                    }
+
+                    Err(format!(
+                        "强制清理后仍检测到 {} 进程在运行，可能存在权限不足",
+                        kernel_name
+                    ))
+                }
                 Ok(false) => Ok(()),
                 Err(e) => {
                     // 检测失败时不直接阻断：终止命令已成功执行，交由上层启动稳定性校验兜底。
@@ -860,55 +1109,69 @@ impl ProcessManager {
             info!("{}", messages::INFO_SYSTEM_PROXY_DISABLED);
         }
 
-        // 提取进程并停止它
-        let mut child_opt = {
+        let kernel_name = crate::platform::get_kernel_executable_name();
+
+        // Номер ядра читаем ДО всякой очистки. Раньше файл стирался раньше запасного
+        // пути, и тот читал пустоту: ядро оставалось жить, а остановка рапортовала успех.
+        let managed_pid = self.read_managed_pid();
+        let mut stop_error: Option<String> = None;
+
+        if let Some(pid) = managed_pid {
+            if self.is_managed_kernel_pid_active(pid, kernel_name).await {
+                match self.stop_managed_kernel(app_handle, pid, kernel_name).await {
+                    Ok(_) => {
+                        info!("{}", messages::INFO_PROCESS_STOPPED);
+                        self.clear_managed_pid();
+                    }
+                    Err(err) => {
+                        error!("остановка ядра не удалась: {}", err);
+                        stop_error = Some(err);
+                    }
+                }
+            } else {
+                self.clear_managed_pid();
+            }
+        }
+
+        // Обёртку снимаем последней: пока ядро живо, она — единственная ниточка к нему.
+        // Обычно она уходит сама, как только ушёл её потомок.
+        let child_opt = {
             let mut process_guard = self.process.write().await;
             process_guard.take()
         };
 
-        if let Some(mut child) = child_opt.take() {
-            // Windows 优先使用强制终止，避免长时间等待
-            #[cfg(windows)]
-            {
-                let pid = child.id();
-                if let Err(e) = kill_process_by_pid(pid) {
-                    warn!("强制终止内核进程失败: {}", e);
-                } else {
-                    info!("已强制终止内核进程 (pid={})", pid);
-                }
-            }
-
-            // 其他平台或兜底再尝试优雅 kill
-            match child.kill() {
-                Ok(_) => {
-                    info!("{}", messages::INFO_PROCESS_STOPPED);
-                    if let Err(e) = child.wait() {
-                        warn!("等待内核进程终止失败: {}", e);
-                    }
-                }
-                Err(e) => {
+        if let Some(mut child) = child_opt {
+            let already_gone = matches!(child.try_wait(), Ok(Some(_)));
+            if !already_gone {
+                if let Err(e) = child.kill() {
                     warn!("终止内核进程失败: {}", e);
-                    #[cfg(windows)]
-                    {
-                        let pid = child.id();
-                        if let Err(e) = kill_process_by_pid(pid) {
-                            error!("强制终止进程失败: {}", e);
-                            return Err(ProcessError::StopFailed(format!(
-                                "强制终止进程失败: {}",
-                                e
-                            )));
-                        }
-                    }
+                }
+                if let Err(e) = child.wait() {
+                    warn!("等待内核进程终止失败: {}", e);
                 }
             }
-            self.clear_managed_pid();
         } else {
             info!("没有正在运行的内核进程");
         }
 
-        // 兜底：尝试清理托管 PID 记录对应的进程
-        if let Err(e) = self.kill_existing_processes(app_handle).await {
-            warn!("清理托管内核进程失败: {}", e);
+        // Номера ядра не было (пароль не подошёл, обёртка не успела его запустить),
+        // а живое ядро в системе есть — это наш сирота, снимаем по имени с правами.
+        // Не смогли проверить — считаем, что живо: чистка по имени сама перепроверит
+        // и вернёт успех, если чистить оказалось нечего.
+        if managed_pid.is_none()
+            && crate::platform::is_process_running(kernel_name)
+                .await
+                .unwrap_or(true)
+        {
+            warn!("номер ядра неизвестен, но ядро живо — чистим по имени процесса");
+            if let Err(e) = self.force_kill_kernel_processes_by_name(app_handle).await {
+                error!("чистка по имени процесса не удалась: {}", e);
+                stop_error.get_or_insert(e);
+            }
+        }
+
+        if let Some(err) = stop_error {
+            return Err(ProcessError::StopFailed(err));
         }
 
         Ok(())
@@ -1081,5 +1344,51 @@ mod tests {
         assert_eq!(lines.len(), STDERR_TAIL_LIMIT);
         assert!(!output.contains("line-0"));
         assert!(output.contains(&format!("line-{}", STDERR_TAIL_LIMIT + 24)));
+    }
+
+    #[test]
+    fn parse_first_pid_should_take_single_number() {
+        assert_eq!(parse_first_pid("12609\n"), Some(12609));
+    }
+
+    #[test]
+    fn parse_first_pid_should_take_first_of_many() {
+        assert_eq!(parse_first_pid("12609\n12610\n12611\n"), Some(12609));
+    }
+
+    #[test]
+    fn parse_first_pid_should_skip_garbage() {
+        assert_eq!(parse_first_pid("pgrep: bad option\n12609\n"), Some(12609));
+    }
+
+    #[test]
+    fn parse_first_pid_should_return_none_on_empty() {
+        assert_eq!(parse_first_pid(""), None);
+        assert_eq!(parse_first_pid("\n  \n"), None);
+        assert_eq!(parse_first_pid("0\n"), None);
+    }
+
+    #[test]
+    fn stop_ladder_with_privilege_should_start_soft_and_end_hard() {
+        let ladder = stop_ladder(true);
+
+        assert_eq!(
+            ladder,
+            &[
+                StopStep::PlainTerm,
+                StopStep::SudoTerm,
+                StopStep::PlainKill,
+                StopStep::SudoKill
+            ]
+        );
+    }
+
+    #[test]
+    fn stop_ladder_without_privilege_should_not_promise_admin_steps() {
+        let ladder = stop_ladder(false);
+
+        assert_eq!(ladder, &[StopStep::PlainTerm, StopStep::PlainKill]);
+        assert!(!ladder.contains(&StopStep::SudoTerm));
+        assert!(!ladder.contains(&StopStep::SudoKill));
     }
 }

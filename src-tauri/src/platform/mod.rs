@@ -51,6 +51,11 @@ pub fn kill_process_by_pid(pid: u32) -> Result<(), String> {
     platform_kill_process_by_pid(pid)
 }
 
+/// Мягкая остановка процесса по номеру: даёт ядру свернуть туннель самому.
+pub fn terminate_process_by_pid(pid: u32) -> Result<(), String> {
+    platform_terminate_process_by_pid(pid)
+}
+
 /// 获取系统架构（用于内核下载）
 pub fn get_system_arch() -> &'static str {
     platform_get_system_arch()

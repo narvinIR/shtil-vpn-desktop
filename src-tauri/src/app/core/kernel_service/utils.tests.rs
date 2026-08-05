@@ -82,7 +82,7 @@ fn test_build_kernel_error_payload_should_include_structured_api_http_error_diag
 #[test]
 fn test_orphan_kernel_is_adopted_not_reported_as_conflict() {
     assert_eq!(
-        decide_foreign_kernel(false, true),
+        decide_foreign_kernel(false, true, false),
         ForeignKernelOutcome::Adopt
     );
 }
@@ -90,7 +90,7 @@ fn test_orphan_kernel_is_adopted_not_reported_as_conflict() {
 #[test]
 fn test_foreign_kernel_without_api_stays_a_failure() {
     assert_eq!(
-        decide_foreign_kernel(false, false),
+        decide_foreign_kernel(false, false, false),
         ForeignKernelOutcome::Blocked
     );
 }
@@ -98,7 +98,26 @@ fn test_foreign_kernel_without_api_stays_a_failure() {
 #[test]
 fn test_stopped_foreign_kernel_lets_us_start_our_own() {
     assert_eq!(
-        decide_foreign_kernel(true, false),
+        decide_foreign_kernel(true, false, false),
+        ForeignKernelOutcome::Cleaned
+    );
+}
+
+/// Смена режима: мы сами только что пытались снять это ядро и не смогли. Взять его
+/// себе — значит показать «отключено» при живом туннеле, а человек останется без сети.
+#[test]
+fn test_mode_change_never_adopts_the_kernel_it_failed_to_stop() {
+    assert_eq!(
+        decide_foreign_kernel(false, true, true),
+        ForeignKernelOutcome::Blocked
+    );
+}
+
+/// Успешная остановка остаётся успешной и внутри смены режима.
+#[test]
+fn test_mode_change_with_clean_stop_starts_fresh_kernel() {
+    assert_eq!(
+        decide_foreign_kernel(true, true, true),
         ForeignKernelOutcome::Cleaned
     );
 }

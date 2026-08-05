@@ -9,7 +9,7 @@ pub async fn platform_is_process_running(process_name: &str) -> Result<bool, Str
 
     // 方法1: 使用 pgrep
     if let Ok(output) = std::process::Command::new("pgrep")
-        .args(&["-x", process_name])
+        .args(["-x", process_name])
         .output()
     {
         if output.status.success() {
@@ -26,7 +26,7 @@ pub async fn platform_is_process_running(process_name: &str) -> Result<bool, Str
 
     // 方法2: 使用 ps 精确匹配命令名，避免误杀自身
     if let Ok(output) = std::process::Command::new("ps")
-        .args(&["-axo", "pid=,comm="])
+        .args(["-axo", "pid=,comm="])
         .output()
     {
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -59,7 +59,7 @@ pub async fn platform_is_process_running(process_name: &str) -> Result<bool, Str
 /// 杀死指定名称的进程（macOS）
 pub async fn platform_kill_processes_by_name(process_name: &str) -> Result<(), String> {
     let output = std::process::Command::new("pkill")
-        .args(&["-9", "-x", process_name])
+        .args(["-9", "-x", process_name])
         .output()
         .map_err(|e| format!("执行pkill失败: {}", e))?;
 
@@ -75,7 +75,7 @@ pub async fn platform_kill_processes_by_name(process_name: &str) -> Result<(), S
 /// 杀死指定 PID 的进程（macOS）
 pub fn platform_kill_process_by_pid(pid: u32) -> Result<(), String> {
     let output = std::process::Command::new("kill")
-        .args(&["-9", &pid.to_string()])
+        .args(["-9", &pid.to_string()])
         .output()
         .map_err(|e| format!("执行kill失败: {}", e))?;
 
@@ -85,6 +85,26 @@ pub fn platform_kill_process_by_pid(pid: u32) -> Result<(), String> {
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("终止进程失败: {}", stderr))
+    }
+}
+
+/// Мягкая остановка процесса по номеру (macOS).
+///
+/// Ядро под туннелем работает от root и само снимает маршруты и разрешение имён,
+/// когда получает мягкий сигнал. Жёсткий такого шанса не оставляет: интерфейс
+/// исчезает вместе с процессом, а всё, что ядро прописало вокруг, остаётся.
+pub fn platform_terminate_process_by_pid(pid: u32) -> Result<(), String> {
+    let output = std::process::Command::new("kill")
+        .args(["-TERM", &pid.to_string()])
+        .output()
+        .map_err(|e| format!("не удалось выполнить kill: {}", e))?;
+
+    if output.status.success() {
+        info!("мягкий сигнал отправлен процессу PID: {}", pid);
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("мягкая остановка не удалась: {}", stderr.trim()))
     }
 }
 
@@ -110,7 +130,7 @@ pub fn platform_get_kernel_executable_name() -> &'static str {
 /// 获取系统运行时间（macOS）
 pub async fn platform_get_system_uptime_ms() -> Result<u64, String> {
     let mut cmd = tokio::process::Command::new("sysctl");
-    cmd.args(&["-n", "kern.boottime"]);
+    cmd.args(["-n", "kern.boottime"]);
 
     match cmd.output().await {
         Ok(output) => {

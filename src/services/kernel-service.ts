@@ -91,10 +91,13 @@ export interface KernelAutoManageResult {
   last_start_message?: string
 }
 
+/** Служебная часть присылает КОД шага — фразу человеку собирает словарь. */
+export type KernelDownloadStage = 'start' | 'download' | 'extract' | 'done' | 'failed'
+
 export interface KernelDownloadPayload {
   progress?: number
-  message?: string
-  status?: 'downloading' | 'completed' | 'error'
+  stage?: KernelDownloadStage
+  status?: 'downloading' | 'extracting' | 'completed' | 'error'
 }
 
 class KernelService {

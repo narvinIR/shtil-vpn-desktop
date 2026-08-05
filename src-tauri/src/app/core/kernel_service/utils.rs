@@ -430,10 +430,19 @@ pub enum ForeignKernelOutcome {
 /// снять его правами пользователя нельзя, а порт оно держит. Живой iMac
 /// владельца 05.08.2026 показывал «Сбой: порт занят» при работающей связи.
 /// Отвечающее ядро на нашем порту — не чужая программа, а наше же, осиротевшее.
-pub fn decide_foreign_kernel(cleanup_succeeded: bool, api_responds: bool) -> ForeignKernelOutcome {
+///
+/// `require_fresh` — мы пришли сюда из смены режима и только что сами пытались это
+/// ядро снять. Тогда «взять его себе» означает соврать: в нём остались прежние
+/// настройки, и человек, выключивший весь трафик, останется с работающим туннелем
+/// и надписью «отключено». В этом случае подхват запрещён.
+pub fn decide_foreign_kernel(
+    cleanup_succeeded: bool,
+    api_responds: bool,
+    require_fresh: bool,
+) -> ForeignKernelOutcome {
     if cleanup_succeeded {
         ForeignKernelOutcome::Cleaned
-    } else if api_responds {
+    } else if api_responds && !require_fresh {
         ForeignKernelOutcome::Adopt
     } else {
         ForeignKernelOutcome::Blocked

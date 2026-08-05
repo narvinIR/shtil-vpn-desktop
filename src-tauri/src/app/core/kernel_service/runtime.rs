@@ -300,7 +300,19 @@ pub async fn start_kernel_with_state(
     app_handle: AppHandle,
     resolved: &ResolvedProxyState,
 ) -> Result<serde_json::Value, String> {
-    start_kernel_impl(app_handle, resolved, true).await
+    start_kernel_impl(app_handle, resolved, true, false).await
+}
+
+/// Запуск после смены режима: нужен именно свежий процесс.
+///
+/// Прежнее ядро несёт прежние настройки. Человек, выключивший «весь трафик»,
+/// с подхваченным старым ядром получит надпись «отключено» и живой туннель —
+/// то есть мёртвую сеть.
+pub async fn start_kernel_requiring_fresh_process(
+    app_handle: AppHandle,
+    resolved: &ResolvedProxyState,
+) -> Result<serde_json::Value, String> {
+    start_kernel_impl(app_handle, resolved, true, true).await
 }
 
 /// 内核启动实现。
@@ -312,6 +324,7 @@ pub(super) async fn start_kernel_impl(
     app_handle: AppHandle,
     resolved: &ResolvedProxyState,
     reactivate_guard: bool,
+    require_fresh: bool,
 ) -> Result<serde_json::Value, String> {
     let _attempt_id = KERNEL_STATE.begin_attempt("kernel-start");
     KERNEL_STATE.set_state(KernelState::Starting);
@@ -392,6 +405,26 @@ pub(super) async fn start_kernel_impl(
     }
 
     if PROCESS_MANAGER.is_running().await {
+        // Смена режима: ядро всё ещё живо, хотя мы его только что снимали. Брать его
+        // себе нельзя — в нём прежние настройки, и человек получит «отключено» при
+        // работающем туннеле.
+        if require_fresh {
+            KERNEL_STATE.mark_failed();
+            let detail = "прежнее ядро осталось работать после остановки".to_string();
+            emit_kernel_error_with_context(
+                &app_handle,
+                "KERNEL_CONFLICT_FORCE_STOP_FAILED",
+                "не удалось снять прежнее подключение",
+                Some(&detail),
+                Some("kernel.runtime.require_fresh"),
+                true,
+            );
+            return Ok(json!({
+                "success": false,
+                "message": detail
+            }));
+        }
+
         // Ретрансляцию здесь помечали готовой, не поднимая её: событий с
         // трафиком не приходило вовсе, и экран показывал нули при живой связи
         // (iMac владельца, 05.08.2026). Поднимаем по-настоящему.
@@ -415,7 +448,11 @@ pub(super) async fn start_kernel_impl(
         let cleanup = try_cleanup_conflicting_kernel(&app_handle).await;
         let outcome = match &cleanup {
             Ok(_) => ForeignKernelOutcome::Cleaned,
-            Err(_) => decide_foreign_kernel(false, kernel_api_responds(resolved.api_port).await),
+            Err(_) => decide_foreign_kernel(
+                false,
+                kernel_api_responds(resolved.api_port).await,
+                require_fresh,
+            ),
         };
 
         if outcome == ForeignKernelOutcome::Adopt {
@@ -691,32 +728,55 @@ async fn restart_kernel_internal(
 
     let resolved = resolve_proxy_runtime_state(&app_handle, overrides).await?;
 
-    // 先尝试停止，超时时强杀
+    // Срок остановки взят по худшему ходу лестницы внутри неё: четыре шага, до 3 с
+    // ожидания на мягкий и до 2 с на жёсткий, плюс запасной проход по имени. Прежние
+    // 4 секунды обрывали остановку на середине, и дальше шёл грубый путь, оставлявший
+    // ядро от root живым — ровно отсюда «выключил, а сети нет». Обычный ход укладывается
+    // в доли секунды: недоставленный сигнал не ждут.
     let stop_result =
-        tokio::time::timeout(Duration::from_secs(4), stop_kernel(Some(&app_handle))).await;
-    match stop_result {
-        Ok(Ok(_)) => info!("? 快速重启：停止阶段完成"),
+        tokio::time::timeout(Duration::from_secs(20), stop_kernel(Some(&app_handle))).await;
+
+    let stop_failure: Option<String> = match stop_result {
+        Ok(Ok(_)) => None,
         Ok(Err(e)) => {
-            warn!("? 快速重启：停止失败，继续强杀: {}", e);
-            if let Err(e) = PROCESS_MANAGER
+            warn!("быстрый перезапуск: остановка не удалась ({}), чистим по имени", e);
+            match PROCESS_MANAGER
                 .force_kill_kernel_processes_by_name(Some(&app_handle))
                 .await
             {
-                error!("强制清理内核进程失败: {}", e);
+                Ok(_) => None,
+                Err(force_error) => Some(format!("{} · {}", e, force_error)),
             }
         }
         Err(_) => {
-            warn!("? 快速重启：停止超时，强制清理");
-            if let Err(e) = PROCESS_MANAGER
+            warn!("быстрый перезапуск: остановка не уложилась в срок, чистим по имени");
+            PROCESS_MANAGER
                 .force_kill_kernel_processes_by_name(Some(&app_handle))
                 .await
-            {
-                error!("强制清理内核进程失败: {}", e);
-            }
+                .err()
         }
+    };
+
+    // Ядро снять не удалось. Запускать поверх него второе — значит показать человеку
+    // успех при работающем прежнем туннеле.
+    if let Some(detail) = stop_failure {
+        error!("смена режима остановлена: прежнее ядро живо ({})", detail);
+        KERNEL_STATE.mark_failed();
+        emit_kernel_error_with_context(
+            &app_handle,
+            "KERNEL_CONFLICT_FORCE_STOP_FAILED",
+            "не удалось снять прежнее подключение",
+            Some(&detail),
+            Some("kernel.runtime.restart_stop"),
+            true,
+        );
+        return Ok(json!({
+            "success": false,
+            "message": detail
+        }));
     }
 
-    start_kernel_with_state(app_handle.clone(), &resolved).await
+    start_kernel_requiring_fresh_process(app_handle.clone(), &resolved).await
 }
 
 pub async fn orchestrated_start_kernel(
@@ -901,16 +961,10 @@ pub async fn stop_kernel(app_handle: Option<&AppHandle>) -> Result<String, Strin
         return Err(format!("{}: {}", messages::ERR_PROCESS_STOP_FAILED, e));
     }
 
-    // 快速轮询确认，避免固定长等待
-    for i in 1..=2 {
-        if !is_kernel_running().await.unwrap_or(true) {
-            info!("? 内核停止成功（第{}次检查）", i);
-            KERNEL_STATE.mark_stopped();
-            return Ok("内核停止成功".to_string());
-        }
-        tokio::time::sleep(Duration::from_millis(500)).await;
-    }
-
-    KERNEL_STATE.mark_failed();
-    Err(messages::ERR_PROCESS_STOP_FAILED.to_string())
+    // Отдельной проверки-заплатки здесь больше нет: остановка сама доводит дело до
+    // подтверждённой смерти процесса и без этого не возвращает успех. Прежняя пара
+    // проверок по полсекунды успевала лишь застать ядро живым и объявить сбой при
+    // исправной остановке — либо, наоборот, промолчать о сироте.
+    KERNEL_STATE.mark_stopped();
+    Ok("内核停止成功".to_string())
 }

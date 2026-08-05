@@ -70,8 +70,14 @@
         </div>
       </div>
 
-      <!-- Сколько осталось: второй из трёх ответов, которые человек ищет на экране -->
-      <p v-if="subscriptionLine" class="subscription-line">{{ subscriptionLine }}</p>
+      <!-- Сколько осталось: второй из трёх ответов, которые человек ищет на экране.
+           Рядом — куда идти платить, чтобы третий ответ не пришлось искать. -->
+      <p v-if="subscriptionLine" class="subscription-line">
+        <span>{{ subscriptionLine }}</span>
+        <n-button v-if="canRenew" text size="tiny" type="primary" @click="payInBot">
+          {{ t('home.subscription.renew') }}
+        </n-button>
+      </p>
 
       <p class="hint">{{ hint }}</p>
 
@@ -81,6 +87,24 @@
         <div class="failure-head">
           <n-icon :size="18"><AlertCircleOutline /></n-icon>
           <span>{{ failureText }}</span>
+        </div>
+        <!-- Что делать: сбой без следующего шага оставляет человека в тупике -->
+        <p class="failure-what">{{ t('home.error.whatToDo') }}</p>
+        <ol class="failure-steps">
+          <li>{{ t('home.error.steps.checkKey') }}</li>
+          <li>{{ t('home.error.steps.restart') }}</li>
+          <li>{{ t('home.error.steps.support') }}</li>
+        </ol>
+        <div class="failure-actions">
+          <n-button size="small" secondary @click="router.push('/sub')">
+            {{ t('home.error.goToKey') }}
+          </n-button>
+          <n-button size="small" secondary :loading="kernelStore.isLoading" @click="restart">
+            {{ t('home.restart') }}
+          </n-button>
+          <n-button size="small" quaternary @click="openSupportInBot">
+            {{ t('home.error.writeSupport') }}
+          </n-button>
         </div>
         <details v-if="failureDetail" class="failure-details">
           <summary>{{ t('home.error.details') }}</summary>
@@ -108,6 +132,7 @@
             <div class="advanced-info">
               <span class="advanced-name">{{ t('home.proxyMode.tun') }}</span>
               <span class="advanced-note">{{ t('home.proxyMode.tunTip') }}</span>
+              <span class="advanced-note">{{ t('home.advanced.tunHint') }}</span>
             </div>
             <n-switch
               :value="appStore.tunEnabled"
@@ -265,7 +290,6 @@ const newsText = computed(() => {
   return deviceLink.news && te(key) ? t(key) : ''
 })
 
-/** «Сколько осталось» словами: дата, а не число секунд. */
 const formatUntil = (date: Date) =>
   date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -280,6 +304,19 @@ const keyExpiryLine = () => {
   return date ? t('home.subscription.activeUntil', { date: formatUntil(date) }) : ''
 }
 
+/** Сколько дней осталось: человек считает днями, а датой сверяется. */
+const subscriptionDaysLeft = computed(() => {
+  const raw = deviceLink.expiresAt
+  if (!raw) return ''
+  const date = new Date(raw)
+  if (Number.isNaN(date.getTime())) return ''
+  const msLeft = date.getTime() - Date.now()
+  if (msLeft <= 0) return ''
+  const days = Math.ceil(msLeft / 86_400_000)
+  return days <= 1 ? t('home.subscription.lastDay') : t('home.subscription.daysLeft', { days })
+})
+
+/** «Сколько осталось» словами: дата и остаток днями, а не число секунд. */
 const subscriptionLine = computed(() => {
   // Пробный доступ идёт часами, поэтому у него своя строка и свой остаток.
   if (guest.active) {
@@ -293,10 +330,23 @@ const subscriptionLine = computed(() => {
   const date = new Date(raw)
   if (Number.isNaN(date.getTime())) return ''
   const text = formatUntil(date)
-  return deviceLink.isTrial
+  const until = deviceLink.isTrial
     ? t('home.subscription.trialUntil', { date: text })
     : t('home.subscription.activeUntil', { date: text })
+  const left = subscriptionDaysLeft.value
+  return left ? `${until} · ${left}` : until
 })
+
+/** Продлить можно тогда, когда есть что продлевать: подписка идёт или уже кончилась. */
+const canRenew = computed(
+  () =>
+    deviceLink.linked &&
+    !guest.active &&
+    (deviceLink.subscription === 'active' || deviceLink.subscription === 'expired'),
+)
+
+/** Поддержка живёт в боте — там же, где оплата и ключ. */
+const openSupportInBot = () => openUrl('https://t.me/RealityVPNBot_bot')
 
 const hint = computed(() => {
   if (!hasKey.value) return t('home.hint.noKey')
@@ -695,6 +745,11 @@ onUnmounted(() => {
 
 .subscription-line {
   margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--primary-color);
@@ -716,6 +771,31 @@ onUnmounted(() => {
   color: var(--error-color);
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+.failure-what {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.failure-steps {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.failure-steps li + li {
+  margin-top: 2px;
+}
+
+.failure-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
 .failure-details {

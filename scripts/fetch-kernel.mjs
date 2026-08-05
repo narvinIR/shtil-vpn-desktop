@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import fsPromises from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
+import crypto from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
@@ -11,7 +12,8 @@ import {
   getAllKernelTargets,
   normalizeArch,
   normalizePlatform,
-  resolveKernelTarget
+  resolveKernelTarget,
+  KERNEL_VERSION
 } from './kernel-targets.mjs'
 
 export async function main(rawArgs = process.argv.slice(2)) {
@@ -24,7 +26,15 @@ export async function main(rawArgs = process.argv.slice(2)) {
   const baseDir = args.out
     ? path.resolve(args.out)
     : path.resolve('src-tauri', 'resources', 'kernel')
-  let resolvedVersion = args.version ?? null
+  if (args.version && args.version !== KERNEL_VERSION) {
+    console.error(
+      `Kernel version is pinned to ${KERNEL_VERSION} together with its checksums. ` +
+        'Update scripts/kernel-targets.mjs instead of passing --version.'
+    )
+    return 1
+  }
+
+  const resolvedVersion = KERNEL_VERSION
   const skipExisting = Boolean(args['skip-existing'] || args.skipExisting)
   const force = Boolean(args.force)
   const targets = resolveRequestedTargets(args)
@@ -37,17 +47,9 @@ export async function main(rawArgs = process.argv.slice(2)) {
   const errors = []
   for (const target of targets) {
     try {
-      await fetchKernel(target, resolvedVersion, baseDir, {
-        skipExisting,
-        force,
-        getVersion: async () => {
-          if (!resolvedVersion) {
-            resolvedVersion = await getLatestVersion()
-          }
-          return resolvedVersion
-        }
-      })
+      await fetchKernel(target, resolvedVersion, baseDir, { skipExisting, force })
     } catch (error) {
+      console.error(error?.message ?? error)
       errors.push(error)
     }
   }
@@ -97,12 +99,15 @@ export function resolveRequestedTargets(
 
 export function printHelp() {
   console.log(`Usage:
-  node scripts/fetch-kernel.mjs [--all] [--platform windows|linux|macos] [--arch amd64|arm64|386|armv5] [--version x.y.z] [--out path] [--skip-existing] [--force]
+  node scripts/fetch-kernel.mjs [--all] [--platform windows|linux|macos] [--arch amd64|arm64|386|armv5] [--out path] [--skip-existing] [--force]
+
+Ядро берётся версии ${KERNEL_VERSION} — она закреплена вместе с контрольными
+суммами в scripts/kernel-targets.mjs. Другая версия = другие суммы, поэтому
+--version здесь нет: правится реестр целей.
 
 Examples:
   node scripts/fetch-kernel.mjs --platform windows --arch amd64
   node scripts/fetch-kernel.mjs --all
-  node scripts/fetch-kernel.mjs --platform macos --arch arm64 --version 1.12.10
   node scripts/fetch-kernel.mjs --all --skip-existing
 `)
 }
@@ -117,17 +122,17 @@ export function buildFilename(platformName, archName, versionName) {
   return `sing-box-${versionName}-linux-${archName}.tar.gz`
 }
 
-export function buildDownloadUrls(versionName, filenameName) {
-  const base = `https://github.com/SagerNet/sing-box/releases/download/v${versionName}/${filenameName}`
-  return [
-    `https://v6.gh-proxy.com/${base}`,
-    `https://gh-proxy.com/${base}`,
-    `https://ghfast.top/${base}`,
-    `https://hub.fastgit.xyz/SagerNet/sing-box/releases/download/v${versionName}/${filenameName}`,
-    `https://hub.fgit.cf/SagerNet/sing-box/releases/download/v${versionName}/${filenameName}`,
-    `https://cdn.jsdelivr.net/gh/SagerNet/sing-box@releases/download/v${versionName}/${filenameName}`,
-    base
-  ]
+// Один источник — тот, кто ядро выпускает. Чужие зеркала (в том числе китайские,
+// стоявшие тут первыми) отдают файл, который потом работает у клиента от имени
+// администратора: подменить его = подменить VPN у всех.
+export function buildDownloadUrl(versionName, filenameName) {
+  return `https://github.com/SagerNet/sing-box/releases/download/v${versionName}/${filenameName}`
+}
+
+export async function sha256OfFile(filePath) {
+  const hash = crypto.createHash('sha256')
+  await pipeline(fs.createReadStream(filePath), hash)
+  return hash.digest('hex')
 }
 
 export async function fetchKernel(target, version, kernelBaseDir, options = {}) {
@@ -147,35 +152,35 @@ export async function fetchKernel(target, version, kernelBaseDir, options = {}) 
     return
   }
 
-  const resolvedTargetVersion = version ?? (await options.getVersion?.())
+  const resolvedTargetVersion = version
   if (!resolvedTargetVersion) {
     throw new Error(`[${target.platform}/${target.arch}] Missing version info.`)
   }
 
   const filename = buildFilename(target.platform, target.arch, resolvedTargetVersion)
-  const downloadUrls = buildDownloadUrls(resolvedTargetVersion, filename)
+  const downloadUrl = buildDownloadUrl(resolvedTargetVersion, filename)
   const tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'sing-box-'))
   const archivePath = path.join(tempDir, filename)
   const extractDir = path.join(tempDir, 'extract')
   await fsPromises.mkdir(extractDir, { recursive: true })
 
-  let downloaded = false
-  for (const url of downloadUrls) {
-    try {
-      console.log(`[${target.platform}/${target.arch}] Downloading: ${url}`)
-      await downloadFile(url, archivePath)
-      downloaded = true
-      break
-    } catch (error) {
-      console.warn(
-        `[${target.platform}/${target.arch}] Download failed: ${error?.message ?? error}`
-      )
-    }
+  try {
+    console.log(`[${target.platform}/${target.arch}] Downloading: ${downloadUrl}`)
+    await downloadFile(downloadUrl, archivePath)
+  } catch (error) {
+    await cleanupTemp(tempDir)
+    throw new Error(
+      `[${target.platform}/${target.arch}] Download failed: ${error?.message ?? error}`
+    )
   }
 
-  if (!downloaded) {
+  const actualChecksum = await sha256OfFile(archivePath)
+  if (actualChecksum !== target.sha256) {
     await cleanupTemp(tempDir)
-    throw new Error(`[${target.platform}/${target.arch}] All download sources failed.`)
+    throw new Error(
+      `[${target.platform}/${target.arch}] Checksum mismatch for ${filename}: ` +
+        `expected ${target.sha256}, got ${actualChecksum}.`
+    )
   }
 
   await extractArchive(archivePath, extractDir)
@@ -197,135 +202,9 @@ export async function fetchKernel(target, version, kernelBaseDir, options = {}) 
   console.log(`[${target.platform}/${target.arch}] Saved: ${targetExecutable}`)
 }
 
-export async function getLatestVersion() {
-  const apiSources = [
-    {
-      url: 'https://api.github.com/repos/SagerNet/sing-box/releases/latest',
-      withAuth: true
-    },
-    {
-      url: 'https://v6.gh-proxy.com/https://api.github.com/repos/SagerNet/sing-box/releases/latest',
-      withAuth: false
-    },
-    {
-      url: 'https://gh-proxy.com/https://api.github.com/repos/SagerNet/sing-box/releases/latest',
-      withAuth: false
-    },
-    {
-      url: 'https://ghfast.top/https://api.github.com/repos/SagerNet/sing-box/releases/latest',
-      withAuth: false
-    }
-  ]
-
-  for (const source of apiSources) {
-    try {
-      const res = await fetch(source.url, {
-        headers: buildGithubHeaders(source.withAuth),
-        redirect: 'follow'
-      })
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`)
-      }
-      const data = await res.json()
-      const version = normalizeVersionTag(data?.tag_name)
-      if (version) {
-        return version
-      }
-    } catch (error) {
-      console.warn(`Latest version fetch failed: ${error?.message ?? error}`)
-    }
-  }
-
-  const releasePageSources = [
-    'https://github.com/SagerNet/sing-box/releases/latest',
-    'https://v6.gh-proxy.com/https://github.com/SagerNet/sing-box/releases/latest',
-    'https://gh-proxy.com/https://github.com/SagerNet/sing-box/releases/latest',
-    'https://ghfast.top/https://github.com/SagerNet/sing-box/releases/latest'
-  ]
-
-  for (const url of releasePageSources) {
-    try {
-      const res = await fetch(url, {
-        headers: buildGithubHeaders(false),
-        redirect: 'follow'
-      })
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`)
-      }
-
-      const fromFinalUrl = parseVersionFromReleaseUrl(res.url)
-      if (fromFinalUrl) {
-        return fromFinalUrl
-      }
-
-      // 部分镜像会返回 HTML，不一定保留重定向 URL，兜底解析页面内容。
-      const html = await res.text()
-      const fromHtml = parseVersionFromReleaseHtml(html)
-      if (fromHtml) {
-        return fromHtml
-      }
-    } catch (error) {
-      console.warn(`Latest release page fetch failed: ${error?.message ?? error}`)
-    }
-  }
-
-  throw new Error(
-    'Unable to fetch latest version. If running in CI, set SING_BOX_GITHUB_TOKEN for higher API rate limits.'
-  )
-}
-
-export function normalizeVersionTag(tag) {
-  if (!tag || typeof tag !== 'string') {
-    return null
-  }
-  const trimmed = tag.trim()
-  if (!trimmed) {
-    return null
-  }
-  return trimmed.startsWith('v') ? trimmed.slice(1) : trimmed
-}
-
-export function parseVersionFromReleaseUrl(url) {
-  if (!url || typeof url !== 'string') {
-    return null
-  }
-  const match = url.match(/\/releases\/tag\/v?([^/?#]+)$/i)
-  if (!match || !match[1]) {
-    return null
-  }
-  return normalizeVersionTag(match[1])
-}
-
-export function parseVersionFromReleaseHtml(html) {
-  if (!html || typeof html !== 'string') {
-    return null
-  }
-  const match = html.match(/\/SagerNet\/sing-box\/releases\/tag\/v?([A-Za-z0-9._-]+)/i)
-  if (!match || !match[1]) {
-    return null
-  }
-  return normalizeVersionTag(match[1])
-}
-
-export function buildGithubHeaders(withAuth) {
-  const headers = {
-    Accept: 'application/vnd.github+json',
-    'User-Agent': 'sing-box-windows'
-  }
-  if (withAuth) {
-    const token =
-      process.env.SING_BOX_GITHUB_TOKEN || process.env.GITHUB_TOKEN || process.env.GH_TOKEN
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
-      headers['X-GitHub-Api-Version'] = '2022-11-28'
-    }
-  }
-  return headers
-}
-
 export async function downloadFile(url, destination) {
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'sing-box-windows' },
+    headers: { 'User-Agent': 'shtil-vpn-desktop' },
     redirect: 'follow'
   })
   if (!res.ok) {

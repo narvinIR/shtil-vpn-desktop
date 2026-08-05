@@ -606,9 +606,15 @@ pub fn request_app_exit(app: &AppHandle) -> Result<(), String> {
 
     let app_handle = app.clone();
     tauri::async_runtime::spawn(async move {
+        // Передаём приложение внутрь: без него у остановки нет пути повышения прав, а
+        // ядро под туннелем работает от root — раньше выход оставлял его жить, и
+        // человек уходил с мёртвой сетью и занятыми портами.
+        // Срок — по худшему ходу лестницы остановки (четыре шага, до 3 с на мягкий и
+        // до 2 с на жёсткий). Обычный выход занимает доли секунды.
+        let handle_for_stop = app_handle.clone();
         match tokio::time::timeout(
-            Duration::from_secs(4),
-            crate::app::core::kernel_service::runtime::stop_kernel(None),
+            Duration::from_secs(15),
+            crate::app::core::kernel_service::runtime::stop_kernel(Some(&handle_for_stop)),
         )
         .await
         {

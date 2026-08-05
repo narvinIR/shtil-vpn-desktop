@@ -25,7 +25,7 @@
         :disabled="props.downloading"
         size="small"
         style="width: 160px"
-        placeholder="Latest"
+        :placeholder="props.t('setting.kernel.latest')"
         @update:value="props.onSelectedKernelVersionChange"
       />
     </div>

@@ -95,7 +95,9 @@ async fn heal_restart(app_handle: &AppHandle, reason: &str) -> bool {
         }
     };
 
-    match start_kernel_impl(app_handle.clone(), &resolved, false).await {
+    // Самолечение — это как раз тот случай, когда живое ядро можно взять себе:
+    // мы его не снимали, оно осталось от прошлого запуска.
+    match start_kernel_impl(app_handle.clone(), &resolved, false, false).await {
         Ok(value) => {
             let success = value
                 .get("success")

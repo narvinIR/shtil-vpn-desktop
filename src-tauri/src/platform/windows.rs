@@ -101,6 +101,14 @@ pub fn platform_kill_process_by_pid(pid: u32) -> Result<(), String> {
     }
 }
 
+/// Мягкая остановка процесса по номеру (Windows).
+///
+/// Мягкого сигнала здесь нет, и он не нужен: ядро запускается без обёртки и от того
+/// же пользователя, что приложение, поэтому путь остановки остаётся прежним.
+pub fn platform_terminate_process_by_pid(pid: u32) -> Result<(), String> {
+    platform_kill_process_by_pid(pid)
+}
+
 /// 获取系统架构（Windows）
 pub fn platform_get_system_arch() -> &'static str {
     match std::env::consts::ARCH {

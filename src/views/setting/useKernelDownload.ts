@@ -53,8 +53,8 @@ export const useKernelDownload = (options: UseKernelDownloadOptions) => {
       if (typeof data.progress === 'number') {
         downloadProgress.value = Math.min(100, Math.max(0, data.progress))
       }
-      if (data.message) {
-        downloadMessage.value = data.message
+      if (data.stage) {
+        downloadMessage.value = options.t(`setting.kernel.stages.${data.stage}`)
       }
 
       if (data.status === 'completed') {
@@ -67,7 +67,7 @@ export const useKernelDownload = (options: UseKernelDownloadOptions) => {
       } else if (data.status === 'error') {
         downloading.value = false
         loading.value = false
-        downloadError.value = data.message || options.t('setting.kernel.downloadFailed')
+        downloadError.value = options.t('setting.kernel.downloadFailed')
         options.message.error(downloadError.value)
         cleanupDownloadListener()
       } else {
@@ -83,9 +83,9 @@ export const useKernelDownload = (options: UseKernelDownloadOptions) => {
         await runKernelInstallationCheck()
       }
     } catch (error) {
-      console.error('下载内核失败:', error)
-      downloadError.value =
-        error instanceof Error ? error.message : options.t('setting.kernel.downloadFailed')
+      // Текст ошибки служебной части — в журнал, человеку фраза из словаря.
+      console.error('kernel download failed:', error)
+      downloadError.value = options.t('setting.kernel.downloadFailed')
       options.message.error(downloadError.value)
       downloading.value = false
       loading.value = false

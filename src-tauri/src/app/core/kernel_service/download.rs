@@ -18,12 +18,14 @@ pub async fn download_kernel(app_handle: AppHandle, version: Option<String>) -> 
         .get_webview_window("main")
         .ok_or("无法获取主窗口")?;
 
+    // Наверх уходит КОД шага, а не фраза: текст человеку собирает словарь на пяти
+    // языках. Раньше отсюда на экран приезжал китайский из форка.
     let _ = window.emit(
         "kernel-download-progress",
         json!({
             "status": "downloading",
             "progress": 0,
-            "message": "开始下载内核..."
+            "stage": "start"
         }),
     );
 
@@ -67,10 +69,10 @@ pub async fn download_kernel(app_handle: AppHandle, version: Option<String>) -> 
     // стояло китайское: кто владеет зеркалом, тот кладёт клиенту внутрь VPN
     // свой исполняемый файл. Ядро и так едет вшитым в установщик — это путь
     // ручного обновления из настроек, и запасных источников у него быть не может.
-    let download_urls = [format!(
+    let download_url = format!(
         "https://github.com/SagerNet/sing-box/releases/download/v{}/{}",
         version, filename
-    )];
+    );
 
     info!("ядро {} для {} {}: {}", version, platform, arch, filename);
 
@@ -103,67 +105,26 @@ pub async fn download_kernel(app_handle: AppHandle, version: Option<String>) -> 
         json!({
             "status": "downloading",
             "progress": 10,
-            "message": "正在下载内核文件..."
+            "stage": "download"
         }),
     );
 
-    for (index, download_url) in download_urls.iter().enumerate() {
-        info!("尝试第 {} 个下载源: {}", index + 1, download_url);
+    if let Err(e) = download_file(&download_url, &download_path, &window).await {
+        warn!("ядро не скачалось с {}: {}", download_url, e);
+
+        let _ = std::fs::remove_file(&download_path);
 
         let _ = window.emit(
             "kernel-download-progress",
             json!({
-                "status": "downloading",
-                "progress": 15 + (index * 5),
-                "message": format!("尝试第 {} 个下载源...", index + 1)
+                "status": "error",
+                "progress": 0,
+                "stage": "failed"
             }),
         );
 
-        match download_file(download_url, &download_path, &window).await {
-            Ok(_) => {
-                info!("下载成功，使用下载源: {}", download_url);
-                break;
-            }
-            Err(e) => {
-                let source_name = "GitHub";
-
-                let error_details = format!("{} 失败: {}", source_name, e);
-                warn!("下载源 {} 失败: {}", source_name, e);
-
-                let _ = window.emit(
-                    "kernel-download-progress",
-                    json!({
-                        "status": "downloading",
-                        "progress": 15 + (index * 5),
-                        "message": format!("?? {} - 尝试下一个下载源...", error_details)
-                    }),
-                );
-
-                let _ = std::fs::remove_file(&download_path);
-
-                if index < download_urls.len() - 1 {
-                    continue;
-                }
-
-                let final_error = format!(
-                    "所有下载源都已失败。最后尝试的 {} 也失败了。请检查网络连接或稍后重试。",
-                    source_name
-                );
-
-                let _ = window.emit(
-                    "kernel-download-progress",
-                    json!({
-                        "status": "error",
-                        "progress": 0,
-                        "message": final_error
-                    }),
-                );
-
-                // 失败时清理
-                let _ = std::fs::remove_dir_all(&temp_update_dir);
-                return Err(final_error);
-            }
-        }
+        let _ = std::fs::remove_dir_all(&temp_update_dir);
+        return Err(format!("kernel download failed: {}", e));
     }
 
     if !download_path.exists() {
@@ -205,19 +166,19 @@ pub async fn download_kernel(app_handle: AppHandle, version: Option<String>) -> 
         json!({
             "status": "extracting",
             "progress": 80,
-            "message": "正在解压内核文件..."
+            "stage": "extract"
         }),
     );
 
     // 解压到临时目录
     if let Err(e) = extract_archive(&download_path, &temp_update_dir).await {
-        let error_msg = format!("解压文件失败: {}", e);
+        let error_msg = format!("kernel archive extraction failed: {}", e);
         let _ = window.emit(
             "kernel-download-progress",
             json!({
                 "status": "error",
                 "progress": 0,
-                "message": error_msg
+                "stage": "failed"
             }),
         );
         let _ = std::fs::remove_dir_all(&temp_update_dir);
@@ -333,7 +294,7 @@ pub async fn download_kernel(app_handle: AppHandle, version: Option<String>) -> 
         json!({
             "status": "completed",
             "progress": 100,
-            "message": "内核下载完成！"
+            "stage": "done"
         }),
     );
 
@@ -400,7 +361,7 @@ async fn download_file(
                 json!({
                     "status": "downloading",
                     "progress": progress.min(70),
-                    "message": format!("下载中... {}/{} bytes", downloaded, total_size)
+                    "stage": "download"
                 }),
             );
         }

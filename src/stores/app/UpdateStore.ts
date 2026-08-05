@@ -71,7 +71,10 @@ export const useUpdateStore = defineStore('update', () => {
       supportsInAppUpdate.value = supports
       return
     }
-    supportsInAppUpdate.value = platformOs.value === 'windows'
+    // С 05.08.2026 обновление по воздуху есть и на Маке (наш адрес /desktop/version,
+    // подпись сверяет Tauri). Оставлять здесь одну Windows значит показывать
+    // человеку на Маке подсказку «встроенного обновления нет» — она врёт.
+    supportsInAppUpdate.value = platformOs.value === 'windows' || platformOs.value === 'macos'
   }
 
   const loadPlatformInfo = async () => {

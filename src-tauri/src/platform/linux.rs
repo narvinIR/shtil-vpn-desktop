@@ -233,6 +233,25 @@ pub fn platform_kill_process_by_pid(pid: u32) -> Result<(), String> {
     }
 }
 
+/// Мягкая остановка процесса по номеру (Linux).
+///
+/// Тот же смысл, что и на macOS: под туннелем ядро работает от root и по мягкому
+/// сигналу убирает за собой само.
+pub fn platform_terminate_process_by_pid(pid: u32) -> Result<(), String> {
+    let output = std::process::Command::new("kill")
+        .args(["-TERM", &pid.to_string()])
+        .output()
+        .map_err(|e| format!("не удалось выполнить kill: {}", e))?;
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+    if output.status.success() {
+        info!("мягкий сигнал отправлен процессу PID: {}", pid);
+        Ok(())
+    } else {
+        Err(format!("мягкая остановка не удалась: {}", stderr))
+    }
+}
+
 /// 获取系统架构（Linux）
 pub fn platform_get_system_arch() -> &'static str {
     match std::env::consts::ARCH {

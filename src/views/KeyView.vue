@@ -39,6 +39,11 @@
             <img class="qr" :src="keyQr" alt="" />
             <p class="card-note">{{ t('key.current.qrHint') }}</p>
           </div>
+          <!-- Ключ перестал подходить: третий ответ — что делать дальше -->
+          <details class="stale">
+            <summary>{{ t('key.current.staleTitle') }}</summary>
+            <p class="card-note">{{ t('key.current.staleText') }}</p>
+          </details>
         </template>
         <p v-else class="card-text">{{ t('key.current.none') }}</p>
       </section>
@@ -659,6 +664,20 @@ onUnmounted(() => {
 .qr-row .card-note {
   margin-top: var(--space-2);
   max-width: 160px;
+}
+
+.stale {
+  margin-top: var(--space-3);
+}
+
+.stale summary {
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.stale .card-note {
+  margin-top: var(--space-2);
 }
 
 .key-name {

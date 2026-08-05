@@ -127,14 +127,14 @@ export default {
       confirm: 'Reiniciar como administrador',
     },
     sudoPassword: {
-      title: 'Hace falta la contraseña del sistema',
+      title: 'Hace falta la contraseña de administrador',
       description:
-        'La primera vez que se activa TUN el programa necesita permisos de sudo. La contraseña se guarda cifrada en su equipo solo para sudo y nunca sale de él.',
-      placeholder: 'Escriba la contraseña del sistema',
+        'Para llevar todo el tráfico por la VPN, el equipo tiene que crear un canal de red, y eso solo se hace con permisos de administrador. La contraseña se guarda cifrada en este equipo y no se envía a ninguna parte.',
+      placeholder: 'Escriba la contraseña de administrador',
       save: 'Guardar y continuar',
-      saved: 'Contraseña del sistema guardada',
-      required: 'Para activar TUN hace falta la contraseña del sistema',
-      invalid: 'Contraseña incorrecta, inténtelo de nuevo',
+      saved: 'Contraseña guardada',
+      required: 'Para llevar todo el tráfico por la VPN hace falta la contraseña de administrador',
+      invalid: 'La contraseña no vale, inténtelo de nuevo',
       empty: 'Escriba la contraseña del sistema',
       failed: 'No se pudo guardar la contraseña',
       unsupported: 'En este sistema no es posible',
@@ -184,14 +184,27 @@ export default {
       activeUntil: 'Suscripción hasta el {date}',
       trialUntil: 'Periodo gratuito hasta el {date}',
       over: 'La suscripción ha terminado: renuévela en el bot',
+      daysLeft: 'quedan {days} días',
+      lastDay: 'último día',
+      renew: 'Renovar',
     },
     advanced: {
       title: 'Para usuarios avanzados',
       restartNote: 'Si la conexión se comporta de forma extraña',
+      tunHint:
+        'Desactívelo y la conexión normal vuelve enseguida: internet no se corta.',
     },
     error: {
       details: 'Detalles para soporte',
       stopFailed: 'No se pudo desconectar: inténtelo de nuevo',
+      whatToDo: 'Qué hacer',
+      steps: {
+        checkKey: 'Compruebe la clave: actualícela en la pantalla «Clave»',
+        restart: 'Reinicie la conexión con el botón de abajo',
+        support: 'Escriba a soporte: respondemos en el bot',
+      },
+      goToKey: 'Abrir «Clave»',
+      writeSupport: 'Escribir a soporte',
       kinds: {
         config_invalid: 'La clave no sirvió: actualícela en la pantalla «Clave»',
         config_missing: 'No hay clave: añádala en la pantalla «Clave»',
@@ -203,7 +216,8 @@ export default {
         process_exited_early: 'La conexión se cortó justo después de iniciarse: inténtelo de nuevo',
         api_http_error: 'La conexión no responde: inténtelo de nuevo',
         api_timeout: 'La conexión no respondió a tiempo: inténtelo de nuevo',
-        conflict_cleanup_failed: 'El arranque anterior no terminó: reinicie el ordenador e inténtelo de nuevo',
+        conflict_cleanup_failed:
+          'La conexión anterior no se retiró: introduzca la contraseña de administrador en los ajustes y repita. Si no ayuda, reinicie el ordenador',
         guard_restart_failed: 'No se pudo reiniciar la conexión: inténtelo de nuevo',
         unknown: 'La conexión no se activó: inténtelo de nuevo',
       },
@@ -259,7 +273,7 @@ export default {
     guest: {
       name: 'Acceso de prueba',
       title: 'Pruébelo sin registrarse',
-      text: 'La conexión se activa durante {hours} h con {traffic} GB de tráfico. Sin Telegram ni pago: suficiente para abrir el bot y contratar la suscripción.',
+      text: 'La conexión se activa durante {hours} h con {traffic} GB de tráfico. Sin Telegram ni pago: suficiente para abrir el bot y pagar la suscripción.',
       take: 'Probar gratis',
       left: 'Acceso de prueba: quedan {left} · {traffic} GB de tráfico',
       leftHours: '{hours} h {minutes} min',
@@ -293,6 +307,9 @@ export default {
       none: 'Todavía no hay clave',
       updated: 'Actualizada {time}',
       refresh: 'Actualizar',
+      staleTitle: '¿La clave ha dejado de servir?',
+      staleText:
+        'Pulse «Actualizar» y la clave llegará de nuevo. Si la conexión sigue sin activarse, es que la suscripción ha terminado: renuévela en el bot y la clave volverá a funcionar sola.',
     },
   },
   tray: {
@@ -305,8 +322,8 @@ export default {
     proxyModeChanged: 'Modo cambiado',
     proxyModeChangeFailed: 'No se pudo cambiar el modo',
     applyProxyFailed: 'No se pudieron aplicar los ajustes del proxy',
-    systemProxyEnabled: 'Proxy de todo el sistema activado',
-    tunEnabled: 'Modo TUN activado',
+    systemProxyEnabled: 'Modo normal activado',
+    tunEnabled: 'Todo el tráfico va ahora por la VPN',
     manualProxyEnabled: 'Modo manual. Configure usted el proxy del sistema',
     kernelRestartFailed: 'No se pudo reiniciar la conexión',
     kernelRestarted: 'Conexión reiniciada',

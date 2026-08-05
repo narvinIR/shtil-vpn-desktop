@@ -352,6 +352,31 @@ pub async fn kill_process_by_pid_with_saved_password(
     Err(SUDO_UNSUPPORTED.to_string())
 }
 
+/// Мягкая остановка ядра с правами администратора.
+///
+/// Ядро под туннелем работает от root, поэтому обычными правами его не остановить.
+/// Мягкий сигнал даёт ему снять маршруты и вернуть разрешение имён самому — жёсткий
+/// оставил бы систему без сети. Пароль берётся уже сохранённый: второй раз человека
+/// не спрашивают.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub async fn terminate_process_by_pid_with_saved_password(
+    app_handle: &AppHandle,
+    pid: u32,
+) -> Result<(), String> {
+    let password = load_validated_saved_password(app_handle).await?;
+    let pid_string = pid.to_string();
+    let output = run_sudo_command(Some(&password), &["kill", "-TERM", &pid_string])?;
+    map_sudo_command_result(output, &format!("sudo мягкая остановка PID {}", pid))
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+pub async fn terminate_process_by_pid_with_saved_password(
+    _app_handle: &AppHandle,
+    _pid: u32,
+) -> Result<(), String> {
+    Err(SUDO_UNSUPPORTED.to_string())
+}
+
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub async fn kill_processes_by_name_with_saved_password(
     app_handle: &AppHandle,

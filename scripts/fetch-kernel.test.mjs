@@ -1,16 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  buildDownloadUrls,
+  buildDownloadUrl,
   buildFilename,
-  buildGithubHeaders,
-  normalizeVersionTag,
   parseArgs,
-  parseVersionFromReleaseHtml,
-  parseVersionFromReleaseUrl,
   resolveRequestedTargets
 } from './fetch-kernel.mjs'
-import { KERNEL_TARGETS } from './kernel-targets.mjs'
+import { KERNEL_TARGETS, KERNEL_VERSION } from './kernel-targets.mjs'
 
 test('parseArgs 支持等号和值分离两种形式', () => {
   const args = parseArgs([
@@ -48,49 +44,24 @@ test('buildFilename 根据平台生成正确文件名', () => {
   assert.equal(buildFilename('linux', 'amd64', '1.12.0'), 'sing-box-1.12.0-linux-amd64.tar.gz')
 })
 
-test('buildDownloadUrls 返回镜像与原始下载地址', () => {
-  const urls = buildDownloadUrls('1.12.0', 'sing-box-1.12.0-windows-amd64.zip')
+// Ядро в установщике работает у клиента от имени администратора, поэтому берётся
+// только у того, кто его выпускает: чужих зеркал в списке быть не должно.
+test('ядро качается единственным адресом первоисточника', () => {
+  const url = buildDownloadUrl('1.12.0', 'sing-box-1.12.0-windows-amd64.zip')
 
-  assert.equal(urls.length, 7)
-  assert.match(urls[0], /gh-proxy/)
   assert.equal(
-    urls.at(-1),
+    url,
     'https://github.com/SagerNet/sing-box/releases/download/v1.12.0/sing-box-1.12.0-windows-amd64.zip'
   )
 })
 
-test('版本辅助函数可以解析 tag、URL 和 HTML', () => {
-  assert.equal(normalizeVersionTag(' v1.12.0 '), '1.12.0')
-  assert.equal(normalizeVersionTag('1.12.0'), '1.12.0')
-  assert.equal(normalizeVersionTag(''), null)
-
-  assert.equal(
-    parseVersionFromReleaseUrl('https://github.com/SagerNet/sing-box/releases/tag/v1.12.0'),
-    '1.12.0'
-  )
-  assert.equal(parseVersionFromReleaseUrl('https://example.com/releases/latest'), null)
-
-  assert.equal(
-    parseVersionFromReleaseHtml('<a href="/SagerNet/sing-box/releases/tag/v1.12.1">release</a>'),
-    '1.12.1'
-  )
-  assert.equal(parseVersionFromReleaseHtml('<html></html>'), null)
-})
-
-test('buildGithubHeaders 在存在 token 时附带认证头', () => {
-  const original = process.env.SING_BOX_GITHUB_TOKEN
-  process.env.SING_BOX_GITHUB_TOKEN = 'secret-token'
-
-  try {
-    const headers = buildGithubHeaders(true)
-    assert.equal(headers.Authorization, 'Bearer secret-token')
-    assert.equal(headers['X-GitHub-Api-Version'], '2022-11-28')
-    assert.equal(headers.Accept, 'application/vnd.github+json')
-  } finally {
-    if (original === undefined) {
-      delete process.env.SING_BOX_GITHUB_TOKEN
-    } else {
-      process.env.SING_BOX_GITHUB_TOKEN = original
-    }
+test('у каждой цели закреплена контрольная сумма', () => {
+  assert.match(KERNEL_VERSION, /^\d+\.\d+\.\d+$/)
+  for (const target of KERNEL_TARGETS) {
+    assert.match(
+      target.sha256 ?? '',
+      /^[0-9a-f]{64}$/,
+      `${target.platform}/${target.arch} без контрольной суммы`
+    )
   }
 })

@@ -127,14 +127,15 @@ export default {
       confirm: 'Als Administrator neu starten',
     },
     sudoPassword: {
-      title: 'Systemkennwort nötig',
+      title: 'Administratorkennwort nötig',
       description:
-        'Beim ersten Einschalten des TUN-Modus braucht das Programm sudo-Rechte. Das Kennwort wird verschlüsselt und nur lokal für sudo gespeichert — es verlässt Ihren Rechner nicht.',
-      placeholder: 'Systemkennwort eingeben',
+        'Damit der gesamte Verkehr über das VPN läuft, muss der Rechner einen Netzwerkkanal anlegen — und das geht nur mit Administratorrechten. Das Kennwort bleibt verschlüsselt auf diesem Rechner und wird nirgendwohin gesendet.',
+      placeholder: 'Administratorkennwort eingeben',
       save: 'Speichern und weiter',
-      saved: 'Systemkennwort gespeichert',
-      required: 'Für den TUN-Modus ist das Systemkennwort nötig',
-      invalid: 'Falsches Systemkennwort, bitte erneut versuchen',
+      saved: 'Kennwort gespeichert',
+      required:
+        'Damit der gesamte Verkehr über das VPN läuft, ist das Administratorkennwort nötig',
+      invalid: 'Das Kennwort passt nicht, bitte erneut versuchen',
       empty: 'Bitte geben Sie das Systemkennwort ein',
       failed: 'Kennwort konnte nicht gespeichert werden',
       unsupported: 'Auf diesem System nicht möglich',
@@ -184,14 +185,27 @@ export default {
       activeUntil: 'Abo bis {date}',
       trialUntil: 'Kostenloser Zeitraum bis {date}',
       over: 'Das Abo ist abgelaufen — verlängern Sie es im Bot',
+      daysLeft: 'noch {days} Tage',
+      lastDay: 'letzter Tag',
+      renew: 'Verlängern',
     },
     advanced: {
       title: 'Für Fortgeschrittene',
       restartNote: 'Wenn die Verbindung sich seltsam verhält',
+      tunHint:
+        'Schalten Sie es aus, kehrt die normale Verbindung sofort zurück — das Internet bleibt.',
     },
     error: {
       details: 'Details für den Support',
       stopFailed: 'Trennen hat nicht geklappt — bitte erneut versuchen',
+      whatToDo: 'Was zu tun ist',
+      steps: {
+        checkKey: 'Prüfen Sie den Schlüssel — erneuern Sie ihn im Bereich „Schlüssel“',
+        restart: 'Starten Sie die Verbindung mit der Schaltfläche unten neu',
+        support: 'Schreiben Sie an den Support — wir antworten im Bot',
+      },
+      goToKey: 'Bereich „Schlüssel“ öffnen',
+      writeSupport: 'An den Support schreiben',
       kinds: {
         config_invalid: 'Der Schlüssel passt nicht — erneuern Sie ihn im Bereich „Schlüssel“',
         config_missing: 'Es gibt keinen Schlüssel — fügen Sie ihn im Bereich „Schlüssel“ hinzu',
@@ -203,7 +217,8 @@ export default {
         process_exited_early: 'Die Verbindung brach direkt nach dem Start ab — bitte erneut versuchen',
         api_http_error: 'Die Verbindung antwortet nicht — bitte erneut versuchen',
         api_timeout: 'Die Verbindung hat nicht rechtzeitig geantwortet — bitte erneut versuchen',
-        conflict_cleanup_failed: 'Der vorige Start ist nicht beendet — starten Sie den Rechner neu und versuchen Sie es erneut',
+        conflict_cleanup_failed:
+          'Die vorige Verbindung wurde nicht abgebaut — geben Sie das Administratorkennwort in den Einstellungen ein und versuchen Sie es erneut. Hilft das nicht, starten Sie den Rechner neu',
         guard_restart_failed: 'Die Verbindung ließ sich nicht neu starten — bitte erneut versuchen',
         unknown: 'Die Verbindung startete nicht — bitte erneut versuchen',
       },
@@ -259,7 +274,7 @@ export default {
     guest: {
       name: 'Testzugang',
       title: 'Ohne Anmeldung ausprobieren',
-      text: 'Die Verbindung läuft {hours} Std. mit {traffic} GB Datenvolumen. Kein Telegram und keine Zahlung — genug, um den Bot zu öffnen und ein Abo zu kaufen.',
+      text: 'Die Verbindung läuft {hours} Std. mit {traffic} GB Datenvolumen. Kein Telegram und keine Zahlung — genug, um den Bot zu öffnen und ein Abo zu bezahlen.',
       take: 'Kostenlos testen',
       left: 'Testzugang: noch {left} · {traffic} GB Datenvolumen',
       leftHours: '{hours} Std. {minutes} Min.',
@@ -293,6 +308,9 @@ export default {
       none: 'Noch kein Schlüssel',
       updated: 'Erneuert {time}',
       refresh: 'Erneuern',
+      staleTitle: 'Der Schlüssel passt nicht mehr?',
+      staleText:
+        'Drücken Sie „Erneuern“ — der Schlüssel kommt neu an. Startet die Verbindung dann immer noch nicht, ist das Abo abgelaufen: verlängern Sie es im Bot, und der Schlüssel funktioniert von selbst wieder.',
     },
   },
   tray: {
@@ -305,8 +323,8 @@ export default {
     proxyModeChanged: 'Modus geändert',
     proxyModeChangeFailed: 'Modus konnte nicht geändert werden',
     applyProxyFailed: 'Die Proxy-Einstellungen ließen sich nicht anwenden',
-    systemProxyEnabled: 'Systemweiter Proxy an',
-    tunEnabled: 'TUN-Modus an',
+    systemProxyEnabled: 'Normaler Modus ist an',
+    tunEnabled: 'Der gesamte Verkehr läuft jetzt über das VPN',
     manualProxyEnabled: 'Manueller Modus. Tragen Sie den System-Proxy selbst ein',
     kernelRestartFailed: 'Neustart der Verbindung fehlgeschlagen',
     kernelRestarted: 'Verbindung neu aufgebaut',
