@@ -23,6 +23,9 @@ export default {
     enabled: 'An',
     disabled: 'Aus',
     minimizedToTray: 'Shtil läuft weiter im Infobereich',
+    windowMinimize: 'Fenster minimieren',
+    windowMaximize: 'Fenster maximieren',
+    windowClose: 'Fenster schließen',
   },
   nav: {
     home: 'Start',

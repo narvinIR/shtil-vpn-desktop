@@ -287,8 +287,6 @@ const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDateString
   font-weight: 600;
   text-align: left;
   white-space: nowrap;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .log-table td {

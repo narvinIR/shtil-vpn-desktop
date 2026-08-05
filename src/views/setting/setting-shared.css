@@ -10,12 +10,12 @@
   gap: var(--space-1);
 }
 
+/* Заголовок раздела: иерархию держат вес и цвет, а не заглавные с разрядкой —
+   капс тут читается медленнее и выдаёт веб-панель, а не окно системы. */
 .setting-section-title {
-  font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
   padding: var(--space-4) 0 var(--space-2);
   margin: 0;
 }
@@ -194,11 +194,9 @@
 
 /* 表单区块小标题（表单内的子标题） */
 .form-section-title {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--text-secondary);
   margin: var(--space-2) 0 var(--space-1);
 }
 
@@ -214,11 +212,9 @@
 }
 
 .collapsible-label {
-  font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .collapse-arrow {

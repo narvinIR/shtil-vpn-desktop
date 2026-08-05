@@ -1,4 +1,5 @@
 import './assets/main.css'
+import './boot/platform'
 
 import { createApp } from 'vue'
 

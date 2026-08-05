@@ -22,6 +22,9 @@ export default {
     enabled: 'روشن',
     disabled: 'خاموش',
     minimizedToTray: 'Shtil در سینی سیستم فعال است',
+    windowMinimize: 'کوچک کردن پنجره',
+    windowMaximize: 'بزرگ کردن پنجره',
+    windowClose: 'بستن پنجره',
   },
   nav: {
     home: 'خانه',

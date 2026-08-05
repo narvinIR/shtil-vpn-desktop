@@ -20,6 +20,9 @@ export default {
     enabled: 'Вкл',
     disabled: 'Выкл',
     minimizedToTray: 'Штиль работает в области уведомлений',
+    windowMinimize: 'Свернуть окно',
+    windowMaximize: 'Развернуть окно',
+    windowClose: 'Закрыть окно',
   },
 
   // 导航菜单

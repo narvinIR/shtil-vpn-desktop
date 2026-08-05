@@ -23,6 +23,9 @@ export default {
     enabled: 'Sí',
     disabled: 'No',
     minimizedToTray: 'Shtil sigue funcionando en la bandeja',
+    windowMinimize: 'Minimizar ventana',
+    windowMaximize: 'Maximizar ventana',
+    windowClose: 'Cerrar ventana',
   },
   nav: {
     home: 'Inicio',

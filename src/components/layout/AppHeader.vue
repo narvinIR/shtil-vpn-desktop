@@ -36,15 +36,16 @@
       </div>
     </div>
 
-    <!-- 窗口控制 -->
-    <div class="window-controls">
-      <button class="control-btn minimize" @click="emit('minimize')">
+    <!-- Кнопки окна. На Маке их рисует сама система слева — свои прячем, иначе
+         на одном окне окажется два набора кнопок. -->
+    <div v-if="!isMacOS" class="window-controls">
+      <button class="control-btn minimize" :aria-label="t('common.windowMinimize')" @click="emit('minimize')">
         <n-icon size="16"><RemoveOutline /></n-icon>
       </button>
-      <button class="control-btn maximize" @click="emit('toggle-maximize')">
+      <button class="control-btn maximize" :aria-label="t('common.windowMaximize')" @click="emit('toggle-maximize')">
         <n-icon size="13"><SquareOutline /></n-icon>
       </button>
-      <button class="control-btn close" @click="emit('close')">
+      <button class="control-btn close" :aria-label="t('common.windowClose')" @click="emit('close')">
         <n-icon size="16"><CloseOutline /></n-icon>
       </button>
     </div>
@@ -60,8 +61,12 @@ import {
   SquareOutline,
   CloseOutline,
 } from '@vicons/ionicons5'
+import { useI18n } from 'vue-i18n'
 import logo from '@/assets/icon.png'
 import { formatSpeed } from '@/utils'
+import { isMacOS } from '@/boot/platform'
+
+const { t } = useI18n()
 
 defineProps<{
   appName: string
@@ -93,6 +98,12 @@ const emit = defineEmits<{
   border-bottom: 1px solid var(--border-color);
   z-index: var(--z-header, 200);
   gap: var(--space-4);
+}
+
+/* На Маке слева живут кнопки самой системы — освобождаем им место, иначе знак
+   «Штиля» окажется под ними. */
+.platform-macos .app-header {
+  padding-left: 84px;
 }
 
 /* 品牌 */

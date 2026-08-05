@@ -168,8 +168,6 @@ const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav
 .nav-group-label {
   font-size: var(--text-xs);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--text-tertiary);
   padding: 0 var(--space-3);
   margin-bottom: var(--space-1);

@@ -297,8 +297,6 @@ const router = useRouter()
 .update-card-label {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   margin-bottom: var(--space-1);
 }
 

@@ -38,17 +38,22 @@
               :class="{ active: color === props.themeStore.accentColor }"
               :style="{ background: color }"
               :title="color"
+              :aria-label="`${props.t('setting.theme.accent')} ${color}`"
               @click="props.selectAccentPreset(color)"
             ></button>
           </div>
           <div class="accent-custom">
+            <!-- Образец цвета, а не поле с кодом: залитая плашка во всю строку
+                 читалась как выделенный текст и спорила с кружками рядом. -->
             <n-color-picker
               :value="props.themeStore.accentColor"
               :modes="['hex']"
               size="small"
               :show-alpha="false"
               @update:value="props.onAccentChange"
-            />
+            >
+              <template #label></template>
+            </n-color-picker>
           </div>
         </div>
       </div>
@@ -257,16 +262,9 @@ const themeModes = computed(() => [
   box-shadow: 0 0 0 2px var(--bg-elevated), var(--shadow-sm);
 }
 
-/* 自定义颜色选择器固定宽度，避免撑满整行 */
+/* Свой цвет — образец рядом с готовыми кружками, а не поле во всю строку */
 .accent-custom {
-  width: 150px;
+  width: 44px;
   margin-left: auto;
-}
-
-@media (max-width: 600px) {
-  .accent-custom {
-    width: 100%;
-    margin-left: 0;
-  }
 }
 </style>

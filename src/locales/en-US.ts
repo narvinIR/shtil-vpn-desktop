@@ -19,6 +19,9 @@ export default {
     enabled: 'On',
     disabled: 'Off',
     minimizedToTray: 'Shtil keeps running in the notification area',
+    windowMinimize: 'Minimize window',
+    windowMaximize: 'Maximize window',
+    windowClose: 'Close window',
   },
   nav: {
     home: 'Home',

@@ -1,7 +1,6 @@
 @import './tokens.css';
 @import './base.css';
 @import './page-layout.css';
-@import 'vfonts/Lato.css';
 @import 'vfonts/FiraCode.css';
 
 /* ============================================================
@@ -48,7 +47,10 @@
 
 /* 聚焦态统一轮廓（无障碍） */
 :focus-visible {
-  outline: none;
+  /* Обводка прозрачная, но настоящая: в режиме высокой контрастности система
+     красит её сама, а в обычном фокус показывает мягкое кольцо тенью. */
+  outline: 2px solid transparent;
+  outline-offset: 2px;
   box-shadow: var(--shadow-focus);
   border-radius: var(--radius-sm);
 }

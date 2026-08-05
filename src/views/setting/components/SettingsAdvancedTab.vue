@@ -386,11 +386,9 @@ const proxyDisplayOptions = computed(() => [
 }
 
 .collapsible-label {
-  font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
   transition: color var(--transition-fast);
 }
 
@@ -409,11 +407,9 @@ const proxyDisplayOptions = computed(() => [
 }
 
 .form-section-title {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--text-secondary);
   margin: var(--space-4) 0 var(--space-2);
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border-color);
