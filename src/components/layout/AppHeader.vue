@@ -38,7 +38,7 @@
 
     <!-- Кнопки окна. На Маке их рисует сама система слева — свои прячем, иначе
          на одном окне окажется два набора кнопок. -->
-    <div class="window-controls" v-if="!isMacOS">
+    <div class="window-controls">
       <button class="control-btn minimize" :aria-label="t('common.windowMinimize')" @click="emit('minimize')">
         <n-icon size="16"><RemoveOutline /></n-icon>
       </button>
@@ -63,7 +63,6 @@ import {
 } from '@vicons/ionicons5'
 import { useI18n } from 'vue-i18n'
 import logo from '@/assets/icon.png'
-import { isMacOS } from '@/boot/platform'
 import { formatSpeed } from '@/utils'
 
 const { t } = useI18n()
@@ -100,10 +99,12 @@ const emit = defineEmits<{
   gap: var(--space-4);
 }
 
-/* На Маке слева живут кнопки самой системы — освобождаем им место, иначе знак
-   «Штиля» окажется под ними. */
+/* На Маке кнопки окна живут слева и выглядят светофором — так их ищет рука
+   человека, привыкшего к системе. Родные украшения окна здесь не включить:
+   окно пересоздаётся из конфига, и Tauri их не ставит, — поэтому светофор
+   рисуем сами. */
 .platform-macos .app-header {
-  padding-left: 84px;
+  padding-left: var(--space-4);
 }
 
 /* 品牌 */
@@ -296,6 +297,45 @@ const emit = defineEmits<{
 .control-btn.close:hover {
   background: var(--red-500-soft);
   color: var(--error-color);
+}
+
+/* Светофор macOS: кружки слева, порядок «закрыть — свернуть — развернуть»,
+   значки внутри прячем — система их показывает только при наведении. */
+.platform-macos .window-controls {
+  order: -1;
+  gap: 8px;
+  margin-right: var(--space-3);
+}
+
+.platform-macos .control-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  transition: filter var(--transition-fast);
+}
+
+.platform-macos .control-btn.close {
+  order: 1;
+  background: #ff5f57;
+}
+
+.platform-macos .control-btn.minimize {
+  order: 2;
+  background: #febc2e;
+}
+
+.platform-macos .control-btn.maximize {
+  order: 3;
+  background: #28c840;
+}
+
+.platform-macos .control-btn:hover {
+  filter: brightness(0.9);
+}
+
+.platform-macos .control-btn :deep(.n-icon) {
+  display: none;
 }
 
 @media (max-width: 720px) {

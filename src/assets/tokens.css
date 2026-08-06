@@ -279,12 +279,12 @@
  * мобильное приложение, натянутое на окно.
  */
 .platform-macos {
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-xl: 14px;
-  --radius-2xl: 18px;
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 13px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 26px;
 
   --text-xs: 11px;
   --text-sm: 12px;
