@@ -180,6 +180,32 @@ const handleBeforeUnload = () => {
   cleanup()
 }
 
+// Проверка новой версии живёт в корне, а не в раскладке окна: уход в трей
+// уводит раскладку на пустой экран и снимает её вместе с таймером, поэтому
+// приложение, живущее в трее сутками, о новой версии не спрашивало ни разу
+// (замер на Mac Studio 06.08.2026). Корень не снимается, пока приложение живо.
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
+// Сеть на старте часто ещё не поднялась. Без короткого повтора следующая
+// попытка приходила через четыре часа, то есть не приходила вовсе.
+const UPDATE_RETRY_INTERVAL_MS = 5 * 60 * 1000
+let updateTimer: ReturnType<typeof setTimeout> | null = null
+
+const scheduleUpdateCheck = (delayMs: number) => {
+  if (updateTimer) clearTimeout(updateTimer)
+  updateTimer = setTimeout(() => void runUpdateCheck(), delayMs)
+}
+
+const runUpdateCheck = async () => {
+  if (!updateStore.autoCheckUpdate) {
+    scheduleUpdateCheck(UPDATE_CHECK_INTERVAL_MS)
+    return
+  }
+
+  await updateStore.checkUpdate(true)
+  const failed = updateStore.updateState.status === 'error'
+  scheduleUpdateCheck(failed ? UPDATE_RETRY_INTERVAL_MS : UPDATE_CHECK_INTERVAL_MS)
+}
+
 onMounted(async () => {
   window.addEventListener('beforeunload', handleBeforeUnload)
   cleanupFunctions.push(() => {
@@ -207,6 +233,12 @@ onMounted(async () => {
 
     await initialize()
     cleanupFunctions.push(() => cleanupBootstrap())
+
+    void runUpdateCheck()
+    cleanupFunctions.push(() => {
+      if (updateTimer) clearTimeout(updateTimer)
+      updateTimer = null
+    })
 
     // Привязка к боту: спрашиваем сервер о подписке при запуске и дальше сами.
     // Сеть недоступна — приложение всё равно поднимается, состояние остаётся прошлым.
