@@ -11,9 +11,18 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
+  /* Окно прозрачное — фон даёт страница. Без этого на Windows видно
+     рабочий стол те доли секунды, пока интерфейс не отрисовался. */
+  background: var(--bg-base);
   font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont,
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+
+/* На Маке фон страницы закрасил бы углы за скруглением окна — там его
+   держит только сам интерфейс, а под ним видно стекло системы. */
+.platform-macos body {
+  background: transparent;
 }

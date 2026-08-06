@@ -198,19 +198,17 @@ fn compose_tooltip(state: &TrayRuntimeState, text: &TrayText) -> String {
     tooltip
 }
 
+/// На macOS значок в строке меню шаблонный: система красит силуэт сама под
+/// светлую и тёмную строку и добавляет подсветку при нажатии. На Windows и
+/// Linux цвет наш — там строка меню одна и та же.
+const ICON_IS_TEMPLATE: bool = cfg!(target_os = "macos");
+
 fn resolve_tray_icon(
     app: &AppHandle,
     state: &TrayRuntimeState,
 ) -> Option<tauri::image::Image<'static>> {
-    if let Some(icon) = app.default_window_icon() {
-        if let Some(recolored) = icon::recolor_icon_for_mode(icon, state.display_mode()) {
-            return Some(recolored);
-        }
-
-        return Some(icon.clone().to_owned());
-    }
-
-    None
+    icon::tray_icon_for_mode(state.display_mode())
+        .or_else(|| app.default_window_icon().map(|icon| icon.clone().to_owned()))
 }
 
 fn build_tray_menu(
@@ -371,6 +369,7 @@ fn create_or_replace_tray_icon(app: &AppHandle, state: &TrayRuntimeState) -> Res
     let mut builder = TrayIconBuilder::with_id(TRAY_ICON_ID)
         .menu(&menu)
         .tooltip(&tooltip)
+        .icon_as_template(ICON_IS_TEMPLATE)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| {
             let menu_id = event.id().as_ref().to_string();
@@ -413,6 +412,9 @@ pub fn refresh_tray(app: &AppHandle) -> Result<(), String> {
         if let Err(err) = tray.set_icon(icon) {
             warn!("更新托盘图标失败，尝试重建托盘: {}", err);
             return create_or_replace_tray_icon(app, &state);
+        }
+        if let Err(err) = tray.set_icon_as_template(ICON_IS_TEMPLATE) {
+            debug!("设置托盘模板图标失败（可忽略的平台差异）: {}", err);
         }
         return Ok(());
     }
@@ -463,7 +465,9 @@ fn create_main_window(app: &AppHandle) -> Result<(), String> {
         WebviewWindowBuilder::from_config(&app_handle, &window_config)
             .map_err(|e| format!("创建主窗口构建器失败: {}", e))?
             .build()
-            .map(|_| ())
+            // окно пересоздаётся из конфига, а стекло и скруглённые углы
+            // ставятся кодом — без этого возвращённое из трея окно квадратное
+            .map(|window| crate::app::system::window_appearance::apply(&window))
             .map_err(|e| format!("重建主窗口失败: {}", e))
     })
     .join()

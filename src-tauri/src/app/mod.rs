@@ -32,6 +32,7 @@ pub mod system {
     pub mod sudo_service;
     pub mod system_service;
     pub mod update_service;
+    pub mod window_appearance;
 }
 
 // Tray services

@@ -280,6 +280,15 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background: var(--bg-base);
+  /* На Маке угол окна скругляем сами: украшений системы у окна нет. На
+     остальных системах здесь ноль, и правило ничего не меняет. */
+  border-radius: var(--window-radius);
+  overflow: hidden;
+}
+
+/* Стеклянная кромка по краю окна: тонкий свет, повторяющий скругление */
+.platform-macos .app-layout {
+  box-shadow: inset 0 0 0 0.5px var(--glass-border);
 }
 
 .app-body {

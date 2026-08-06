@@ -34,7 +34,14 @@ serde_yaml = "0.9"
 # Tauri 2.0 最新版本
 # Отладочная консоль в релизной сборке — лишняя поверхность: она даёт полный
 # доступ к окну приложения. В отладочных сборках Tauri включает её сам.
-tauri = { version = "2.10.2", features = ["tray-icon", "unstable"] }
+tauri = { version = "2.10.2", features = [
+    "tray-icon",
+    "unstable",
+    # знак в трее собирается из своего PNG (Image::from_bytes), а не из ярлыка окна
+    "image-png",
+    # прозрачное окно на macOS: без этого не будет ни скруглённых углов, ни стекла
+    "macos-private-api",
+] }
 reqwest = { version = "0.12", features = ["json", "stream", "native-tls-vendored"] }
 dirs = "5.0.1"
 tokio = { version = "1.48", features = ["full"] }

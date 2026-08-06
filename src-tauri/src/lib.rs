@@ -90,6 +90,10 @@ pub fn run() {
                 !startup_context.should_start_hidden,
             );
 
+            if let Some(window) = app.get_webview_window("main") {
+                crate::app::system::window_appearance::apply(&window);
+            }
+
             if startup_context.should_start_hidden {
                 if let Some(window) = app.get_webview_window("main") {
                     if let Err(err) = window.hide() {

@@ -1,147 +1,122 @@
 use super::model::TrayProxyMode;
 use tauri::image::Image;
 
-type Rgba = [u8; 4];
+/// Знак «Штиля» для строки меню: белый силуэт на прозрачном, без плашки.
+/// Собирается `scripts/brand/make_desktop_icons.py` из общего описания знака —
+/// руками его не рисуют, иначе разъедется с телефоном.
+const GLYPH: &[u8] = include_bytes!("../../../icons/tray.png");
 
-const SYSTEM_ACCENT: Rgba = [220, 38, 56, 255];
-const TUN_ACCENT: Rgba = [168, 85, 247, 255];
+type Rgb = [u8; 3];
 
-pub fn recolor_icon_for_mode(base_icon: &Image<'_>, mode: TrayProxyMode) -> Option<Image<'static>> {
-    let accent = match mode {
-        TrayProxyMode::System => SYSTEM_ACCENT,
-        TrayProxyMode::Tun => TUN_ACCENT,
-        TrayProxyMode::Manual => return None,
-    };
+/// Цвета — из палитры продукта (`src/assets/tokens.css`). Красного в «Штиле»
+/// нет нигде, кроме настоящей ошибки: прежний значок красил знак в `#dc2638`,
+/// и в трее это читалось как «сломалось», а не «работает».
+const OFF: Rgb = [155, 170, 196]; // ink-400 — защита выключена
+const SYSTEM: Rgb = [79, 146, 255]; // azure-500 — системный прокси
+const TUN: Rgb = [70, 209, 137]; // green-400 — весь трафик в туннеле
 
-    let mut recolored = Vec::with_capacity(base_icon.rgba().len());
-    for pixel in base_icon.rgba().chunks_exact(4) {
-        let alpha = pixel[3];
-        if alpha == 0 {
-            recolored.extend_from_slice(pixel);
-            continue;
-        }
+/// Выключенное состояние приглушаем силой знака, а не цветом: на macOS значок
+/// шаблонный (система красит его сама под светлую и тёмную строку меню), и до
+/// неё доходит только прозрачность.
+const OFF_STRENGTH: f32 = 0.45;
 
-        // 保留原图明暗层次，只替换色相，避免换成完全陌生的托盘形状。
-        let luminance =
-            (u16::from(pixel[0]) * 54 + u16::from(pixel[1]) * 183 + u16::from(pixel[2]) * 19) / 256;
-        let tinted = map_luminance_to_accent(accent, luminance as u8);
-
-        recolored.extend_from_slice(&tinted);
-        recolored.push(alpha);
-    }
-
-    Some(Image::new_owned(
-        recolored,
-        base_icon.width(),
-        base_icon.height(),
-    ))
+pub fn tray_icon_for_mode(mode: TrayProxyMode) -> Option<Image<'static>> {
+    let base = Image::from_bytes(GLYPH).ok()?;
+    Some(paint(&base, tint(mode), strength(mode)))
 }
 
-fn map_luminance_to_accent(accent: Rgba, luminance: u8) -> [u8; 3] {
-    let palette = palette_for_accent(accent);
-    let base = palette.base;
-
-    if luminance < 96 {
-        let ratio = luminance as f32 / 96.0;
-        mix_rgb(palette.shadow, base, ratio)
-    } else {
-        let ratio = ((luminance - 96) as f32 / 159.0).clamp(0.0, 1.0);
-        mix_rgb(base, palette.highlight, ratio)
+fn tint(mode: TrayProxyMode) -> Rgb {
+    match mode {
+        TrayProxyMode::Manual => OFF,
+        TrayProxyMode::System => SYSTEM,
+        TrayProxyMode::Tun => TUN,
     }
 }
 
-fn palette_for_accent(accent: Rgba) -> TintPalette {
-    if accent == SYSTEM_ACCENT {
-        return TintPalette {
-            base: [220, 38, 56],
-            shadow: [92, 16, 28],
-            highlight: [244, 96, 112],
-        };
-    }
-
-    if accent == TUN_ACCENT {
-        return TintPalette {
-            base: [168, 85, 247],
-            shadow: [72, 32, 116],
-            highlight: [206, 156, 255],
-        };
-    }
-
-    let base = rgb(accent);
-    TintPalette {
-        base,
-        shadow: mix_rgb([24, 18, 30], base, 0.4),
-        highlight: mix_rgb(base, [255, 255, 255], 0.18),
+fn strength(mode: TrayProxyMode) -> f32 {
+    match mode {
+        TrayProxyMode::Manual => OFF_STRENGTH,
+        _ => 1.0,
     }
 }
 
-struct TintPalette {
-    base: [u8; 3],
-    shadow: [u8; 3],
-    highlight: [u8; 3],
-}
+/// Красит силуэт: цвет ставим свой, форму берём из прозрачности исходника.
+fn paint(base: &Image<'_>, color: Rgb, strength: f32) -> Image<'static> {
+    let mut painted = Vec::with_capacity(base.rgba().len());
+    for pixel in base.rgba().chunks_exact(4) {
+        let alpha = (f32::from(pixel[3]) * strength).round().clamp(0.0, 255.0) as u8;
+        painted.extend_from_slice(&color);
+        painted.push(alpha);
+    }
 
-fn rgb(color: Rgba) -> [u8; 3] {
-    [color[0], color[1], color[2]]
-}
-
-fn mix_rgb(from: [u8; 3], to: [u8; 3], ratio: f32) -> [u8; 3] {
-    [
-        mix_channel(from[0], to[0], ratio),
-        mix_channel(from[1], to[1], ratio),
-        mix_channel(from[2], to[2], ratio),
-    ]
-}
-
-fn mix_channel(from: u8, to: u8, ratio: f32) -> u8 {
-    let clamped = ratio.clamp(0.0, 1.0);
-    (from as f32 + (to as f32 - from as f32) * clamped).round() as u8
+    Image::new_owned(painted, base.width(), base.height())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn sample_icon() -> Image<'static> {
-        Image::new_owned(
-            vec![
-                255, 255, 255, 255, 80, 80, 80, 255, 0, 0, 0, 0, 200, 60, 30, 200,
-            ],
-            2,
-            2,
-        )
+    fn max_alpha(icon: &Image<'_>) -> u8 {
+        icon.rgba()
+            .chunks_exact(4)
+            .map(|pixel| pixel[3])
+            .max()
+            .unwrap_or(0)
+    }
+
+    fn icon(mode: TrayProxyMode) -> Image<'static> {
+        tray_icon_for_mode(mode).expect("знак трея должен собираться")
     }
 
     #[test]
-    fn manual_mode_keeps_original_icon() {
-        assert!(recolor_icon_for_mode(&sample_icon(), TrayProxyMode::Manual).is_none());
+    fn glyph_decodes_and_keeps_size() {
+        let base = Image::from_bytes(GLYPH).expect("знак должен читаться");
+        let painted = icon(TrayProxyMode::System);
+
+        assert!(base.width() > 0 && base.height() > 0);
+        assert_eq!(painted.width(), base.width());
+        assert_eq!(painted.height(), base.height());
+        assert_eq!(painted.rgba().len(), base.rgba().len());
     }
 
     #[test]
-    fn recolored_icon_keeps_size_and_alpha() {
-        let base = sample_icon();
-        let recolored = recolor_icon_for_mode(&base, TrayProxyMode::System).expect("system icon");
+    fn every_mode_paints_its_own_colour() {
+        let system = icon(TrayProxyMode::System);
+        let tun = icon(TrayProxyMode::Tun);
+        let manual = icon(TrayProxyMode::Manual);
 
-        assert_eq!(recolored.width(), 2);
-        assert_eq!(recolored.height(), 2);
-        assert_eq!(recolored.rgba()[3], 255);
-        assert_eq!(recolored.rgba()[7], 255);
-        assert_eq!(recolored.rgba()[11], 0);
-        assert_eq!(recolored.rgba()[15], 200);
-    }
-
-    #[test]
-    fn different_modes_produce_different_tints() {
-        let base = sample_icon();
-        let system = recolor_icon_for_mode(&base, TrayProxyMode::System).expect("system icon");
-        let tun = recolor_icon_for_mode(&base, TrayProxyMode::Tun).expect("tun icon");
-
-        assert_ne!(system.rgba(), base.rgba());
-        assert_ne!(tun.rgba(), base.rgba());
         assert_ne!(system.rgba(), tun.rgba());
-        assert!(system.rgba()[0] > system.rgba()[1]);
-        assert!(system.rgba()[0] > system.rgba()[2]);
-        assert!(tun.rgba()[0] > tun.rgba()[1]);
-        assert!(tun.rgba()[2] > tun.rgba()[1]);
+        assert_ne!(system.rgba(), manual.rgba());
+        assert_eq!(&system.rgba()[0..3], &SYSTEM);
+        assert_eq!(&tun.rgba()[0..3], &TUN);
+        assert_eq!(&manual.rgba()[0..3], &OFF);
+    }
+
+    #[test]
+    fn disabled_mode_is_dimmer() {
+        let manual = max_alpha(&icon(TrayProxyMode::Manual));
+        let system = max_alpha(&icon(TrayProxyMode::System));
+
+        assert!(manual > 0, "выключенный знак всё равно виден");
+        assert!(
+            manual < system,
+            "выключенный знак бледнее включённого: {manual} против {system}"
+        );
+    }
+
+    #[test]
+    fn transparent_pixels_stay_transparent() {
+        let base = Image::from_bytes(GLYPH).expect("знак должен читаться");
+        let painted = icon(TrayProxyMode::System);
+
+        for (from, to) in base
+            .rgba()
+            .chunks_exact(4)
+            .zip(painted.rgba().chunks_exact(4))
+        {
+            if from[3] == 0 {
+                assert_eq!(to[3], 0, "пустое место не должно закраситься");
+            }
+        }
     }
 }

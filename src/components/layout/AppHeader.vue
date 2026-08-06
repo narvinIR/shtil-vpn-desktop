@@ -136,6 +136,9 @@ const emit = defineEmits<{
   width: 26px;
   height: 26px;
   object-fit: contain;
+  /* Знак нарисован плитой во весь квадрат — угол скругляем здесь, иначе в
+     шапке он торчит квадратиком среди скруглённых элементов */
+  border-radius: 7px;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
   transition: filter var(--transition-base);
 }
