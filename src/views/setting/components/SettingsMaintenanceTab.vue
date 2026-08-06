@@ -194,16 +194,16 @@
       {{ props.t('setting.backup.noPreview') }}
     </div>
 
-    <!-- Журнал убран из бокового меню: человеку он нужен только когда что-то не
-         работает, и приходит он сюда — в обслуживание. -->
-    <h3 class="setting-section-title">{{ props.t('log.entryTitle') }}</h3>
+    <!-- Диагностика убрана из бокового меню: человеку она нужна только когда
+         что-то не работает, и приходит он сюда — в обслуживание. -->
+    <h3 class="setting-section-title">{{ props.t('diagnostics.entryTitle') }}</h3>
 
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-desc">{{ props.t('log.entryDesc') }}</div>
+        <div class="setting-desc">{{ props.t('diagnostics.entryDesc') }}</div>
       </div>
       <n-button size="small" secondary @click="router.push('/log')">
-        {{ props.t('log.entryOpen') }}
+        {{ props.t('diagnostics.entryOpen') }}
       </n-button>
     </div>
   </div>

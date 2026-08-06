@@ -1,18 +1,5 @@
 <template>
-  <div class="page-shell log-page">
-    <PageHeader :title="t('log.title')" :subtitle="t('log.subtitle')">
-      <template #actions>
-        <n-space>
-          <n-button secondary @click="logStore.togglePaused()">
-            {{ logStore.paused ? labels.resume : labels.pause }}
-          </n-button>
-          <n-button secondary @click="copyLogs">{{ t('log.copy') }}</n-button>
-          <n-button secondary @click="exportLogs">{{ t('log.export') }}</n-button>
-          <n-button type="error" secondary @click="clearLogs">{{ t('log.clear') }}</n-button>
-        </n-space>
-      </template>
-    </PageHeader>
-
+  <div class="log-page">
     <ToolbarBar>
       <template #filters>
         <n-input v-model:value="logStore.searchQuery" :placeholder="t('log.searchLogs')" clearable size="small">
@@ -44,6 +31,12 @@
           </template>
           {{ labels.sortOrder }}
         </n-button>
+        <n-button size="small" secondary @click="logStore.togglePaused()">
+          {{ logStore.paused ? labels.resume : labels.pause }}
+        </n-button>
+        <n-button size="small" secondary @click="copyLogs">{{ t('log.copy') }}</n-button>
+        <n-button size="small" secondary @click="exportLogs">{{ t('log.export') }}</n-button>
+        <n-button size="small" type="error" secondary @click="clearLogs">{{ t('log.clear') }}</n-button>
       </template>
       <template #stats>
         <n-tag size="small" round :bordered="false">{{ t('log.records') }}: {{ logStore.logs.length }}</n-tag>
@@ -121,14 +114,13 @@ import {
   DocumentTextOutline,
   SearchOutline,
 } from '@vicons/ionicons5'
-import PageHeader from '@/components/common/PageHeader.vue'
 import ToolbarBar from '@/components/common/ToolbarBar.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useLogStore, type LogEntry } from '@/stores/kernel/LogStore'
 import { useI18n } from 'vue-i18n'
 
 defineOptions({
-  name: 'LogView',
+  name: 'LogPanel',
 })
 
 const { t } = useI18n()
@@ -257,8 +249,9 @@ const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDateString
 
 <style scoped>
 .log-page {
-  max-width: var(--content-max-width, 1440px);
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .logs-card {

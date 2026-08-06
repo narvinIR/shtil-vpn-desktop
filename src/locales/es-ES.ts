@@ -230,6 +230,28 @@ export default {
   proxy: {
     modeChangeFailed: 'No se pudo cambiar el modo',
   },
+  diagnostics: {
+    entryTitle: 'Diagnóstico',
+    entryDesc: 'Qué hace la aplicación y adónde van las conexiones. Útil si pide ayuda al soporte',
+    entryOpen: 'Abrir el diagnóstico',
+    title: 'Diagnóstico',
+    subtitle: 'Registro de la aplicación y conexiones de ahora mismo',
+    tabLog: 'Registro',
+    tabConnections: 'Conexiones',
+  },
+  connections: {
+    search: 'Buscar por dirección o programa…',
+    pause: 'Pausar',
+    resume: 'Reanudar',
+    count: 'Conexiones',
+    destination: 'Destino',
+    process: 'Programa',
+    path: 'Ruta',
+    pathVpn: 'por VPN',
+    pathDirect: 'directo',
+    traffic: 'Tráfico',
+    empty: 'Todavía no hay conexiones',
+  },
   // Осталось только то, что ещё зовётся из кода
   sub: {
     autoUpdateOff: 'No actualizar sola',

@@ -453,3 +453,47 @@ fn apply_app_settings_should_normalize_tun_stack_for_this_platform() {
     };
     assert_eq!(tun_in.get("stack"), Some(&json!(expected)));
 }
+
+#[test]
+fn apply_app_settings_should_enable_process_lookup_for_diagnostics() {
+    let mut config = json!({
+        "route": {
+            "rules": [{ "action": "sniff" }],
+            "final": "direct",
+            "auto_detect_interface": true
+        }
+    });
+
+    apply_app_settings_to_config(&mut config, &AppConfig::default());
+
+    // Без этого поля ядро отдаёт пустой processPath, и на экране диагностики
+    // колонка «Программа» была бы пустой у всех соединений (замер 07.08.2026).
+    assert_eq!(
+        config.get("route").and_then(|route| route.get("find_process")),
+        Some(&json!(true))
+    );
+}
+
+#[test]
+fn apply_port_settings_only_should_enable_process_lookup_without_touching_routes() {
+    let mut config = json!({
+        "inbounds": [{ "type": "mixed", "tag": "mixed-in", "listen_port": 7890 }],
+        "route": {
+            "rules": [{ "action": "sniff" }, { "domain_suffix": [".ru"], "outbound": "direct" }],
+            "final": "VPN"
+        }
+    });
+
+    apply_port_settings_only(&mut config, &AppConfig::default());
+
+    let route = config.get("route").expect("route должен остаться");
+    // Наша подписка приходит готовым конфигом, и в этом режиме мы правим только
+    // порты. Поиск программы — исключение: без него экран диагностики пустой.
+    assert_eq!(route.get("find_process"), Some(&json!(true)));
+    // Маршруты подписки при этом остаются нетронутыми.
+    assert_eq!(route.get("final"), Some(&json!("VPN")));
+    assert_eq!(
+        route.get("rules").and_then(|rules| rules.as_array()).map(|rules| rules.len()),
+        Some(2)
+    );
+}

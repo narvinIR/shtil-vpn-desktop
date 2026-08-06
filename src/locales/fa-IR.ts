@@ -226,6 +226,28 @@ export default {
   proxy: {
     modeChangeFailed: 'حالت عوض نشد',
   },
+  diagnostics: {
+    entryTitle: 'عیب‌یابی',
+    entryDesc: 'برنامه چه می‌کند و اتصال‌ها به کجا می‌روند. اگر از پشتیبانی کمک می‌خواهید لازم است',
+    entryOpen: 'باز کردن عیب‌یابی',
+    title: 'عیب‌یابی',
+    subtitle: 'گزارش کار برنامه و اتصال‌های همین حالا',
+    tabLog: 'گزارش',
+    tabConnections: 'اتصال‌ها',
+  },
+  connections: {
+    search: 'جست‌وجو بر پایه نشانی یا برنامه…',
+    pause: 'توقف',
+    resume: 'ادامه',
+    count: 'اتصال‌ها',
+    destination: 'مقصد',
+    process: 'برنامه',
+    path: 'مسیر',
+    pathVpn: 'از راه VPN',
+    pathDirect: 'مستقیم',
+    traffic: 'داده',
+    empty: 'هنوز اتصالی نیست',
+  },
   // Осталось только то, что ещё зовётся из кода
   sub: {
     autoUpdateOff: 'خودکار به‌روز نشود',

@@ -231,6 +231,28 @@ export default {
   proxy: {
     modeChangeFailed: 'Der Modus konnte nicht gewechselt werden',
   },
+  diagnostics: {
+    entryTitle: 'Diagnose',
+    entryDesc: 'Was die App tut und wohin die Verbindungen gehen. Hilfreich, wenn Sie den Support fragen',
+    entryOpen: 'Diagnose öffnen',
+    title: 'Diagnose',
+    subtitle: 'Protokoll der App und Verbindungen von gerade eben',
+    tabLog: 'Protokoll',
+    tabConnections: 'Verbindungen',
+  },
+  connections: {
+    search: 'Nach Adresse oder Programm suchen …',
+    pause: 'Anhalten',
+    resume: 'Fortsetzen',
+    count: 'Verbindungen',
+    destination: 'Ziel',
+    process: 'Programm',
+    path: 'Weg',
+    pathVpn: 'über VPN',
+    pathDirect: 'direkt',
+    traffic: 'Datenmenge',
+    empty: 'Noch keine Verbindungen',
+  },
   // Осталось только то, что ещё зовётся из кода
   sub: {
     autoUpdateOff: 'Nicht automatisch aktualisieren',

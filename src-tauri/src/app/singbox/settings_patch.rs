@@ -79,6 +79,7 @@ fn proxy_listen_address(app_config: &AppConfig) -> &'static str {
 pub fn apply_app_settings_to_config(config: &mut Value, app_config: &AppConfig) {
     if let Some(config_obj) = config.as_object_mut() {
         ensure_kernel_log_output(config_obj);
+        ensure_process_lookup(config_obj);
         strip_remote_rule_sets(config_obj);
         apply_inbounds_settings(config_obj, app_config);
 
@@ -125,6 +126,12 @@ pub fn apply_app_settings_to_config(config: &mut Value, app_config: &AppConfig) 
 
 pub fn apply_port_settings_only(config: &mut Value, app_config: &AppConfig) {
     if let Some(config_obj) = config.as_object_mut() {
+        // Наша подписка приезжает готовым конфигом, и здесь мы правим только
+        // порты — маршруты остаются как прислал сервер. Исключение одно: без
+        // поиска программы ядро не называет её ни у одного соединения, и экран
+        // диагностики пустой у всех наших клиентов.
+        ensure_process_lookup(config_obj);
+
         if let Some(experimental) = config_obj
             .get_mut("experimental")
             .and_then(|v| v.as_object_mut())
@@ -493,6 +500,17 @@ fn extract_existing_tun_route_exclude_address(
         .and_then(|route_exclude_address| {
             normalize_persisted_tun_route_exclude_address(Some(route_exclude_address))
         })
+}
+
+/// Просим ядро называть программу, которая открыла соединение: экран
+/// диагностики показывает её человеку. Без этой просьбы ядро оставляет поле
+/// пустым у всех соединений (замер на 1.13.16 от 07.08.2026). Ищет ядро по
+/// таблице сокетов самой машины, наружу ничего не уходит.
+fn ensure_process_lookup(config_obj: &mut Map<String, Value>) {
+    let route = config_obj.entry("route".to_string()).or_insert(json!({}));
+    if let Some(route_obj) = route.as_object_mut() {
+        route_obj.insert("find_process".to_string(), json!(true));
+    }
 }
 
 fn ensure_sniff_route_rule(rules: &mut Vec<Value>) -> usize {
