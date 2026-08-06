@@ -32,6 +32,9 @@
   },
   "bundle": {
     "active": true,
+    "macOS": {
+      "signingIdentity": "-"
+    },
     "targets": [
       "msi",
       "nsis",
