@@ -1,6 +1,7 @@
 use crate::utils::log_util;
 use app::storage::EnhancedStorageService;
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
 use tokio::sync::OnceCell;
@@ -325,6 +326,12 @@ pub fn run() {
             // прокси в настройках сети выглядит у человека как «пропал
             // интернет» во всех браузерах, а причина не видна ниоткуда.
             if matches!(event, RunEvent::Exit) {
+                // Ядро гасим здесь же, а не только на подготовке к выходу:
+                // событие системы «Завершить» (меню Apple, Dock, конец сеанса)
+                // до `ExitRequested` не доходит вовсе — замер 06.08.2026 на
+                // Маке: приложения нет, а ядро живо и держит порты.
+                stop_kernel_on_exit(app_handle);
+
                 if let Err(err) = crate::utils::proxy_util::disable_system_proxy() {
                     tracing::warn!("не удалось снять системный прокси при выходе: {}", err);
                 } else {
@@ -349,6 +356,29 @@ pub fn run() {
                 }
             }
         });
+}
+
+/// Погасить ядро на самом выходе и дождаться конца.
+///
+/// Обычный выход (трей, наш пункт меню) приходит сюда с уже остановленным
+/// ядром — повторная остановка ничего не делает и стоит доли секунды. А выход
+/// командой системы идёт мимо подготовки, и без этого шага ядро остаётся
+/// сиротой: порты заняты, трафик идёт, человек ничего об этом не знает.
+fn stop_kernel_on_exit(app_handle: &AppHandle) {
+    let handle = app_handle.clone();
+    let stopped = tauri::async_runtime::block_on(async move {
+        tokio::time::timeout(
+            Duration::from_secs(15),
+            crate::app::core::kernel_service::runtime::stop_kernel(Some(&handle)),
+        )
+        .await
+    });
+
+    match stopped {
+        Ok(Ok(message)) => tracing::info!("ядро остановлено при выходе: {}", message),
+        Ok(Err(err)) => tracing::warn!("ядро при выходе остановить не удалось: {}", err),
+        Err(_) => tracing::warn!("остановка ядра при выходе не уложилась в срок"),
+    }
 }
 
 #[allow(dead_code)]
