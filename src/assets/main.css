@@ -19,6 +19,12 @@
     color var(--transition-base);
 }
 
+/* На Маке фон кладёт только корень окна. Тот же цвет вторым слоем гасит
+   стекло системы: три полупрозрачных слоя подряд дают почти сплошной. */
+.platform-macos #app {
+  background-color: transparent;
+}
+
 /* 全局滚动条 */
 ::-webkit-scrollbar {
   width: 8px;

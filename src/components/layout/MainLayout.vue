@@ -289,6 +289,12 @@ onUnmounted(() => {
 /* Стеклянная кромка по краю окна: тонкий свет, повторяющий скругление */
 .platform-macos .app-layout {
   box-shadow: inset 0 0 0 0.5px var(--glass-border);
+  /* Маска заставляет WebKit применить скругление и к тем слоям, которые
+     он рисует отдельно (движущаяся волна на главном экране). Без неё
+     `overflow: hidden` их не касается, и правый нижний угол оставался
+     квадратным, пока три остальных были скруглены. Цвета маски роли не
+     играют — важна только её непрозрачность. */
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
 .app-body {
@@ -302,6 +308,12 @@ onUnmounted(() => {
   background: var(--bg-base);
   position: relative;
   min-width: 0;
+}
+
+/* На Маке фон уже положен корнем окна. Второй раз тем же цветом — и стекло
+   системы под окном перестаёт просвечивать: два слоя по 0.34 дают 0.56. */
+.platform-macos .app-content {
+  background: transparent;
 }
 
 .content-container {

@@ -324,36 +324,37 @@
  */
 .platform-macos.dark,
 .platform-macos[data-theme='dark'] {
-  --bg-base: rgba(9, 14, 26, 0.58);
+  --bg-base: rgba(9, 14, 26, 0.22);
   --page-bg: transparent;
 
-  --glass-bg: rgba(23, 38, 63, 0.42);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(23, 38, 63, 0.38);
+  --glass-border: rgba(255, 255, 255, 0.14);
 
-  --bg-surface: rgba(23, 38, 63, 0.56);
-  --bg-surface-2: rgba(30, 46, 74, 0.5);
-  --bg-elevated: rgba(30, 46, 74, 0.78);
+  --bg-surface: rgba(23, 38, 63, 0.44);
+  --bg-surface-2: rgba(30, 46, 74, 0.4);
+  /* Всплывающее закрывает то, что под ним, — здесь плотность нужна */
+  --bg-elevated: rgba(30, 46, 74, 0.86);
 
-  --panel-bg: rgba(23, 38, 63, 0.56);
-  --hero-bg: rgba(23, 38, 63, 0.56);
+  --panel-bg: rgba(23, 38, 63, 0.44);
+  --hero-bg: rgba(23, 38, 63, 0.44);
 
-  --border-color: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
 }
 
 .platform-macos:not(.dark):not([data-theme='dark']) {
-  --bg-base: rgba(244, 247, 252, 0.55);
+  --bg-base: rgba(244, 247, 252, 0.38);
   --page-bg: transparent;
 
-  --glass-bg: rgba(255, 255, 255, 0.5);
-  --glass-border: rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.42);
+  --glass-border: rgba(255, 255, 255, 0.75);
 
-  --bg-surface: rgba(255, 255, 255, 0.66);
-  --bg-surface-2: rgba(231, 237, 247, 0.6);
-  --bg-elevated: rgba(255, 255, 255, 0.82);
+  --bg-surface: rgba(255, 255, 255, 0.56);
+  --bg-surface-2: rgba(231, 237, 247, 0.52);
+  --bg-elevated: rgba(255, 255, 255, 0.9);
 
-  --panel-bg: rgba(255, 255, 255, 0.66);
-  --hero-bg: rgba(255, 255, 255, 0.66);
+  --panel-bg: rgba(255, 255, 255, 0.56);
+  --hero-bg: rgba(255, 255, 255, 0.56);
 
   --border-color: rgba(90, 107, 133, 0.16);
   --border-strong: rgba(90, 107, 133, 0.28);
