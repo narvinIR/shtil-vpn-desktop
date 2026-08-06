@@ -2,14 +2,14 @@
   <header class="app-header" data-tauri-drag-region>
     <!-- 品牌 + 运行状态 -->
     <div class="header-brand">
-      <div class="brand-logo-wrapper" @click="emit('home')">
+      <button class="brand-logo-wrapper" :aria-label="t('common.home')" @click="emit('home')">
         <img
           :src="logo"
           alt="Logo"
           class="brand-logo"
           :class="{ 'is-running': kernelStatusClass === 'running' }"
         />
-      </div>
+      </button>
       <div class="brand-text">
         <h1 class="app-name">{{ appName }}</h1>
         <div class="app-status" :class="kernelStatusClass">
@@ -38,7 +38,7 @@
 
     <!-- Кнопки окна. На Маке их рисует сама система слева — свои прячем, иначе
          на одном окне окажется два набора кнопок. -->
-    <div class="window-controls">
+    <div class="window-controls" v-if="!isMacOS">
       <button class="control-btn minimize" :aria-label="t('common.windowMinimize')" @click="emit('minimize')">
         <n-icon size="16"><RemoveOutline /></n-icon>
       </button>
@@ -63,6 +63,7 @@ import {
 } from '@vicons/ionicons5'
 import { useI18n } from 'vue-i18n'
 import logo from '@/assets/icon.png'
+import { isMacOS } from '@/boot/platform'
 import { formatSpeed } from '@/utils'
 
 const { t } = useI18n()
@@ -120,6 +121,9 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  padding: 0;
+  border: none;
+  background: transparent;
   transition: transform var(--transition-fast);
 }
 
