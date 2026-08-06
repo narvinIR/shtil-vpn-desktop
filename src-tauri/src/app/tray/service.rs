@@ -21,6 +21,12 @@ lazy_static! {
         RwLock::new(TrayRuntimeState::default());
 }
 
+// Язык, на котором собрана строка меню в системе. Пустой — ещё не собирали.
+#[cfg(target_os = "macos")]
+lazy_static! {
+    static ref APP_MENU_LOCALE: RwLock<String> = RwLock::new(String::new());
+}
+
 #[derive(Debug, Clone, Copy)]
 struct TrayText {
     app_name: &'static str,
@@ -389,13 +395,105 @@ fn create_or_replace_tray_icon(app: &AppHandle, state: &TrayRuntimeState) -> Res
         .map_err(|e| format!("创建托盘图标失败: {}", e))
 }
 
+/// Меню приложения в строке системы (macOS). Своё нужно ровно ради «Выхода»:
+/// готовый пункт системы завершает процесс её же командой, минуя нашу лестницу
+/// остановки. Замер на Mac Studio 06.08.2026: после такого выхода приложения
+/// уже нет, а ядро живо — держит порты 12080/12081 и гоняет трафик. Под
+/// туннелем это ещё и мёртвая сеть у человека до перезагрузки.
+#[cfg(target_os = "macos")]
+fn install_app_menu(app: &AppHandle, text: &TrayText) -> Result<(), String> {
+    use std::sync::Once;
+    static MENU_HANDLER: Once = Once::new();
+
+    let quit_item = MenuItemBuilder::with_id(menu_ids::QUIT, text.quit)
+        .accelerator("CmdOrCtrl+Q")
+        .build(app)
+        .map_err(|e| format!("пункт выхода не собрался: {}", e))?;
+
+    let app_submenu = SubmenuBuilder::new(app, text.app_name)
+        .about(None)
+        .separator()
+        .services()
+        .separator()
+        .hide()
+        .hide_others()
+        .show_all()
+        .separator()
+        .item(&quit_item)
+        .build()
+        .map_err(|e| format!("меню приложения не собралось: {}", e))?;
+
+    let edit_submenu = SubmenuBuilder::new(app, "Edit")
+        .undo()
+        .redo()
+        .separator()
+        .cut()
+        .copy()
+        .paste()
+        .select_all()
+        .build()
+        .map_err(|e| format!("меню правки не собралось: {}", e))?;
+
+    let window_submenu = SubmenuBuilder::new(app, "Window")
+        .minimize()
+        .separator()
+        .close_window()
+        .build()
+        .map_err(|e| format!("меню окна не собралось: {}", e))?;
+
+    let menu = MenuBuilder::new(app)
+        .items(&[&app_submenu, &edit_submenu, &window_submenu])
+        .build()
+        .map_err(|e| format!("строка меню не собралась: {}", e))?;
+
+    app.set_menu(menu)
+        .map_err(|e| format!("установка строки меню не удалась: {}", e))?;
+
+    // Обработчик ставим один раз: меню пересобирается при смене языка, а второй
+    // подписчик означал бы два выхода на одно нажатие.
+    MENU_HANDLER.call_once(|| {
+        app.on_menu_event(|app, event| {
+            handle_menu_event(app, event.id().as_ref());
+        });
+    });
+
+    Ok(())
+}
+
+/// Держим строку меню на языке трея. Пересобираем только при смене языка:
+/// состояние ядра меняется часто, а надписи от этого не зависят.
+#[cfg(target_os = "macos")]
+fn sync_app_menu(app: &AppHandle, locale: &str) {
+    let already_built = APP_MENU_LOCALE
+        .read()
+        .map(|built| built.as_str() == locale)
+        .unwrap_or(false);
+    if already_built {
+        return;
+    }
+
+    match install_app_menu(app, &tray_text_for_locale(locale)) {
+        Ok(()) => {
+            if let Ok(mut built) = APP_MENU_LOCALE.write() {
+                *built = locale.to_string();
+            }
+        }
+        Err(err) => warn!("строка меню не собралась: {}", err),
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn sync_app_menu(_app: &AppHandle, _locale: &str) {}
+
 pub fn init_tray(app: &AppHandle) -> Result<(), String> {
     let state = with_state_read(|state| state.clone());
+    sync_app_menu(app, &state.locale);
     create_or_replace_tray_icon(app, &state)
 }
 
 pub fn refresh_tray(app: &AppHandle) -> Result<(), String> {
     let state = with_state_read(|state| state.clone());
+    sync_app_menu(app, &state.locale);
     let text = tray_text_for_locale(&state.locale);
     let menu = build_tray_menu(app, &state, &text)?;
     let tooltip = compose_tooltip(&state, &text);
