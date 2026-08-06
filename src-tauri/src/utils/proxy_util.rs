@@ -52,12 +52,40 @@ fn applied_proxy_port() -> Option<u16> {
     }
 }
 
-/// Разбор ответа `networksetup -getwebproxy <служба>`: порт включённой записи,
-/// которая ведёт на петлю. Выключенная и чужая по адресу дают `None`.
+/// Запись прокси одного канала: то, что показывает `networksetup -getwebproxy`.
 #[cfg(any(target_os = "macos", test))]
-fn parse_local_proxy_port(output: &str) -> Option<u16> {
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+struct ProxyRecord {
+    server: String,
+    port: u16,
+    enabled: bool,
+}
+
+/// Чужие записи, поверх которых мы легли: ключ «канал|вид» → что там стояло.
+#[cfg(any(target_os = "macos", test))]
+type ProxyBackup = std::collections::BTreeMap<String, ProxyRecord>;
+
+#[cfg(any(target_os = "macos", test))]
+fn backup_key(service: &str, kind: &str) -> String {
+    format!("{}|{}", service, kind)
+}
+
+/// Что делать с записью на выходе.
+#[cfg(any(target_os = "macos", test))]
+#[derive(Debug, PartialEq, Eq)]
+enum ProxyCleanup {
+    /// Вернуть чужую запись — она стояла здесь до нас.
+    Restore(ProxyRecord),
+    /// До нас на этом месте ничего не было — просто выключить.
+    TurnOff,
+}
+
+/// Разбор ответа `networksetup -getwebproxy <служба>`. Пустая запись (нет
+/// адреса или порт 0) — это «здесь ничего не настроено».
+#[cfg(any(target_os = "macos", test))]
+fn parse_proxy_record(output: &str) -> Option<ProxyRecord> {
     let mut enabled = false;
-    let mut is_local = false;
+    let mut server = String::new();
     let mut port: Option<u16> = None;
 
     for line in output.lines() {
@@ -67,16 +95,83 @@ fn parse_local_proxy_port(output: &str) -> Option<u16> {
         let value = value.trim();
         match key.trim() {
             "Enabled" => enabled = value.eq_ignore_ascii_case("yes"),
-            "Server" => is_local = matches!(value, "127.0.0.1" | "::1" | "localhost"),
+            "Server" => server = value.to_string(),
             "Port" => port = value.parse().ok(),
             _ => {}
         }
     }
 
-    if enabled && is_local {
-        port
+    let port = port.filter(|value| *value != 0)?;
+    if server.is_empty() {
+        return None;
+    }
+
+    Some(ProxyRecord {
+        server,
+        port,
+        enabled,
+    })
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn is_loopback(server: &str) -> bool {
+    matches!(server, "127.0.0.1" | "::1" | "localhost")
+}
+
+/// Порт включённой записи, которая ведёт на петлю. Выключенная и чужая по
+/// адресу дают `None`.
+#[cfg(any(target_os = "macos", test))]
+fn parse_local_proxy_port(output: &str) -> Option<u16> {
+    let record = parse_proxy_record(output)?;
+
+    if record.enabled && is_loopback(&record.server) {
+        Some(record.port)
     } else {
         None
+    }
+}
+
+/// Чужая запись, которую мы сейчас затрём своей: её надо вернуть на выходе.
+/// Своя (наш порт на петле) и пустая — не чужие, возвращать нечего.
+#[cfg(any(target_os = "macos", test))]
+fn foreign_proxy_record(output: &str, our_port: Option<u16>) -> Option<ProxyRecord> {
+    let record = parse_proxy_record(output)?;
+
+    if is_loopback(&record.server) && Some(record.port) == our_port {
+        return None;
+    }
+
+    Some(record)
+}
+
+/// Запоминаем самую первую чужую запись: во втором запуске подряд на её месте
+/// стоит уже наша, и перезапись потеряла бы настройку человека.
+#[cfg(any(target_os = "macos", test))]
+fn remember_foreign_record(
+    backup: &mut ProxyBackup,
+    service: &str,
+    kind: &str,
+    record: ProxyRecord,
+) {
+    backup.entry(backup_key(service, kind)).or_insert(record);
+}
+
+/// Что делать с записью канала на выходе. Чужую не трогаем вовсе.
+#[cfg(any(target_os = "macos", test))]
+fn cleanup_for(
+    output: &str,
+    our_port: Option<u16>,
+    backup: &ProxyBackup,
+    service: &str,
+    kind: &str,
+) -> Option<ProxyCleanup> {
+    if !is_our_proxy_record(output, our_port) {
+        return None;
+    }
+
+    match backup.get(&backup_key(service, kind)) {
+        Some(previous) => Some(ProxyCleanup::Restore(previous.clone())),
+        None => Some(ProxyCleanup::TurnOff),
     }
 }
 
@@ -227,12 +322,65 @@ fn disable_system_proxy_linux() -> io::Result<()> {
     Ok(())
 }
 
+/// Виды записей прокси: как прочитать, как записать адрес, как переключить.
+#[cfg(target_os = "macos")]
+const PROXY_KINDS: [(&str, &str, &str, &str); 3] = [
+    ("web", "-getwebproxy", "-setwebproxy", "-setwebproxystate"),
+    (
+        "secure",
+        "-getsecurewebproxy",
+        "-setsecurewebproxy",
+        "-setsecurewebproxystate",
+    ),
+    (
+        "socks",
+        "-getsocksfirewallproxy",
+        "-setsocksfirewallproxy",
+        "-setsocksfirewallproxystate",
+    ),
+];
+
+/// Где лежат запомненные чужие записи. На диске, а не в памяти: приложение
+/// может упасть, а вернуть человеку его настройку надо в любом случае.
+#[cfg(target_os = "macos")]
+fn foreign_backup_path() -> std::path::PathBuf {
+    std::path::PathBuf::from(crate::utils::app_util::get_work_dir_sync()).join("foreign_proxy.json")
+}
+
+#[cfg(target_os = "macos")]
+fn read_foreign_backup() -> ProxyBackup {
+    std::fs::read_to_string(foreign_backup_path())
+        .ok()
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_default()
+}
+
+#[cfg(target_os = "macos")]
+fn write_foreign_backup(backup: &ProxyBackup) {
+    match serde_json::to_string_pretty(backup) {
+        Ok(raw) => {
+            if let Err(e) = std::fs::write(foreign_backup_path(), raw) {
+                tracing::warn!("не удалось запомнить чужие записи прокси: {}", e);
+            }
+        }
+        Err(e) => tracing::warn!("не удалось собрать список чужих записей прокси: {}", e),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn clear_foreign_backup() {
+    let _ = std::fs::remove_file(foreign_backup_path());
+}
+
 #[cfg(target_os = "macos")]
 fn disable_system_proxy_macos() -> io::Result<()> {
     // Прокси прописывается на все каналы разом, поэтому и снимать надо со всех:
     // забытая запись на неактивном канале потом немеет браузером. Но трогаем
-    // ТОЛЬКО свою — чужой клиент на этой же машине не должен пострадать.
+    // ТОЛЬКО свою, а на её место возвращаем чужую, которую собой закрыли:
+    // рядом живёт другой VPN-клиент, и без возврата человек уходит с мёртвым
+    // браузером, не видя причины.
     let our_port = applied_proxy_port();
+    let backup = read_foreign_backup();
 
     let output = std::process::Command::new("networksetup")
         .args(["-listallnetworkservices"])
@@ -248,11 +396,7 @@ fn disable_system_proxy_macos() -> io::Result<()> {
                 continue;
             }
 
-            for (read, write) in [
-                ("-getwebproxy", "-setwebproxystate"),
-                ("-getsecurewebproxy", "-setsecurewebproxystate"),
-                ("-getsocksfirewallproxy", "-setsocksfirewallproxystate"),
-            ] {
+            for (kind, read, set_value, set_state) in PROXY_KINDS {
                 let Ok(current) = std::process::Command::new("networksetup")
                     .args([read, service])
                     .output()
@@ -261,16 +405,39 @@ fn disable_system_proxy_macos() -> io::Result<()> {
                 };
 
                 let record = String::from_utf8_lossy(&current.stdout);
-                if !is_our_proxy_record(&record, our_port) {
-                    continue;
+                match cleanup_for(&record, our_port, &backup, service, kind) {
+                    Some(ProxyCleanup::Restore(previous)) => {
+                        let _ = std::process::Command::new("networksetup")
+                            .args([
+                                set_value,
+                                service,
+                                &previous.server,
+                                &previous.port.to_string(),
+                            ])
+                            .output();
+                        let _ = std::process::Command::new("networksetup")
+                            .args([set_state, service, if previous.enabled { "on" } else { "off" }])
+                            .output();
+                        tracing::info!(
+                            "чужая запись прокси возвращена: {} / {} → {}:{}",
+                            service,
+                            kind,
+                            previous.server,
+                            previous.port
+                        );
+                    }
+                    Some(ProxyCleanup::TurnOff) => {
+                        let _ = std::process::Command::new("networksetup")
+                            .args([set_state, service, "off"])
+                            .output();
+                    }
+                    None => {}
                 }
-
-                let _ = std::process::Command::new("networksetup")
-                    .args([write, service, "off"])
-                    .output();
             }
         }
     }
+
+    clear_foreign_backup();
 
     // 同时清除环境变量
     std::env::remove_var("http_proxy");
@@ -473,6 +640,12 @@ fn enable_system_proxy_linux(host: &str, port: u16, bypass: Option<&str>) -> io:
 
 #[cfg(target_os = "macos")]
 fn enable_system_proxy_macos(host: &str, port: u16, bypass: Option<&str>) -> io::Result<()> {
+    // Пока «Штиль» работает, системный прокси обязан быть наш — иначе трафик
+    // пойдёт мимо VPN. Но на этом месте могла стоять чужая запись (другой
+    // VPN-клиент, рабочий прокси), и мы её собой закрываем. Запоминаем ДО
+    // записи: на выходе вернём ровно то, что стояло.
+    let mut backup = read_foreign_backup();
+
     // 获取所有网络服务
     let output = std::process::Command::new("networksetup")
         .args(["-listallnetworkservices"])
@@ -486,25 +659,33 @@ fn enable_system_proxy_macos(host: &str, port: u16, bypass: Option<&str>) -> io:
         for line in services.lines().skip(1) {
             let service = line.trim();
             if !service.is_empty() && service != "*" {
-                // 设置HTTP代理
-                let _ = std::process::Command::new("networksetup")
-                    .args(["-setwebproxy", service, host, &port.to_string()])
-                    .output();
+                // HTTP и HTTPS: запоминаем чужое, потом кладём своё
+                for (kind, read, set_value, set_state) in PROXY_KINDS.into_iter().take(2) {
+                    if let Ok(current) = std::process::Command::new("networksetup")
+                        .args([read, service])
+                        .output()
+                    {
+                        let record = String::from_utf8_lossy(&current.stdout);
+                        if let Some(foreign) = foreign_proxy_record(&record, Some(port)) {
+                            tracing::info!(
+                                "чужая запись прокси запомнена: {} / {} → {}:{}",
+                                service,
+                                kind,
+                                foreign.server,
+                                foreign.port
+                            );
+                            remember_foreign_record(&mut backup, service, kind, foreign);
+                        }
+                    }
 
-                // 启用HTTP代理
-                let _ = std::process::Command::new("networksetup")
-                    .args(["-setwebproxystate", service, "on"])
-                    .output();
+                    let _ = std::process::Command::new("networksetup")
+                        .args([set_value, service, host, &port.to_string()])
+                        .output();
 
-                // 设置HTTPS代理
-                let _ = std::process::Command::new("networksetup")
-                    .args(["-setsecurewebproxy", service, host, &port.to_string()])
-                    .output();
-
-                // 启用HTTPS代理
-                let _ = std::process::Command::new("networksetup")
-                    .args(["-setsecurewebproxystate", service, "on"])
-                    .output();
+                    let _ = std::process::Command::new("networksetup")
+                        .args([set_state, service, "on"])
+                        .output();
+                }
 
                 // 设置代理绕过列表
                 if !entries.is_empty() {
@@ -518,6 +699,8 @@ fn enable_system_proxy_macos(host: &str, port: u16, bypass: Option<&str>) -> io:
             }
         }
     }
+
+    write_foreign_backup(&backup);
 
     // 同时设置环境变量
     let proxy_url = format!("http://{}:{}", host, port);
