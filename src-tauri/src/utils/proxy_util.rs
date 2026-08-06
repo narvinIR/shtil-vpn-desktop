@@ -1,4 +1,5 @@
 use std::io;
+use std::sync::atomic::{AtomicU16, Ordering};
 
 #[cfg(target_os = "windows")]
 use crate::app::constants::registry;
@@ -27,6 +28,67 @@ fn parse_bypass_entries(raw: Option<&str>) -> Vec<String> {
         .collect()
 }
 
+/// Порт, который приложение прописало в системные настройки последним.
+///
+/// Нужен, чтобы снимать ТОЛЬКО СВОЮ запись. Рядом на машине живут чужие
+/// прокси — другой VPN-клиент, рабочий прокси, — и слепое выключение всех
+/// каналов чинит нашу поломку чужими руками: человек остаётся без сети уже
+/// из-за нас. Ноль = мы ещё ничего не прописывали.
+static APPLIED_PROXY_PORT: AtomicU16 = AtomicU16::new(0);
+
+/// Запомнить порт, который стоит в системе от нашего имени. Зовётся при
+/// включении прокси и при старте приложения: после падения память процесса
+/// пуста, а запись в настройках сети осталась, и без порта из настроек мы
+/// свою запись уже не узнаем.
+pub fn remember_applied_proxy_port(port: u16) {
+    APPLIED_PROXY_PORT.store(port, Ordering::Relaxed);
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn applied_proxy_port() -> Option<u16> {
+    match APPLIED_PROXY_PORT.load(Ordering::Relaxed) {
+        0 => None,
+        port => Some(port),
+    }
+}
+
+/// Разбор ответа `networksetup -getwebproxy <служба>`: порт включённой записи,
+/// которая ведёт на петлю. Выключенная и чужая по адресу дают `None`.
+#[cfg(any(target_os = "macos", test))]
+fn parse_local_proxy_port(output: &str) -> Option<u16> {
+    let mut enabled = false;
+    let mut is_local = false;
+    let mut port: Option<u16> = None;
+
+    for line in output.lines() {
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+        let value = value.trim();
+        match key.trim() {
+            "Enabled" => enabled = value.eq_ignore_ascii_case("yes"),
+            "Server" => is_local = matches!(value, "127.0.0.1" | "::1" | "localhost"),
+            "Port" => port = value.parse().ok(),
+            _ => {}
+        }
+    }
+
+    if enabled && is_local {
+        port
+    } else {
+        None
+    }
+}
+
+/// Наша ли это запись в настройках сети.
+#[cfg(any(target_os = "macos", test))]
+fn is_our_proxy_record(output: &str, our_port: Option<u16>) -> bool {
+    match (parse_local_proxy_port(output), our_port) {
+        (Some(port), Some(ours)) => port == ours,
+        _ => false,
+    }
+}
+
 /// 禁用系统代理 (跨平台实现)
 pub fn disable_system_proxy() -> io::Result<()> {
     #[cfg(target_os = "windows")]
@@ -52,6 +114,9 @@ pub fn disable_system_proxy() -> io::Result<()> {
 
 /// 启用系统代理 (跨平台实现)
 pub fn enable_system_proxy(host: &str, port: u16, bypass: Option<&str>) -> io::Result<()> {
+    // Своё имя в системе запоминаем до записи: снимать потом будем по нему.
+    remember_applied_proxy_port(port);
+
     #[cfg(target_os = "windows")]
     {
         enable_system_proxy_windows(host, port, bypass)
@@ -164,8 +229,11 @@ fn disable_system_proxy_linux() -> io::Result<()> {
 
 #[cfg(target_os = "macos")]
 fn disable_system_proxy_macos() -> io::Result<()> {
-    // macOS使用networksetup命令来管理系统代理设置
-    // 获取所有网络服务
+    // Прокси прописывается на все каналы разом, поэтому и снимать надо со всех:
+    // забытая запись на неактивном канале потом немеет браузером. Но трогаем
+    // ТОЛЬКО свою — чужой клиент на этой же машине не должен пострадать.
+    let our_port = applied_proxy_port();
+
     let output = std::process::Command::new("networksetup")
         .args(["-listallnetworkservices"])
         .output()?;
@@ -176,20 +244,29 @@ fn disable_system_proxy_macos() -> io::Result<()> {
         // 跳过第一行（标题行），处理每个网络服务
         for line in services.lines().skip(1) {
             let service = line.trim();
-            if !service.is_empty() && service != "*" {
-                // 禁用HTTP代理
-                let _ = std::process::Command::new("networksetup")
-                    .args(["-setwebproxystate", service, "off"])
-                    .output();
+            if service.is_empty() || service == "*" {
+                continue;
+            }
 
-                // 禁用HTTPS代理
-                let _ = std::process::Command::new("networksetup")
-                    .args(["-setsecurewebproxystate", service, "off"])
-                    .output();
+            for (read, write) in [
+                ("-getwebproxy", "-setwebproxystate"),
+                ("-getsecurewebproxy", "-setsecurewebproxystate"),
+                ("-getsocksfirewallproxy", "-setsocksfirewallproxystate"),
+            ] {
+                let Ok(current) = std::process::Command::new("networksetup")
+                    .args([read, service])
+                    .output()
+                else {
+                    continue;
+                };
 
-                // 禁用SOCKS代理
+                let record = String::from_utf8_lossy(&current.stdout);
+                if !is_our_proxy_record(&record, our_port) {
+                    continue;
+                }
+
                 let _ = std::process::Command::new("networksetup")
-                    .args(["-setsocksfirewallproxystate", service, "off"])
+                    .args([write, service, "off"])
                     .output();
             }
         }
@@ -455,3 +532,7 @@ fn enable_system_proxy_macos(host: &str, port: u16, bypass: Option<&str>) -> io:
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "proxy_util.tests.rs"]
+mod tests;

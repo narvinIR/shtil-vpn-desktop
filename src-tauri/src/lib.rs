@@ -320,6 +320,18 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
+            // Последний шанс убрать за собой. Сюда приходит любой конец работы:
+            // выход из трея, Cmd+Q, меню системы, конец сеанса. Забытая запись
+            // прокси в настройках сети выглядит у человека как «пропал
+            // интернет» во всех браузерах, а причина не видна ниоткуда.
+            if matches!(event, RunEvent::Exit) {
+                if let Err(err) = crate::utils::proxy_util::disable_system_proxy() {
+                    tracing::warn!("не удалось снять системный прокси при выходе: {}", err);
+                } else {
+                    tracing::info!("системный прокси снят при выходе");
+                }
+            }
+
             if let RunEvent::ExitRequested { api, .. } = event {
                 if crate::app::tray::should_prevent_exit() {
                     tracing::info!("主窗口已销毁，保留托盘与后台任务，阻止应用退出");

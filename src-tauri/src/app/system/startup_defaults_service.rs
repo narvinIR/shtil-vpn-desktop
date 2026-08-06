@@ -111,6 +111,11 @@ async fn run_startup_defaults(app: &AppHandle) -> Result<(), String> {
     let storage = get_enhanced_storage(app).await?;
     let mut app_config = storage.get_app_config().await.map_err(|e| e.to_string())?;
 
+    // Своё имя в системе восстанавливаем из настроек: после падения память
+    // процесса пуста, а запись прокси в настройках сети осталась — без порта
+    // мы не отличим свою запись от чужого клиента и не снимем ни ту, ни другую.
+    crate::utils::proxy_util::remember_applied_proxy_port(app_config.proxy_port);
+
     if should_clear_leftover_proxy(app_config.system_proxy_enabled) {
         if let Err(e) = disable_system_proxy() {
             warn!(
