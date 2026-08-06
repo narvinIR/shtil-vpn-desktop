@@ -36,6 +36,10 @@ export const buildNaiveOverrides = (): GlobalThemeOverrides => {
     heightHuge: '52px',
   }
   put(common, 'fontFamily', '--font-sans')
+  // naive-ui красит <body> строкой стиля прямо в элементе, а её не перебить
+  // ни одним правилом таблицы. Отсюда и берётся сплошной фон на Маке, если
+  // значение не отдать ему самим.
+  put(common, 'bodyColor', '--body-bg')
   put(common, 'primaryColor', '--primary-color')
   put(common, 'primaryColorHover', '--primary-hover')
   put(common, 'primaryColorPressed', '--primary-active')
