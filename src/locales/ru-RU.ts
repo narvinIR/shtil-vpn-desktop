@@ -255,6 +255,12 @@ export default {
   proxy: {
     modeChangeFailed: 'Не удалось сменить режим',
   },
+  speed: {
+    bps: 'бит/с',
+    kbps: 'Кбит/с',
+    mbps: 'Мбит/с',
+    gbps: 'Гбит/с',
+  },
   diagnostics: {
     entryTitle: 'Диагностика',
     entryDesc: 'Что делает приложение и куда идут соединения. Нужна, если просите помощи у поддержки',

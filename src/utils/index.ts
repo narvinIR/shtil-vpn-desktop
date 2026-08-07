@@ -1,5 +1,7 @@
-export function formatBandwidth(kbps: number) {
-  const valueInKb = kbps / 1024
+import i18n from '@/locales'
+
+export function formatBandwidth(bytesPerSecond: number) {
+  const valueInKb = bytesPerSecond / 1024
   const valueInMb = valueInKb / 1024
   const valueInGb = valueInMb / 1024
 
@@ -22,6 +24,17 @@ export function formatBytes(bytes?: number): string {
   return `${value.toFixed(2)} ${units[index]}`
 }
 
-export function formatSpeed(bytes: number): string {
-  return `${formatBytes(bytes)}/s`
+/**
+ * Скорость в битах в секунду — так её меряют спидтесты и соседние клиенты.
+ *
+ * До 07.08.2026 здесь были мегабайты: цифра выходила в восемь раз меньше
+ * ожидаемой, и живой канал на 59 Мбит/с читался с экрана как «килобиты».
+ */
+export function formatSpeed(bytesPerSecond?: number): string {
+  const bits = Math.max(0, (bytesPerSecond || 0) * 8)
+  const units = ['speed.bps', 'speed.kbps', 'speed.mbps', 'speed.gbps']
+  const index = bits < 1 ? 0 : Math.min(Math.floor(Math.log10(bits) / 3), units.length - 1)
+  const value = bits / Math.pow(1000, index)
+
+  return `${value.toFixed(index === 0 ? 0 : 1)} ${i18n.global.t(units[index])}`
 }

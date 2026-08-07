@@ -231,6 +231,12 @@ export default {
   proxy: {
     modeChangeFailed: 'Der Modus konnte nicht gewechselt werden',
   },
+  speed: {
+    bps: 'Bit/s',
+    kbps: 'kBit/s',
+    mbps: 'MBit/s',
+    gbps: 'GBit/s',
+  },
   diagnostics: {
     entryTitle: 'Diagnose',
     entryDesc: 'Was die App tut und wohin die Verbindungen gehen. Hilfreich, wenn Sie den Support fragen',

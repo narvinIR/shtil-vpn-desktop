@@ -32,28 +32,21 @@ export const useTrafficStore = defineStore(
     // 事件监听器状态
     let eventListenersSetup = false
 
-    // 内存清理定时器
-    let memoryCleanupTimer: number | null = null
-
     // 更新流量统计数据
     const updateTrafficStats = (data: TrafficDataPayload) => {
       if (data && 'up' in data && 'down' in data) {
         try {
-          // 确保数据是数字类型
+          // Ядро присылает СКОРОСТЬ за последнюю секунду, а не накопленный
+          // счётчик. Здесь бралась разность двух скоростей — при ровной закачке
+          // она около нуля, и «за всё время» показывало почти ничего.
           const currentUp = Number(data.up) || 0
           const currentDown = Number(data.down) || 0
-          const prevUp = Number(traffic.value.up) || 0
-          const prevDown = Number(traffic.value.down) || 0
 
-          const upDiff = Math.max(0, currentUp - prevUp)
-          const downDiff = Math.max(0, currentDown - prevDown)
-
-          // 直接更新数据，确保响应式更新
           traffic.value = {
             up: currentUp,
             down: currentDown,
-            totalUp: (traffic.value.totalUp || 0) + upDiff,
-            totalDown: (traffic.value.totalDown || 0) + downDiff,
+            totalUp: (traffic.value.totalUp || 0) + currentUp,
+            totalDown: (traffic.value.totalDown || 0) + currentDown,
           }
 
           // 如果数据接收正常，但当前状态不是连接状态，更新状态
@@ -119,36 +112,10 @@ export const useTrafficStore = defineStore(
       }
     }
 
-    // 内存优化：定期清理无用数据
-    const startMemoryOptimization = () => {
-      if (memoryCleanupTimer) {
-        clearInterval(memoryCleanupTimer)
-      }
-
-      // 每30秒检查一次，重置累计流量如果数值过大
-      memoryCleanupTimer = window.setInterval(() => {
-        // 如果累计流量超过1GB，重置计数器防止数值溢出
-        const MAX_TRAFFIC = 1024 * 1024 * 1024 // 1GB
-        if (traffic.value.totalUp > MAX_TRAFFIC || traffic.value.totalDown > MAX_TRAFFIC) {
-          traffic.value.totalUp = 0
-          traffic.value.totalDown = 0
-        }
-      }, 30 * 1000) // 30秒
-    }
-
-    // 停止内存优化
-    const stopMemoryOptimization = () => {
-      if (memoryCleanupTimer) {
-        clearInterval(memoryCleanupTimer)
-        memoryCleanupTimer = null
-      }
-    }
-
     // 初始化Store
     const initializeStore = async () => {
       try {
         await setupEventListeners()
-        startMemoryOptimization()
       } catch (error) {
         console.error('❌ TrafficStore 初始化失败:', error)
       }
@@ -161,8 +128,6 @@ export const useTrafficStore = defineStore(
       cleanupEventListeners,
       resetStats,
       updateTrafficStats,
-      startMemoryOptimization,
-      stopMemoryOptimization,
       initializeStore, // 添加这个方法
     }
   },
