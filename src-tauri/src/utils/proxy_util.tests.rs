@@ -1,6 +1,13 @@
 use super::*;
 
 #[test]
+fn secure_traffic_still_reaches_the_proxy_over_plain_http() {
+    // https:// здесь заставляло клиент начинать TLS-рукопожатие с открытым
+    // портом ядра — обновление на Маке не приходило ни разу (07.08.2026).
+    assert_eq!(proxy_env_value("127.0.0.1", 12080), "http://127.0.0.1:12080");
+}
+
+#[test]
 fn enabled_local_record_gives_its_port() {
     let record = "Enabled: Yes\nServer: 127.0.0.1\nPort: 12080\nAuthenticated Proxy Enabled: 0\n";
 

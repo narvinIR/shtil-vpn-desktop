@@ -28,6 +28,18 @@ fn parse_bypass_entries(raw: Option<&str>) -> Vec<String> {
         .collect()
 }
 
+/// Значение для переменных окружения прокси (`http_proxy`, `https_proxy` и родня).
+///
+/// Схема здесь говорит, КАК соединяться с самим прокси, а не что через него везём.
+/// Наш вход на петле — обычный HTTP, поэтому `https://` в `https_proxy` означало
+/// TLS-рукопожатие в открытый порт: ядро отвечало `malformed HTTP request`, и всё,
+/// что читает переменные окружения, теряло сеть — обновление приложения не
+/// приходило вовсе, а проверка связи вечно показывала обрыв (07.08.2026).
+#[cfg(any(target_os = "linux", target_os = "macos", test))]
+fn proxy_env_value(host: &str, port: u16) -> String {
+    format!("http://{}:{}", host, port)
+}
+
 /// Порт, который приложение прописало в системные настройки последним.
 ///
 /// Нужен, чтобы снимать ТОЛЬКО СВОЮ запись. Рядом на машине живут чужие
@@ -522,8 +534,7 @@ fn notify_wininet_change() {
 
 #[cfg(target_os = "linux")]
 fn enable_system_proxy_linux(host: &str, port: u16, bypass: Option<&str>) -> io::Result<()> {
-    let proxy_url = format!("http://{}:{}", host, port);
-    let proxy_url_secure = format!("https://{}:{}", host, port);
+    let proxy_url = proxy_env_value(host, port);
     let entries = parse_bypass_entries(bypass);
     let no_proxy = if entries.is_empty() {
         DEFAULT_BYPASS_LIST.replace(';', ",")
@@ -533,9 +544,9 @@ fn enable_system_proxy_linux(host: &str, port: u16, bypass: Option<&str>) -> io:
 
     // 设置环境变量
     std::env::set_var("http_proxy", &proxy_url);
-    std::env::set_var("https_proxy", &proxy_url_secure);
+    std::env::set_var("https_proxy", &proxy_url);
     std::env::set_var("HTTP_PROXY", &proxy_url);
-    std::env::set_var("HTTPS_PROXY", &proxy_url_secure);
+    std::env::set_var("HTTPS_PROXY", &proxy_url);
     std::env::set_var("all_proxy", &proxy_url);
     std::env::set_var("ALL_PROXY", &proxy_url);
     std::env::set_var("no_proxy", &no_proxy);
@@ -703,13 +714,12 @@ fn enable_system_proxy_macos(host: &str, port: u16, bypass: Option<&str>) -> io:
     write_foreign_backup(&backup);
 
     // 同时设置环境变量
-    let proxy_url = format!("http://{}:{}", host, port);
-    let proxy_url_secure = format!("https://{}:{}", host, port);
+    let proxy_url = proxy_env_value(host, port);
 
     std::env::set_var("http_proxy", &proxy_url);
-    std::env::set_var("https_proxy", &proxy_url_secure);
+    std::env::set_var("https_proxy", &proxy_url);
     std::env::set_var("HTTP_PROXY", &proxy_url);
-    std::env::set_var("HTTPS_PROXY", &proxy_url_secure);
+    std::env::set_var("HTTPS_PROXY", &proxy_url);
     std::env::set_var("all_proxy", &proxy_url);
     std::env::set_var("ALL_PROXY", &proxy_url);
 

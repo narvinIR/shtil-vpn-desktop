@@ -267,8 +267,12 @@ const setupProgressListener = async () => {
       (event: Event<UpdateProgressPayload>) => {
         const { status, progress, message: rawMessage } = event.payload
         updateProgress.value = progress
+        // Скачивание идёт из Rust и своего текста не присылает — оставляем тот,
+        // что уже стоит, иначе строка под полосой гаснет на всю загрузку.
         progressMessage.value =
-          status === 'installing' ? t('setting.update.installStarted') : rawMessage
+          status === 'installing'
+            ? t('setting.update.installStarted')
+            : rawMessage || progressMessage.value
 
         if (status === 'downloading') {
           updateStatus.value = 'downloading'

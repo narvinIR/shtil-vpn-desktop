@@ -34,6 +34,7 @@ pub mod messages {
     pub const ERR_WRITE_FILE_FAILED: &str = "Could not write the file";
     pub const ERR_READ_FILE_FAILED: &str = "Could not read the file";
     pub const ERR_KEY_NOT_FOUND: &str = "Key not found";
+    pub const ERR_UPDATE_NOT_FOUND: &str = "No update available";
 
     // Сообщения
     pub const INFO_PROCESS_STARTED: &str = "Process started";

@@ -32,6 +32,13 @@ export interface AppUpdateInfo {
   supports_in_app_update: boolean
 }
 
+/** Ответ нашего манифеста обновления: что предлагается поставить. */
+export interface PendingAppUpdate {
+  version: string
+  notes: string
+  date: string
+}
+
 export const systemService = {
   pickKernelImportFile() {
     return invokeWithAppContext<string | null>('pick_kernel_import_file', undefined, {
@@ -72,6 +79,18 @@ export const systemService = {
 
   downloadKernel(version?: string) {
     return invokeWithAppContext<void>('download_kernel', { version }, { skipDataRestore: true })
+  },
+
+  /** Есть ли новая версия. `null` — стоит свежая. Идёт мимо нашего туннеля. */
+  checkAppUpdate() {
+    return invokeWithAppContext<PendingAppUpdate | null>('check_app_update', undefined, {
+      skipDataRestore: true,
+    })
+  },
+
+  /** Скачать и поставить новую версию. Ход приходит событием `update-progress`. */
+  installAppUpdate() {
+    return invokeWithAppContext<void>('install_app_update', undefined, { skipDataRestore: true })
   },
 
 

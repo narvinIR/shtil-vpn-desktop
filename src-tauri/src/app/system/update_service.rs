@@ -31,6 +31,91 @@ fn resolve_release_page_url(release: &serde_json::Value) -> String {
         .to_string()
 }
 
+/// Обновление спрашивается и ставится МИМО системного прокси.
+///
+/// Свой туннель обновлению не нужен, а зависеть от него нельзя: приложение при
+/// старте гасит прежнее ядро, и проверка, попавшая в это окно, падала мгновенно.
+/// Готовый `check()` из плагина берёт прокси из окружения и такой развязки не
+/// даёт (07.08.2026). Подпись файла Tauri по-прежнему сверяет нашим ключом.
+fn our_updater(app: &tauri::AppHandle) -> Result<tauri_plugin_updater::Updater, String> {
+    use tauri_plugin_updater::UpdaterExt;
+
+    app.updater_builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| e.to_string())
+}
+
+/// Есть ли новая версия. `None` — стоит свежая.
+#[tauri::command]
+pub async fn check_app_update(app: tauri::AppHandle) -> Result<Option<serde_json::Value>, String> {
+    let found = our_updater(&app)?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(found.map(|update| {
+        // День выпуска отдаём как ГГГГ-ММ-ДД: интерфейс разбирает его
+        // `new Date(...)`, а собственный вид времени тот читает как «Invalid Date».
+        let released = update
+            .date
+            .map(|stamp| {
+                let day = stamp.date();
+                format!(
+                    "{:04}-{:02}-{:02}",
+                    day.year(),
+                    u8::from(day.month()),
+                    day.day()
+                )
+            })
+            .unwrap_or_default();
+
+        json!({
+            "version": update.version,
+            "notes": update.body.clone().unwrap_or_default(),
+            "date": released,
+        })
+    }))
+}
+
+/// Скачать и поставить. Ход показываем событием `update-progress`.
+#[tauri::command]
+pub async fn install_app_update(app: tauri::AppHandle) -> Result<(), String> {
+    let update = our_updater(&app)?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| messages::ERR_UPDATE_NOT_FOUND.to_string())?;
+
+    let reporter = app.clone();
+    let mut got: u64 = 0;
+
+    update
+        .download_and_install(
+            move |chunk, total| {
+                got += chunk as u64;
+                let progress = match total {
+                    Some(total) if total > 0 => (got * 100 / total).min(100),
+                    _ => 0,
+                };
+                let _ = reporter.emit(
+                    "update-progress",
+                    json!({ "status": "downloading", "progress": progress }),
+                );
+            },
+            || {},
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let _ = app.emit(
+        "update-progress",
+        json!({ "status": "installing", "progress": 100 }),
+    );
+
+    Ok(())
+}
+
 #[cfg(test)]
 #[path = "update_service.tests.rs"]
 mod tests;

@@ -281,6 +281,8 @@ pub fn run() {
             // System - что за система и какое железо (для экрана «О программе»)
             crate::app::system::update_service::get_platform_info,
             crate::app::system::update_service::get_detailed_platform_info,
+            crate::app::system::update_service::check_app_update,
+            crate::app::system::update_service::install_app_update,
             // System - Config service commands
             crate::app::system::config_service::update_singbox_ports,
             // Core - Proxy service commands

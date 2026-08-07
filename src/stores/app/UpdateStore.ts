@@ -1,13 +1,18 @@
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { defineStore } from 'pinia'
 import { ref, watch, computed } from 'vue'
-import { systemService, type AppUpdateInfo } from '@/services/system-service'
+import {
+  systemService,
+  type AppUpdateInfo,
+  type PendingAppUpdate,
+} from '@/services/system-service'
 import { getVersion } from '@tauri-apps/api/app'
 import { DatabaseService } from '@/services/database-service'
 import type { UpdateConfig } from '@/types/database'
 import i18n from '@/locales'
-import { check, type Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
+import { listen } from '@tauri-apps/api/event'
+import { APP_EVENTS } from '@/constants/events'
 
 export type UpdateChannel = 'stable' | 'prerelease' | 'autobuild'
 type PlatformOs = 'windows' | 'linux' | 'macos' | 'unknown'
@@ -172,7 +177,7 @@ export const useUpdateStore = defineStore('update', () => {
   }
 
   /** Что нам ответил наш манифест в прошлый раз: его же ставим. */
-  let pending: Update | null = null
+  let pending: PendingAppUpdate | null = null
 
   const checkUpdate = async (silent: boolean = false): Promise<AppUpdateInfo | null> => {
     if (silent && skipVersion.value && skipVersion.value === latestVersion.value) {
@@ -189,14 +194,15 @@ export const useUpdateStore = defineStore('update', () => {
         await fetchAppVersion(false)
       }
 
-      // Спрашиваем наш бот (адрес в tauri.conf.json). Подпись файла Tauri
-      // сверит нашим ключом сам — чужое обновление не поставится.
-      pending = await check()
+      // Спрашиваем наш бот (адрес в tauri.conf.json), МИМО системного прокси:
+      // свой туннель обновлению не нужен, а зависеть от него нельзя. Подпись
+      // файла Tauri сверит нашим ключом сам — чужое обновление не поставится.
+      pending = await systemService.checkAppUpdate()
 
       if (pending) {
         hasUpdate.value = true
         latestVersion.value = pending.version
-        releaseNotes.value = pending.body || ''
+        releaseNotes.value = pending.notes || ''
         releaseDate.value = pending.date || ''
         supportsInAppUpdate.value = true
         updateState.value.message = i18n.global.t('notification.updateAvailable')
@@ -205,7 +211,7 @@ export const useUpdateStore = defineStore('update', () => {
           latest_version: pending.version,
           download_url: '',
           release_page_url: releasePageUrl.value,
-          release_notes: pending.body || '',
+          release_notes: pending.notes || '',
           release_date: pending.date || '',
           file_size: 0,
           is_prerelease: false,
@@ -240,19 +246,22 @@ export const useUpdateStore = defineStore('update', () => {
       updateState.value.progress = 0
       updateState.value.error = null
 
-      let total = 0
-      let got = 0
-      await pending.downloadAndInstall((event) => {
-        if (event.event === 'Started') {
-          total = event.data.contentLength ?? 0
-        } else if (event.event === 'Progress') {
-          got += event.data.chunkLength
-          updateState.value.progress = total ? Math.round((got / total) * 100) : 0
-        } else if (event.event === 'Finished') {
-          updateState.value.progress = 100
-          updateState.value.status = 'installing'
-        }
-      })
+      // Ход скачивания приходит событием: качает Rust, мимо системного прокси.
+      const stopWatching = await listen<{ status: string; progress: number }>(
+        APP_EVENTS.updateProgress,
+        ({ payload }) => {
+          updateState.value.progress = payload.progress
+          if (payload.status === 'installing') {
+            updateState.value.status = 'installing'
+          }
+        },
+      )
+
+      try {
+        await systemService.installAppUpdate()
+      } finally {
+        stopWatching()
+      }
 
       // Windows закрывает приложение сам, на Маке перезапускаем руками.
       await relaunch()
