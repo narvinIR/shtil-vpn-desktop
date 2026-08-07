@@ -305,8 +305,11 @@ export const useKernelStore = defineStore('kernel', () => {
 
   const hasKernelUpdate = computed(() => {
     if (!latestAvailableVersion.value) return false
-    if (!status.value.version) return true
-    return compareVersion(latestAvailableVersion.value, status.value.version) > 0
+    // При работающем ядре версия приходит ответом его панели целиком — JSON-строкой.
+    // Сравнивать её как номер нельзя: получается «0», и свежее ядро выглядит устаревшим.
+    const installed = normalizeKernelVersion(status.value.version || '')
+    if (!installed) return true
+    return compareVersion(latestAvailableVersion.value, installed) > 0
   })
 
   const isRunning = computed(() => status.value.process_running)
