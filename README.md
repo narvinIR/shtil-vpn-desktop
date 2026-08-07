@@ -4,6 +4,16 @@
   <h1>Штиль VPN — для компьютера</h1>
 
   <p><strong>Windows и macOS. Ключ из Telegram-бота, российские сайты открываются напрямую.</strong></p>
+
+  <p><em>Shtil VPN for desktop — a Tauri + Vue client on the sing-box core (VLESS + Reality, TUN mode)
+  for Windows and macOS. Subscription link from a Telegram bot, Russian sites stay on the direct
+  route, signed over-the-air updates.</em></p>
+
+  <p>
+    <a href="https://github.com/narvinIR/shtil-vpn">Готовые файлы и установка · Downloads</a> ·
+    <a href="https://github.com/narvinIR/shtil-vpn/blob/main/README.en.md">English</a> ·
+    <a href="https://t.me/RealityVPNBot_bot">@RealityVPNBot_bot</a>
+  </p>
 </div>
 
 Приложение подключается к VPN «Штиль» по ссылке-подписке из бота. Банки,
@@ -14,6 +24,10 @@
 и цвета общие.
 
 ## Установка
+
+Готовые файлы для всех устройств — на [витрине «Штиля»](https://github.com/narvinIR/shtil-vpn/releases/tag/apps)
+(адреса там постоянные) или на странице [sub.ndvsdom54.ru/get](https://sub.ndvsdom54.ru/get),
+которая сама подбирает файл под систему.
 
 **Windows.** Скачайте `.exe` из [релизов](../../releases) и запустите. Windows
 покажет «Windows защитила ваш компьютер»: нажмите **«Подробнее» → «Выполнить в
