@@ -68,7 +68,7 @@ import { useKernelStore } from '@/stores/kernel/KernelStore'
 import { useTrafficStore } from '@/stores/kernel/TrafficStore'
 import { useConnectionStore } from '@/stores/kernel/ConnectionStore'
 import { useI18n } from 'vue-i18n'
-import { HomeOutline, KeyOutline, SettingsOutline } from '@vicons/ionicons5'
+import { HomeOutline, KeyOutline, PulseOutline, SettingsOutline } from '@vicons/ionicons5'
 import { useMessage } from 'naive-ui'
 import UpdateModal from '@/components/UpdateModal.vue'
 import AppHeader from './AppHeader.vue'
@@ -131,8 +131,9 @@ const updateInfo = ref({
 const theme = computed(() => themeStore.naiveTheme)
 const themeOverrides = computed(() => themeStore.themeOverrides)
 
-// Меню: человеку нужны два экрана — главный и ключ. Журнал остался входом из
-// настроек: он нужен поддержке, а не на каждый день.
+// Меню: главный экран, ключ, диагностика, настройки. Диагностика стоит здесь,
+// а не только в обслуживании: нужна она ровно тогда, когда что-то не работает,
+// и искать её в такую минуту через четыре нажатия никто не станет.
 const currentMenu = computed(() => {
   const path = route.path
   if (path === '/' || path === '/home') return 'home'
@@ -140,7 +141,7 @@ const currentMenu = computed(() => {
   const pathToMenuMap: Record<string, string> = {
     '/sub': 'key',
     '/setting': 'settings',
-    '/log': 'settings',
+    '/log': 'diagnostics',
   }
   return pathToMenuMap[path] || path.slice(1)
 })
@@ -148,6 +149,7 @@ const currentMenu = computed(() => {
 const menuItems = computed<NavItem[]>(() => [
   { label: t('nav.home'), key: 'home', icon: HomeOutline },
   { label: t('nav.key'), key: 'key', icon: KeyOutline },
+  { label: t('diagnostics.entryTitle'), key: 'diagnostics', icon: PulseOutline },
   { label: t('nav.settings'), key: 'settings', icon: SettingsOutline },
 ])
 
@@ -163,6 +165,7 @@ const onSelect = (key: string) => {
   }
   const routeMap: Record<string, string> = {
     key: '/sub',
+    diagnostics: '/log',
     settings: '/setting',
   }
   router.push(routeMap[key] || '/')
