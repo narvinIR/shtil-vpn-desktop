@@ -289,6 +289,22 @@ pub async fn download_kernel(app_handle: AppHandle, version: Option<String>) -> 
     info!("内核文件已准备就绪: {:?}", target_executable_path);
     info!("内核下载并解压完成: {:?}", target_executable_path);
 
+    // Версию записываем ДО сообщения «готово»: экран по этому сообщению сразу
+    // перечитывает установленную версию из базы, и при обратном порядке получал
+    // старую — ядро уже обновилось, а в настройках висело прежнее число и
+    // предложение обновиться (замер на машине владельца 09.08.2026).
+    use crate::app::storage::enhanced_storage_service::{
+        db_get_app_config, db_save_app_config_internal,
+    };
+    if let Ok(mut config) = db_get_app_config(app_handle.clone()).await {
+        config.installed_kernel_version = Some(version);
+        if let Err(e) = db_save_app_config_internal(config, &app_handle).await {
+            warn!("保存内核版本信息失败: {}", e);
+        } else {
+            info!("已更新数据库中的已安装内核版本信息");
+        }
+    }
+
     let _ = window.emit(
         "kernel-download-progress",
         json!({
@@ -301,19 +317,6 @@ pub async fn download_kernel(app_handle: AppHandle, version: Option<String>) -> 
     if was_running_before_update {
         info!("内核更新完成，自动重新启动内核");
         auto_manage_with_saved_config(&app_handle, true, "kernel-update").await;
-    }
-
-    // 更新安装版本信息到数据库
-    use crate::app::storage::enhanced_storage_service::{
-        db_get_app_config, db_save_app_config_internal,
-    };
-    if let Ok(mut config) = db_get_app_config(app_handle.clone()).await {
-        config.installed_kernel_version = Some(version);
-        if let Err(e) = db_save_app_config_internal(config, &app_handle).await {
-            warn!("保存内核版本信息失败: {}", e);
-        } else {
-            info!("已更新数据库中的已安装内核版本信息");
-        }
     }
 
     Ok(())

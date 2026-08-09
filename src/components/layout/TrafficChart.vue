@@ -24,7 +24,7 @@
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useThemeVars } from 'naive-ui'
-import { formatBandwidth, formatSpeed } from '@/utils/index'
+import { formatSpeed } from '@/utils/index'
 import { useI18n } from 'vue-i18n'
 
 defineOptions({
@@ -71,11 +71,16 @@ const getColors = () => {
   }
 }
 
+// Данные графика — байты в секунду, как их присылает ядро; в подписи они
+// переводятся в биты. Нижняя граница шкалы — 1 Мбит/с (125 000 байт/с):
+// без неё пустой канал растягивал бы любой шорох на всю высоту.
+const MIN_SCALE_BYTES_PER_SECOND = 125_000
+
 const maxValue = computed(() => {
-  const uploadMax = Math.max(...uploadData.value, 0.1)
-  const downloadMax = Math.max(...downloadData.value, 0.1)
+  const uploadMax = Math.max(...uploadData.value, MIN_SCALE_BYTES_PER_SECOND)
+  const downloadMax = Math.max(...downloadData.value, MIN_SCALE_BYTES_PER_SECOND)
   const currentMax = Math.max(uploadMax, downloadMax)
-  return Math.max(currentMax * 1.2, 0.1)
+  return Math.max(currentMax * 1.2, MIN_SCALE_BYTES_PER_SECOND)
 })
 
 const initChart = () => {
@@ -114,7 +119,7 @@ const drawChart = () => {
     top: 24 * dpr,
     right: 16 * dpr,
     bottom: 28 * dpr,
-    left: 64 * dpr,
+    left: 82 * dpr,
   }
 
   ctx.clearRect(0, 0, width, height)
@@ -132,12 +137,7 @@ const drawChart = () => {
   for (let i = 0; i <= yAxisSteps; i++) {
     const y = padding.top + chartHeight - (i / yAxisSteps) * chartHeight
     const value = (i / yAxisSteps) * maxValue.value
-    const formattedValue = formatBandwidth(value * 1024 * 1024)
-    const speedLabel = `${formattedValue}/s`
-      .replace(' MB/s', 'MB/s')
-      .replace(' KB/s', 'KB/s')
-      .replace(' B/s', 'B/s')
-      .replace(' GB/s', 'GB/s')
+    const speedLabel = formatSpeed(value)
 
     ctx.beginPath()
     ctx.strokeStyle = colors.grid
@@ -327,8 +327,8 @@ const updateData = () => {
   downloadData.value.shift()
   timeLabels.value.shift()
 
-  uploadData.value.push(uploadSpeed / 1024 / 1024)
-  downloadData.value.push(downloadSpeed / 1024 / 1024)
+  uploadData.value.push(uploadSpeed)
+  downloadData.value.push(downloadSpeed)
 
   const now = new Date()
   const timeStr = `${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
