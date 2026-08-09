@@ -5,19 +5,19 @@
     class="modern-modal update-modal"
     preset="dialog"
     :title="t('notification.updateAvailable')"
-    :style="{ width: '500px' }"
+    :style="{ width: 'min(560px, calc(100vw - 48px))' }"
     @update:show="handleUpdateShow"
   >
     <div class="modal-content">
       <div class="update-header">
-        <div class="version-badge new">
-          <span class="label">{{ t('setting.update.newVersion') }}</span>
-          <span class="value">{{ latestVersion }}</span>
-        </div>
-        <n-icon size="24" class="arrow-icon"><ArrowForwardOutline /></n-icon>
         <div class="version-badge current">
           <span class="label">{{ t('setting.update.current') }}</span>
           <span class="value">{{ currentVersion }}</span>
+        </div>
+        <n-icon size="24" class="arrow-icon"><ArrowForwardOutline /></n-icon>
+        <div class="version-badge new">
+          <span class="label">{{ t('setting.update.newVersion') }}</span>
+          <span class="value">{{ latestVersion }}</span>
         </div>
       </div>
 
@@ -478,16 +478,28 @@ onBeforeUnmount(() => cleanup())
   font-size: 13px;
 }
 
+/* Кнопки переносятся, а не вылезают за рамку: русские и немецкие надписи
+   длиннее английских, а при системном увеличении шрифта в Windows ряд не
+   помещается в диалог ни при какой его ширине. */
 .modal-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   width: 100%;
+  min-width: 0;
 }
 
 .right-actions {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.modal-actions :deep(.n-button) {
+  max-width: 100%;
 }
 
 .markdown-body {
