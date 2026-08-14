@@ -169,6 +169,15 @@ export default {
     server: {
       label: 'Servidor',
       searching: 'Eligiendo',
+      pick: 'Elegir canal',
+      pickFailed: 'No se pudo cambiar de canal: inténtelo de nuevo',
+      channels: {
+        auto: 'Automático',
+        main: 'EE. UU. · Nueva York',
+        backup: 'EE. UU. · Nueva York · reserva',
+        fast: 'EE. UU. · Nueva York · rápido',
+        direct: 'Sin canal, directo',
+      },
     },
     hint: {
       noKey: 'Añada una clave: se la entrega el bot Shtil en Telegram',

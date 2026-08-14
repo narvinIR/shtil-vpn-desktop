@@ -50,12 +50,25 @@
         </button>
       </div>
 
-      <!-- Куда подключены. Пока туннель не поднят, сервера нет — нет и плашки. -->
-      <button v-if="connected" class="server-pill" @click="router.push('/sub')">
-        <n-icon :size="18"><GlobeOutline /></n-icon>
-        <span class="server-label">{{ t('home.server.label') }}:</span>
-        <span class="server-name">{{ serverName }}</span>
-      </button>
+      <!-- Куда подключены и куда можно переключиться. Пока туннель не поднят,
+           сервера нет — нет и плашки. -->
+      <n-dropdown
+        v-if="connected"
+        trigger="click"
+        placement="bottom"
+        :options="channelOptions"
+        :disabled="channelOptions.length < 2"
+        @select="onPickChannel"
+      >
+        <button class="server-pill" :title="t('home.server.pick')">
+          <n-icon :size="18"><GlobeOutline /></n-icon>
+          <span class="server-label">{{ t('home.server.label') }}:</span>
+          <span class="server-name">{{ serverName }}</span>
+          <n-icon v-if="channelOptions.length > 1" :size="14" class="server-caret">
+            <ChevronDownOutline />
+          </n-icon>
+        </button>
+      </n-dropdown>
 
       <!-- Отклик, принято, отдано — в том же порядке, что на телефоне. -->
       <div class="stats">
@@ -170,6 +183,7 @@ import {
   KeyOutline,
   GlobeOutline,
   AlertCircleOutline,
+  ChevronDownOutline,
 } from '@vicons/ionicons5'
 import { useAppStore } from '@/stores'
 import { useKernelStore } from '@/stores/kernel/KernelStore'
@@ -183,6 +197,7 @@ import BrandWave from '@/components/common/BrandWave.vue'
 import { subscriptionExpiryDate } from '@/views/sub/subscription-utils'
 import { useKernelStatus } from '@/composables/useKernelStatus'
 import { formatBytes } from '@/utils'
+import { channelKey } from '@/utils/channel-names'
 
 defineOptions({
   name: 'HomeView',
@@ -269,8 +284,35 @@ const uptime = computed(() => {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
 })
 
-const activeNode = computed(() => proxyStore.proxyGroups[0]?.now || '')
-const serverName = computed(() => activeNode.value || t('home.server.searching'))
+/** Группа выбора из подписки: в ней и лежат каналы, между которыми переключаемся. */
+const channelGroup = computed(() => proxyStore.proxyGroups[0])
+const activeNode = computed(() => channelGroup.value?.now || '')
+
+/** Служебное имя узла («VPN-HY2») человеку не показываем — только людское. */
+const channelLabel = (tag: string) => {
+  const key = channelKey(tag)
+  return key ? t(`home.server.channels.${key}`) : tag
+}
+
+const serverName = computed(() =>
+  activeNode.value ? channelLabel(activeNode.value) : t('home.server.searching'),
+)
+
+const channelOptions = computed(() =>
+  (channelGroup.value?.all || []).map((tag) => ({ key: tag, label: channelLabel(tag) })),
+)
+
+const onPickChannel = async (tag: string) => {
+  const group = channelGroup.value
+  if (!group || tag === activeNode.value) return
+  try {
+    await proxyStore.changeProxy(group.name, tag)
+    await proxyStore.fetchProxies()
+    void proxyStore.testNodeDelay(tag).catch(() => undefined)
+  } catch {
+    message.error(t('home.server.pickFailed'))
+  }
+}
 
 const ping = computed(() => (activeNode.value ? proxyStore.getLatency(activeNode.value) : 0))
 const pingText = computed(() =>
@@ -686,11 +728,22 @@ onUnmounted(() => {
   background: var(--primary-soft);
   color: var(--state-color);
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .server-pill:hover {
   background: var(--primary-soft-strong);
+}
+
+/* Нажатие обязано отзываться: иначе непонятно, услышали ли тебя. */
+.server-pill:active {
+  transform: scale(0.97);
+}
+
+.server-caret {
+  opacity: 0.7;
 }
 
 .server-label {

@@ -170,6 +170,15 @@ export default {
     server: {
       label: 'Server',
       searching: 'Wird gewählt',
+      pick: 'Kanal wählen',
+      pickFailed: 'Kanal konnte nicht gewechselt werden — bitte erneut versuchen',
+      channels: {
+        auto: 'Automatisch',
+        main: 'USA · New York',
+        backup: 'USA · New York · Reserve',
+        fast: 'USA · New York · schnell',
+        direct: 'Ohne Kanal, direkt',
+      },
     },
     hint: {
       noKey: 'Fügen Sie einen Schlüssel hinzu — der Shtil-Bot in Telegram stellt ihn aus',
