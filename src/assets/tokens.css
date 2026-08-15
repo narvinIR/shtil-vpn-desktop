@@ -165,7 +165,12 @@
   --primary-active: var(--accent-user-active, var(--azure-700));
   --primary-soft: var(--accent-user-soft, rgba(79, 146, 255, 0.1));
   --primary-soft-strong: rgba(79, 146, 255, 0.16);
-  --primary-contrast: #ffffff;
+  /* Текст на акценте — чернильный, а не белый. Замер: белое на azure-500 даёт
+     3.05:1 при норме 4.5:1, на azure-300 тёмной темы — 2.16:1, то есть надписи
+     на кнопках и активной вкладке формально нечитаемы. Чернильный даёт 5.97:1 и
+     8.41:1. Это же значение стоит на телефоне (Color.kt → AzureInk), так что
+     заодно уходит расхождение носителей №2 из DESIGN.md. */
+  --primary-contrast: var(--azure-900);
 
   /* Состояния: получилось, внимание, ошибка, справка */
   --success-color: var(--green-500);
@@ -185,7 +190,7 @@
   --text-secondary: var(--ink-600);
   --text-tertiary: var(--ink-500);
   --text-disabled: var(--ink-300);
-  --text-on-primary: #ffffff;
+  --text-on-primary: var(--azure-900);
 
   /* Фон по глубине */
   --bg-base: var(--ink-50);
@@ -240,7 +245,7 @@
   --primary-active: var(--accent-user-active, var(--azure-500));
   --primary-soft: var(--accent-user-soft, rgba(127, 178, 255, 0.16));
   --primary-soft-strong: rgba(127, 178, 255, 0.24);
-  --primary-contrast: #ffffff;
+  --primary-contrast: var(--azure-900);
 
   --success-color: var(--green-400);
   --warning-color: var(--amber-400);
