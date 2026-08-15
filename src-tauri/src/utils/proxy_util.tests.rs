@@ -4,7 +4,10 @@ use super::*;
 fn secure_traffic_still_reaches_the_proxy_over_plain_http() {
     // https:// здесь заставляло клиент начинать TLS-рукопожатие с открытым
     // портом ядра — обновление на Маке не приходило ни разу (07.08.2026).
-    assert_eq!(proxy_env_value("127.0.0.1", 12080), "http://127.0.0.1:12080");
+    assert_eq!(
+        proxy_env_value("127.0.0.1", 12080),
+        "http://127.0.0.1:12080"
+    );
 }
 
 #[test]
@@ -152,4 +155,24 @@ fn foreign_record_is_left_alone_on_exit() {
         cleanup_for(alien, Some(12080), &ProxyBackup::new(), "Ethernet", "web"),
         None
     );
+}
+
+/// Windows: свою запись в реестре снимаем, чужую — нет. Другой VPN или
+/// корпоративная настройка на этом месте не наша забота: стереть её значит
+/// оставить человека с мёртвым браузером в соседней программе.
+#[test]
+fn windows_touches_only_our_own_registry_record() {
+    assert!(is_our_windows_proxy("127.0.0.1:12080", Some(12080)));
+    assert!(is_our_windows_proxy(
+        "http=127.0.0.1:12080;https=127.0.0.1:12080",
+        Some(12080)
+    ));
+
+    // чужой клиент на петле — порт не наш
+    assert!(!is_our_windows_proxy("127.0.0.1:2080", Some(12080)));
+    // корпоративный прокси в сети — тем более
+    assert!(!is_our_windows_proxy("proxy.corp.local:3128", Some(12080)));
+    // своего порта не знаем — значит и снимать нечего
+    assert!(!is_our_windows_proxy("127.0.0.1:12080", None));
+    assert!(!is_our_windows_proxy("", Some(12080)));
 }

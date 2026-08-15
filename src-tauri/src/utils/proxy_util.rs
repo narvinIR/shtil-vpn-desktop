@@ -56,7 +56,7 @@ pub fn remember_applied_proxy_port(port: u16) {
     APPLIED_PROXY_PORT.store(port, Ordering::Relaxed);
 }
 
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 fn applied_proxy_port() -> Option<u16> {
     match APPLIED_PROXY_PORT.load(Ordering::Relaxed) {
         0 => None,
@@ -125,9 +125,30 @@ fn parse_proxy_record(output: &str) -> Option<ProxyRecord> {
     })
 }
 
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 fn is_loopback(server: &str) -> bool {
     matches!(server, "127.0.0.1" | "::1" | "localhost")
+}
+
+/// Наша ли запись прокси в реестре Windows. Значение бывает голым
+/// (`127.0.0.1:12080`) и списком по видам (`http=…;https=…`) — узнаём себя по
+/// нашему порту на петле. Всё остальное принадлежит другой программе.
+#[cfg(any(target_os = "windows", test))]
+fn is_our_windows_proxy(value: &str, our_port: Option<u16>) -> bool {
+    let Some(ours) = our_port else {
+        return false;
+    };
+
+    value.split(';').any(|part| {
+        let part = part.trim();
+        let part = part.split_once('=').map_or(part, |(_, rest)| rest);
+        match part.rsplit_once(':') {
+            Some((server, port)) => {
+                is_loopback(server.trim()) && port.trim().parse::<u16>().ok() == Some(ours)
+            }
+            None => false,
+        }
+    })
 }
 
 /// Порт включённой записи, которая ведёт на петлю. Выключенная и чужая по
@@ -248,7 +269,20 @@ pub fn enable_system_proxy(host: &str, port: u16, bypass: Option<&str>) -> io::R
 #[cfg(target_os = "windows")]
 fn disable_system_proxy_windows() -> io::Result<()> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let settings = hkcu.open_subkey_with_flags(registry::INTERNET_SETTINGS, KEY_WRITE)?;
+    let settings =
+        hkcu.open_subkey_with_flags(registry::INTERNET_SETTINGS, KEY_READ | KEY_WRITE)?;
+
+    // Рядом живёт другой VPN-клиент или корпоративная настройка. Стереть чужую
+    // запись — значит оставить человека с мёртвым браузером в соседней
+    // программе, причём причины он не увидит. Снимаем только свою, узнавая её
+    // по нашему порту на петле.
+    let current: String = settings
+        .get_value(registry::PROXY_SERVER)
+        .unwrap_or_default();
+    if !current.is_empty() && !is_our_windows_proxy(&current, applied_proxy_port()) {
+        tracing::info!("системный прокси не наш — оставляем запись как есть");
+        return Ok(());
+    }
 
     // 禁用代理
     settings.set_value(registry::PROXY_ENABLE, &0u32)?;
@@ -428,7 +462,11 @@ fn disable_system_proxy_macos() -> io::Result<()> {
                             ])
                             .output();
                         let _ = std::process::Command::new("networksetup")
-                            .args([set_state, service, if previous.enabled { "on" } else { "off" }])
+                            .args([
+                                set_state,
+                                service,
+                                if previous.enabled { "on" } else { "off" },
+                            ])
                             .output();
                         tracing::info!(
                             "чужая запись прокси возвращена: {} / {} → {}:{}",

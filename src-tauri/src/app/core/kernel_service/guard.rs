@@ -6,6 +6,7 @@ use crate::app::core::kernel_service::state::KERNEL_STATE;
 use crate::app::core::kernel_service::status::is_kernel_running;
 use crate::app::core::kernel_service::utils::{emit_kernel_error_with_context, emit_kernel_stopped};
 use crate::app::storage::enhanced_storage_service::db_get_app_config;
+use crate::utils::proxy_util::disable_system_proxy;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::time::Duration;
 use std::time::Instant;
@@ -286,6 +287,16 @@ fn spawn_guard_loop(app_handle: AppHandle) -> JoinHandle<()> {
 
                     let succeeded = heal_restart(&app_handle, "process-crashed").await;
                     if !succeeded {
+                        // Ядра больше нет, а наша запись прокси в настройках сети
+                        // осталась и указывает в закрытый порт. Для человека это
+                        // «умер браузер» при работающих остальных программах —
+                        // причины не видно ниоткуда. Снимаем свою запись (чужую
+                        // при этом возвращаем): выключенный VPN честнее мёртвой сети.
+                        match disable_system_proxy() {
+                            Ok(()) => info!("ядро не поднялось — системный прокси снят"),
+                            Err(err) => warn!("прокси после падения ядра не снят: {}", err),
+                        }
+
                         // sudo 密码失效等不可恢复错误：停止守护，避免无意义的重试循环。
                         let should_stop = KERNEL_STATE
                             .get_startup_diagnosis()
