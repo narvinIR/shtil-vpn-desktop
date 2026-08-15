@@ -5,12 +5,14 @@
       <nav class="sider-nav">
         <div v-for="group in groupedItems" :key="group.key" class="nav-group">
           <div v-if="!collapsed && group.label" class="nav-group-label">{{ group.label }}</div>
-          <div
+          <button
             v-for="item in group.items"
             :key="item.key"
+            type="button"
             class="nav-item"
-            :class="{ active: currentMenu === item.key, disabled: item.disabled }"
-            @click="!item.disabled && emit('select', item.key)"
+            :class="{ active: currentMenu === item.key }"
+            :disabled="item.disabled"
+            @click="emit('select', item.key)"
           >
             <n-tooltip v-if="collapsed" placement="right" :delay="200">
               <template #trigger>
@@ -35,7 +37,7 @@
             </span>
             <span v-if="item.badge" class="nav-badge"></span>
             <span class="active-indicator" v-if="currentMenu === item.key"></span>
-          </div>
+          </button>
         </div>
       </nav>
 
@@ -141,6 +143,13 @@ const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav
   width: var(--sider-collapsed-width, 64px);
 }
 
+/* В свёрнутой колонке пункт был 40 px шириной — уже нормы. Отступ на ступень
+   меньше даёт 48 и не выводит значение из шкалы. */
+.app-sidebar.collapsed .sider-inner {
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+}
+
 .sider-inner {
   height: 100%;
   display: flex;
@@ -173,31 +182,65 @@ const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav
   margin-bottom: var(--space-1);
 }
 
+/* Переход между экранами — самое частое действие в приложении, и до 15.08.2026
+   оно жило в `div` с обработчиком клика: табом не дойти, кольца фокуса нет,
+   пробел не срабатывает. Тег кнопки возвращает всё это разом, а сброс ниже
+   снимает браузерное оформление. */
 .nav-item {
   position: relative;
-  height: 42px;
+  /* 44 — минимальная цель нажатия: было 42, и промах уходил в пустоту между
+     пунктами. */
+  height: 44px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  text-align: left;
   border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--text-secondary);
+  --nav-press: 1;
+  transform: scale(var(--nav-press));
   transition:
     background var(--transition-fast),
-    color var(--transition-fast);
+    color var(--transition-fast),
+    transform var(--transition-fast);
   display: flex;
   align-items: center;
 }
 
-.nav-item:hover:not(.disabled) {
-  background: var(--bg-surface-2);
-  color: var(--text-primary);
+@media (hover: hover) and (pointer: fine) {
+  .nav-item:hover:not(:disabled) {
+    background: var(--bg-surface-2);
+    color: var(--text-primary);
+  }
 }
 
+/* Нажатие подтверждается сразу: во всём приложении откликался только главный
+   круг, поэтому переход между разделами ощущался как «не услышали». */
+.nav-item:active:not(:disabled) {
+  --nav-press: 0.98;
+  transition-duration: 120ms;
+}
+
+/* Обводка та же, что у главного круга; вылет меньше — пункты стоят вплотную
+   (зазор 4 px), и кольцо с большим отступом наезжало бы на соседа. */
+.nav-item:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Где я — показывают подложка, полоска слева и жирное начертание. Текст
+   акцентным синим давал на этой подложке 2.71:1 при норме 4.5:1: активный
+   раздел был самым нечитаемым пунктом колонки (замер 15.08.2026). */
 .nav-item.active {
   background: var(--primary-soft);
-  color: var(--primary-color);
+  color: var(--text-primary);
   font-weight: 600;
 }
 
-.nav-item.disabled {
+.nav-item:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -267,7 +310,7 @@ const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav
 
 .footer-btn {
   flex: 1;
-  height: 38px;
+  height: 44px;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -279,7 +322,8 @@ const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav
   cursor: pointer;
   transition:
     background var(--transition-fast),
-    color var(--transition-fast);
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .collapsed .footer-btn {
@@ -290,6 +334,16 @@ const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav
 .footer-btn:hover {
   background: var(--bg-surface-2);
   color: var(--text-primary);
+}
+
+.footer-btn:active {
+  transform: scale(0.98);
+  transition-duration: 120ms;
+}
+
+.footer-btn:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 .footer-text {

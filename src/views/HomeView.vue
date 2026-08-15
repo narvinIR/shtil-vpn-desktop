@@ -27,27 +27,34 @@
       <div class="ring-wrap">
         <div v-if="connected" class="ring-halo"></div>
         <button class="ring" :disabled="!ringEnabled" @click="onRingClick">
-          <!-- Слова «Подключено» в круге нет: оно уже стоит заголовком над ним,
-               и вдвоём они читались как заикание. -->
-          <template v-if="connected">
-            <span class="ring-timer">{{ uptime }}</span>
-            <span class="ring-note">{{ t('home.action.disconnect') }}</span>
-          </template>
-          <template v-else-if="busy">
-            <span class="ring-word">{{ busyWord }}</span>
-            <ol class="ring-steps">
-              <li v-for="step in steps" :key="step.key" :class="{ done: step.done }">
-                {{ t(step.key) }}
-              </li>
-            </ol>
-          </template>
-          <template v-else-if="!hasKey">
-            <n-icon :size="42" class="ring-icon"><KeyOutline /></n-icon>
-          </template>
-          <template v-else>
-            <n-icon :size="42" class="ring-icon"><PowerOutline /></n-icon>
-            <span class="ring-action">{{ t('home.action.connect') }}</span>
-          </template>
+          <!-- Подключение — тот кадр, на который человек смотрит, и до
+               15.08.2026 круг менял содержимое мгновенной подменой. Переход
+               `out-in`: две внутренности разом в круг не помещаются. -->
+          <Transition name="ring-face" mode="out-in">
+            <span class="ring-face" :key="ringStage">
+              <!-- Слова «Подключено» в круге нет: оно уже стоит заголовком над ним,
+                   и вдвоём они читались как заикание. -->
+              <template v-if="connected">
+                <span class="ring-timer">{{ uptime }}</span>
+                <span class="ring-note">{{ t('home.action.disconnect') }}</span>
+              </template>
+              <template v-else-if="busy">
+                <span class="ring-word">{{ busyWord }}</span>
+                <ol class="ring-steps">
+                  <li v-for="step in steps" :key="step.key" :class="{ done: step.done }">
+                    {{ t(step.key) }}
+                  </li>
+                </ol>
+              </template>
+              <template v-else-if="!hasKey">
+                <n-icon :size="42" class="ring-icon"><KeyOutline /></n-icon>
+              </template>
+              <template v-else>
+                <n-icon :size="42" class="ring-icon"><PowerOutline /></n-icon>
+                <span class="ring-action">{{ t('home.action.connect') }}</span>
+              </template>
+            </span>
+          </Transition>
         </button>
       </div>
 
@@ -146,7 +153,6 @@
             </div>
             <n-switch
               :value="appStore.systemProxyEnabled"
-              size="small"
               :disabled="modeSwitchPending"
               @update:value="(v: boolean) => toggleSystemProxy(v)"
             />
@@ -159,7 +165,6 @@
             </div>
             <n-switch
               :value="appStore.tunEnabled"
-              size="small"
               :disabled="modeSwitchPending"
               @update:value="(v: boolean) => toggleTunProxy(v)"
             />
@@ -183,7 +188,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useMessage } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import {
   PowerOutline,
   KeyOutline,
@@ -211,7 +216,7 @@ defineOptions({
 
 const { t, te } = useI18n()
 const router = useRouter()
-const message = useMessage()
+const message = useAppMessage()
 
 const appStore = useAppStore()
 const kernelStore = useKernelStore()
@@ -243,6 +248,13 @@ const busy = computed(
     (kernelStore.isRunning && !isReady.value),
 )
 const ringEnabled = computed(() => !busy.value)
+
+/** Ключ перехода внутри круга: секунды таймера его не меняют. */
+const ringStage = computed(() => {
+  if (connected.value) return 'connected'
+  if (busy.value) return 'busy'
+  return hasKey.value ? 'ready' : 'nokey'
+})
 
 /**
  * Пущен ли трафик через нас. Ядро живо и отвечает — это ещё не защита: при
@@ -787,6 +799,11 @@ onUnmounted(() => {
   .ring:active:not(:disabled) {
     transform: none;
   }
+
+  .ring-face-enter-from,
+  .ring-face-leave-to {
+    transform: none;
+  }
 }
 
 .ring {
@@ -847,6 +864,36 @@ onUnmounted(() => {
 
 .is-connected .ring {
   box-shadow: 0 0 42px var(--success-soft);
+}
+
+/* Внутренность круга — своя колонка: кнопка держит один элемент по центру,
+   а раскладка содержимого живёт здесь, иначе переход рвал бы её на части. */
+.ring-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Уход короче прихода: старое содержимое убирается с дороги, новое
+   проявляется. Масштаб еле заметный — круг не должен «прыгать». */
+.ring-face-leave-active {
+  transition:
+    opacity 100ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 100ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.ring-face-enter-active {
+  transition:
+    opacity var(--transition-base),
+    transform var(--transition-base);
+}
+
+.ring-face-enter-from,
+.ring-face-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
 }
 
 .ring-icon {
@@ -1143,12 +1190,26 @@ onUnmounted(() => {
 }
 
 .advanced-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-sm);
   background: var(--bg-surface-2);
+}
+
+/* Рельс переключателя — 40×22, палец и мышь промахиваются. Цель растянута
+   на правую полосу строки целиком (по вертикали — вся строка, то есть больше
+   44 px), но не выходит за её границы: перекрытие с соседней строкой значило
+   бы, что промах переключает не то. */
+.advanced-row :deep(.n-switch)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 64px;
 }
 
 .advanced-info {
