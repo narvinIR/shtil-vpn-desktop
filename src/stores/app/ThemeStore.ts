@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
 import { darkTheme, type GlobalThemeOverrides, useOsTheme } from 'naive-ui'
 import { DatabaseService } from '@/services/database-service'
 import type { ThemeConfig } from '@/types/database'
@@ -195,20 +194,10 @@ export const useThemeStore = defineStore(
       root.style.setProperty('--accent-user-soft', hexToRgba(primary, 0.12))
     }
 
-    /**
-     * Окно на Маке светлеет вместе с интерфейсом: материал стекла спрашивает
-     * светлоту у самого окна, и без этого светлая тема оставалась серой.
-     * На Windows и Linux команда ничего не делает.
-     */
-    const applyWindowTheme = (dark: boolean) => {
-      void invoke('set_window_theme', { dark }).catch(() => undefined)
-    }
-
     const syncUiTheme = (dark: boolean, compact: boolean) => {
       applyThemeClass(dark)
       applyCompactClass(compact)
       applyAccentVariables()
-      applyWindowTheme(dark)
     }
 
     let saveTimer: number | null = null
