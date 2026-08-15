@@ -69,7 +69,7 @@ import { useTrafficStore } from '@/stores/kernel/TrafficStore'
 import { useConnectionStore } from '@/stores/kernel/ConnectionStore'
 import { useI18n } from 'vue-i18n'
 import { HomeOutline, KeyOutline, PulseOutline, SettingsOutline } from '@vicons/ionicons5'
-import { useMessage } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import UpdateModal from '@/components/UpdateModal.vue'
 import AppHeader from './AppHeader.vue'
 import AppSidebar, { type NavGroup, type NavItem } from './AppSidebar.vue'
@@ -82,7 +82,7 @@ defineOptions({
 const router = useRouter()
 const route = useRoute()
 const collapsed = ref(false)
-const message = useMessage()
+const message = useAppMessage()
 
 // Stores
 const themeStore = useThemeStore()

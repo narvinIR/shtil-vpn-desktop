@@ -28,13 +28,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useMessage } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import { useSudoStore } from '@/stores'
 
 defineOptions({ name: 'SudoPasswordModal' })
 
 const { t } = useI18n()
-const message = useMessage()
+const message = useAppMessage()
 const sudoStore = useSudoStore()
 
 const errorText = computed(() => {

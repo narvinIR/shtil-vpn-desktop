@@ -115,7 +115,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import {
   DownloadOutline,
   DocumentTextOutline,
@@ -165,7 +165,7 @@ const emits = defineEmits<{
   skip: []
 }>()
 
-const message = useMessage()
+const message = useAppMessage()
 const { t } = useI18n()
 const isUpdating = ref(false)
 const updateProgress = ref(0)

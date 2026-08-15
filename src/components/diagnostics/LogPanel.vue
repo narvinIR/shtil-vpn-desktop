@@ -107,7 +107,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import {
   ArrowDownOutline,
   ArrowUpOutline,
@@ -124,7 +124,7 @@ defineOptions({
 })
 
 const { t } = useI18n()
-const message = useMessage()
+const message = useAppMessage()
 const logStore = useLogStore()
 const selectedLog = ref<LogEntry | null>(null)
 

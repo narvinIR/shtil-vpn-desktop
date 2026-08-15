@@ -115,7 +115,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import { SettingsOutline, ChevronDownOutline } from '@vicons/ionicons5'
-import { useMessage } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import type { useAppStore } from '@/stores'
 import { useAdvancedSettingsForm } from '@/views/setting/useAdvancedSettingsForm'
 
@@ -129,7 +129,7 @@ const props = defineProps<{
   showPortSettings: () => void
 }>()
 
-const message = useMessage()
+const message = useAppMessage()
 
 const expandedSections = reactive({
   proxy: false,

@@ -148,7 +148,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, type Component } from 'vue'
 import { Window } from '@tauri-apps/api/window'
-import { useDialog, useMessage } from 'naive-ui'
+import { useDialog } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import {
   DownloadOutline,
   InformationCircleOutline,
@@ -183,7 +184,7 @@ import SettingsMaintenanceTab from '@/views/setting/components/SettingsMaintenan
 import SettingsAboutTab from '@/views/setting/components/SettingsAboutTab.vue'
 import '@/views/setting/setting-shared.css'
 
-const message = useMessage()
+const message = useAppMessage()
 const dialog = useDialog()
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -321,10 +322,12 @@ watch(showManualImportModal, (visible) => {
   }
 })
 
+// Переключатель сам показывает, что стало: подтверждение «Сохранено» рядом с
+// ним ничего не добавляет, а пять таких плашек подряд наезжают друг на друга и
+// приучают не читать сообщения вовсе. Об ошибке говорим, об успехе — нет.
 const onAutoStartChange = async (value: boolean) => {
   try {
     await appStore.toggleAutoStart(value)
-    message.success(t('common.saveSuccess'))
   } catch {
     message.error(t('common.saveFailed'))
     autoStart.value = !value
@@ -336,7 +339,6 @@ const onTrayCloseBehaviorChange = async (value: TrayCloseBehavior) => {
   try {
     await appStore.setTrayCloseBehavior(value)
     trayCloseBehavior.value = value
-    message.success(t('common.saveSuccess'))
   } catch (error) {
     console.error('保存关闭到托盘行为失败:', error)
     trayCloseBehavior.value = previous
@@ -349,7 +351,6 @@ const onAutoHideToTrayOnAutostartChange = async (value: boolean) => {
   try {
     await appStore.setAutoHideToTrayOnAutostart(value)
     autoHideToTrayOnAutostart.value = value
-    message.success(t('common.saveSuccess'))
   } catch (error) {
     console.error('保存开机后自动隐藏窗口到托盘设置失败:', error)
     autoHideToTrayOnAutostart.value = previous
@@ -375,8 +376,6 @@ const onIpVersionChange = async (value: boolean) => {
     if (!toggled) {
       throw new Error(kernelStore.lastError || t('notification.ipVersionChangeFailed'))
     }
-
-    message.success(t('common.saveSuccess'))
   } catch (error) {
     console.error('切换IPv6优先失败:', error)
     message.error(t('notification.proxyModeChangeFailed'))
@@ -389,7 +388,6 @@ const onLanAccessChange = async (value: boolean) => {
 
   try {
     await appStore.saveToBackend({ applyRuntime: true })
-    message.success(t('common.saveSuccess'))
   } catch (error) {
     console.error('切换局域网访问失败:', error)
     appStore.allowLanAccess = previous
@@ -548,7 +546,11 @@ const handleExportBackup = async () => {
   backupExporting.value = true
   try {
     const result = await systemService.backupExportSnapshot()
-    message.success(t('setting.backup.exportSuccess', { path: result.file_path }))
+    // Внутри — путь к созданному файлу, то самое, ради чего жали кнопку. Три
+    // секунды на прочитать адрес папки не хватает никому.
+    message.success(t('setting.backup.exportSuccess', { path: result.file_path }), {
+      duration: 12000,
+    })
   } catch (error) {
     console.warn('[backup-export]', error)
     message.error(t('setting.backup.operationFailed'))

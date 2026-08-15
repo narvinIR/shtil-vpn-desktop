@@ -7,10 +7,10 @@
  * 那些无法处于 provider 上下文内的调用方（如 useAppBootstrap）。
  */
 import { onMounted } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import mitt from '@/utils/mitt'
 
-const message = useMessage()
+const message = useAppMessage()
 
 onMounted(() => {
   mitt.emit('message-instance-ready', message)

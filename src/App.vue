@@ -4,7 +4,10 @@
     <n-dialog-provider>
       <n-modal-provider>
         <n-notification-provider>
-          <n-message-provider>
+          <!-- Три сообщения разом — потолок: дальше они наезжают друг на друга,
+               и человек перестаёт читать в том числе ошибки. Курсор над
+               сообщением останавливает отсчёт, крестик закрывает рукой. -->
+          <n-message-provider :max="3" keep-alive-on-hover closable>
             <!-- 消息消费组件 -->
             <MessageConsumer />
 

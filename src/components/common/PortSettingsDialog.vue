@@ -28,7 +28,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useMessage } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import { useAppStore } from '@/stores'
 
 const show = defineModel<boolean>('show', { required: true })
@@ -37,7 +37,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const message = useMessage()
+const message = useAppMessage()
 const appStore = useAppStore()
 
 const tempProxyPort = ref<number | null>(12080)
