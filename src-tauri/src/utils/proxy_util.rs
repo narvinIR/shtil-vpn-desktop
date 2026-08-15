@@ -386,6 +386,75 @@ const PROXY_KINDS: [(&str, &str, &str, &str); 3] = [
     ),
 ];
 
+/// Пары «служба — устройство» из ответа `networksetup -listnetworkserviceorder`.
+///
+/// Служба без устройства (виртуальный канал чужого VPN-клиента) и выключенная
+/// человеком (в ответе помечена звёздочкой) сюда не попадают.
+#[cfg(target_os = "macos")]
+fn parse_service_devices(order_output: &str) -> Vec<(String, String)> {
+    let mut services = Vec::new();
+    let mut pending: Option<String> = None;
+
+    for line in order_output.lines() {
+        let line = line.trim();
+
+        if line.starts_with("(Hardware Port:") {
+            let device = line
+                .rsplit_once("Device:")
+                .map(|(_, tail)| tail.trim_end_matches(')').trim())
+                .unwrap_or_default();
+            if let (Some(service), false) = (pending.take(), device.is_empty()) {
+                services.push((service, device.to_string()));
+            }
+            continue;
+        }
+
+        if let Some((marker, name)) = line.strip_prefix('(').and_then(|r| r.split_once(") ")) {
+            pending = (marker != "*").then(|| name.trim().to_string());
+        }
+    }
+
+    services
+}
+
+/// Живой канал — тот, у кого поднято соединение. Кабель не воткнут — значит
+/// человек по этому каналу не ходит.
+#[cfg(target_os = "macos")]
+fn is_device_active(ifconfig_output: &str) -> bool {
+    ifconfig_output
+        .lines()
+        .any(|line| line.trim() == "status: active")
+}
+
+/// Каналы, по которым машина реально ходит в сеть. Только в них мы имеем право
+/// прописать свой адрес: запись в спящем канале человек не найдёт никогда, а
+/// работать она перестанет вместе с нашим ядром.
+#[cfg(target_os = "macos")]
+fn active_network_services() -> Vec<String> {
+    let Ok(output) = std::process::Command::new("networksetup")
+        .args(["-listnetworkserviceorder"])
+        .output()
+    else {
+        return Vec::new();
+    };
+
+    if !output.status.success() {
+        return Vec::new();
+    }
+
+    parse_service_devices(&String::from_utf8_lossy(&output.stdout))
+        .into_iter()
+        .filter(|(_, device)| {
+            std::process::Command::new("ifconfig")
+                .arg(device)
+                .output()
+                .map(|out| is_device_active(&String::from_utf8_lossy(&out.stdout)))
+                .unwrap_or(false)
+        })
+        .map(|(service, _)| service)
+        .collect()
+}
+
 /// Где лежат запомненные чужие записи. На диске, а не в памяти: приложение
 /// может упасть, а вернуть человеку его настройку надо в любом случае.
 #[cfg(target_os = "macos")]
@@ -695,57 +764,49 @@ fn enable_system_proxy_macos(host: &str, port: u16, bypass: Option<&str>) -> io:
     // записи: на выходе вернём ровно то, что стояло.
     let mut backup = read_foreign_backup();
 
-    // 获取所有网络服务
-    let output = std::process::Command::new("networksetup")
-        .args(["-listallnetworkservices"])
-        .output()?;
+    // Только живые каналы: в спящем наша запись останется мусором, который
+    // человек не найдёт, а трафик по нему всё равно не идёт.
+    let entries = parse_bypass_entries(bypass);
 
-    if output.status.success() {
-        let services = String::from_utf8_lossy(&output.stdout);
-        let entries = parse_bypass_entries(bypass);
+    for service in active_network_services() {
+        let service = service.as_str();
 
-        // 跳过第一行（标题行），处理每个网络服务
-        for line in services.lines().skip(1) {
-            let service = line.trim();
-            if !service.is_empty() && service != "*" {
-                // HTTP и HTTPS: запоминаем чужое, потом кладём своё
-                for (kind, read, set_value, set_state) in PROXY_KINDS.into_iter().take(2) {
-                    if let Ok(current) = std::process::Command::new("networksetup")
-                        .args([read, service])
-                        .output()
-                    {
-                        let record = String::from_utf8_lossy(&current.stdout);
-                        if let Some(foreign) = foreign_proxy_record(&record, Some(port)) {
-                            tracing::info!(
-                                "чужая запись прокси запомнена: {} / {} → {}:{}",
-                                service,
-                                kind,
-                                foreign.server,
-                                foreign.port
-                            );
-                            remember_foreign_record(&mut backup, service, kind, foreign);
-                        }
-                    }
-
-                    let _ = std::process::Command::new("networksetup")
-                        .args([set_value, service, host, &port.to_string()])
-                        .output();
-
-                    let _ = std::process::Command::new("networksetup")
-                        .args([set_state, service, "on"])
-                        .output();
-                }
-
-                // 设置代理绕过列表
-                if !entries.is_empty() {
-                    let mut cmd = std::process::Command::new("networksetup");
-                    cmd.args(["-setproxybypassdomains", service]);
-                    for entry in &entries {
-                        cmd.arg(entry);
-                    }
-                    let _ = cmd.output();
+        // HTTP и HTTPS: запоминаем чужое, потом кладём своё
+        for (kind, read, set_value, set_state) in PROXY_KINDS.into_iter().take(2) {
+            if let Ok(current) = std::process::Command::new("networksetup")
+                .args([read, service])
+                .output()
+            {
+                let record = String::from_utf8_lossy(&current.stdout);
+                if let Some(foreign) = foreign_proxy_record(&record, Some(port)) {
+                    tracing::info!(
+                        "чужая запись прокси запомнена: {} / {} → {}:{}",
+                        service,
+                        kind,
+                        foreign.server,
+                        foreign.port
+                    );
+                    remember_foreign_record(&mut backup, service, kind, foreign);
                 }
             }
+
+            let _ = std::process::Command::new("networksetup")
+                .args([set_value, service, host, &port.to_string()])
+                .output();
+
+            let _ = std::process::Command::new("networksetup")
+                .args([set_state, service, "on"])
+                .output();
+        }
+
+        // 设置代理绕过列表
+        if !entries.is_empty() {
+            let mut cmd = std::process::Command::new("networksetup");
+            cmd.args(["-setproxybypassdomains", service]);
+            for entry in &entries {
+                cmd.arg(entry);
+            }
+            let _ = cmd.output();
         }
     }
 
