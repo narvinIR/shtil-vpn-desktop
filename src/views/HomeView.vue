@@ -307,8 +307,16 @@ const serverName = computed(() =>
   activeNode.value ? channelLabel(activeNode.value) : t('home.server.searching'),
 )
 
+/**
+ * Каналы на выбор. «Напрямую» из списка убрано: это не сервер, а выход МИМО
+ * VPN — выбрав его, человек остаётся без защиты, а экран продолжает писать
+ * «Подключено». Российские сайты и без того идут напрямую, это решает сам
+ * ключ, а не человек.
+ */
 const channelOptions = computed(() =>
-  (channelGroup.value?.all || []).map((tag) => ({ key: tag, label: channelLabel(tag) })),
+  (channelGroup.value?.all || [])
+    .filter((tag) => channelKey(tag) !== 'direct')
+    .map((tag) => ({ key: tag, label: channelLabel(tag) })),
 )
 
 const onPickChannel = async (tag: string) => {
