@@ -296,6 +296,15 @@ const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav
 }
 
 /* 底部 */
+/* Система просила не двигать — не двигаем: подложка и цвет остаются, вжатие
+   уходит. Так же сделано на главном экране. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-item:active:not(:disabled),
+  .footer-btn:active {
+    transform: none;
+  }
+}
+
 .sider-footer {
   padding-top: var(--space-3);
   border-top: 1px solid var(--border-color);

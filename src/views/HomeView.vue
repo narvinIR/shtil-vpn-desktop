@@ -880,8 +880,8 @@ onUnmounted(() => {
    проявляется. Масштаб еле заметный — круг не должен «прыгать». */
 .ring-face-leave-active {
   transition:
-    opacity 100ms cubic-bezier(0.23, 1, 0.32, 1),
-    transform 100ms cubic-bezier(0.23, 1, 0.32, 1);
+    opacity 100ms var(--ease-out),
+    transform 100ms var(--ease-out);
 }
 
 .ring-face-enter-active {
@@ -952,7 +952,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition:
     background var(--transition-fast),
-    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+    transform 160ms var(--ease-out);
 }
 
 .server-pill:hover {
