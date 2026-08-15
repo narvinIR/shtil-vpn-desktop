@@ -250,16 +250,34 @@
   padding-bottom: var(--space-3);
 }
 
+/* Раскрытие блока. Прежде здесь стояло `transition: all` и высота ТОЛЬКО в
+   закрытом состоянии — открытому не с чем было интерполировать, поэтому блок
+   не раскрывался, а появлялся рывком. Свойства названы поимённо, у открытого
+   есть свой предел высоты. */
 .collapse-enter-active,
 .collapse-leave-active {
-  transition: all var(--transition-fast);
+  transition:
+    opacity var(--transition-fast),
+    max-height var(--transition-base);
   overflow: hidden;
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  max-height: 600px;
 }
 
 .collapse-enter-from,
 .collapse-leave-to {
   opacity: 0;
   max-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapse-enter-active,
+  .collapse-leave-active {
+    transition: opacity var(--transition-fast);
+  }
 }
 
 @media (max-width: 768px) {

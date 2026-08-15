@@ -203,15 +203,31 @@ const { savingAdvanced, proxyAdvancedForm, saveProxyAdvancedSettings } = useAdva
   margin: var(--space-1) 0 0;
 }
 
+/* Тот же случай, что в setting-shared.css: у открытого состояния не было
+   предела высоты, поэтому раскрытия не происходило вовсе. */
 .collapse-enter-active,
 .collapse-leave-active {
-  transition: all var(--transition-base);
+  transition:
+    opacity var(--transition-fast),
+    max-height var(--transition-base);
   overflow: hidden;
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  max-height: 600px;
 }
 
 .collapse-enter-from,
 .collapse-leave-to {
   opacity: 0;
   max-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapse-enter-active,
+  .collapse-leave-active {
+    transition: opacity var(--transition-fast);
+  }
 }
 </style>

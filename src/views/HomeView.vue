@@ -803,22 +803,33 @@ onUnmounted(() => {
   gap: 6px;
   padding: 0 24px;
   cursor: pointer;
+  /* Подъём и нажатие живут в РАЗНЫХ величинах одного transform: раньше
+     :active со своим transform стирал подъём от :hover целиком, и кнопка
+     дёргалась вниз вместо того, чтобы вжаться. */
+  --ring-lift: 0px;
+  --ring-press: 1;
+  transform: translateY(var(--ring-lift)) scale(var(--ring-press));
   transition:
     border-color var(--transition-base),
     transform var(--transition-fast),
     box-shadow var(--transition-base);
 }
 
-.ring:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 0 32px var(--primary-soft-strong);
+/* Наведение — только там, где указатель настоящий: на касании палец рождает
+   ложное наведение, и кнопка остаётся приподнятой после отпускания. */
+@media (hover: hover) and (pointer: fine) {
+  .ring:hover:not(:disabled) {
+    --ring-lift: -2px;
+    box-shadow: 0 0 32px var(--primary-soft-strong);
+  }
 }
 
 /* Главная кнопка приложения обязана отзываться на нажатие — иначе непонятно,
-   услышали ли тебя, и человек жмёт второй раз. */
+   услышали ли тебя, и человек жмёт второй раз. Отклик короче остального
+   движения: рука ждёт ответа сразу. */
 .ring:active:not(:disabled) {
-  transform: scale(0.97);
-  transition-duration: 90ms;
+  --ring-press: 0.97;
+  transition-duration: 120ms;
 }
 
 /* Клавиатура: круг — единственное действие экрана, до него доходят табом. */
@@ -1009,9 +1020,13 @@ onUnmounted(() => {
   justify-content: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   font-weight: 600;
-  color: var(--primary-color);
+  /* Срок подписки красился акцентным синим — 3.00:1 на стекле плиты при норме
+     4.5:1, то есть главное число экрана было самым нечитаемым. Акцент здесь
+     работал украшением, а не смыслом: цветом на экране выделяется одно
+     действие — круг подключения. */
+  color: var(--text-primary);
 }
 
 .failure {
