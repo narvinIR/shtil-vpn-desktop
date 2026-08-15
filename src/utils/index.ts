@@ -1,27 +1,18 @@
 import i18n from '@/locales'
 
-export function formatBandwidth(bytesPerSecond: number) {
-  const valueInKb = bytesPerSecond / 1024
-  const valueInMb = valueInKb / 1024
-  const valueInGb = valueInMb / 1024
-
-  if (valueInGb >= 1) {
-    return `${valueInGb.toFixed(2)} GB`
-  }
-
-  if (valueInMb >= 1) {
-    return `${valueInMb.toFixed(2)} MB`
-  }
-
-  return `${valueInKb.toFixed(2)} KB`
-}
-
+/**
+ * Объём — байтами и через словарь.
+ *
+ * Единственная мера объёма в приложении: до 15.08.2026 таких было три —
+ * здесь, на экране ключа и в окне обновления, — и все три писали «KB / MB»
+ * по-английски мимо словаря, в каком бы языке ни сидел человек.
+ */
 export function formatBytes(bytes?: number): string {
-  if (!bytes) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const units = ['size.b', 'size.kb', 'size.mb', 'size.gb', 'size.tb']
+  if (!bytes || bytes <= 0) return `0 ${i18n.global.t(units[0])}`
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
   const value = bytes / Math.pow(1024, index)
-  return `${value.toFixed(2)} ${units[index]}`
+  return `${value.toFixed(2)} ${i18n.global.t(units[index])}`
 }
 
 /**

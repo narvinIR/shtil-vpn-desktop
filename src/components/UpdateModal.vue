@@ -128,6 +128,7 @@ import {
 } from '@vicons/ionicons5'
 import { listen, type Event } from '@tauri-apps/api/event'
 import { useI18n } from 'vue-i18n'
+import { formatBytes } from '@/utils'
 
 interface UpdateProgressPayload {
   status: 'checking' | 'downloading' | 'completed' | 'error' | 'installing'
@@ -174,17 +175,7 @@ const updateError = ref('')
 const localShow = ref(false)
 let unlisten: (() => void) | null = null
 
-const formattedSize = computed(() => {
-  if (!props.fileSize) return ''
-  const units = ['B', 'KB', 'MB', 'GB']
-  let size = props.fileSize
-  let unitIndex = 0
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-  return `${size.toFixed(1)} ${units[unitIndex]}`
-})
+const formattedSize = computed(() => (props.fileSize ? formatBytes(props.fileSize) : ''))
 
 const formattedDate = computed(() => {
   if (!props.releaseDate) return ''

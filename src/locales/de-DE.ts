@@ -150,6 +150,7 @@ export default {
       connecting: 'Verbindung wird aufgebaut',
       disconnecting: 'Verbindung wird getrennt',
       disconnected: 'Aus',
+      failed: 'Verbindung fehlgeschlagen',
     },
     action: {
       connect: 'Verbinden',
@@ -239,6 +240,13 @@ export default {
   // Осталось только то, что ещё зовётся из кода
   proxy: {
     modeChangeFailed: 'Der Modus konnte nicht gewechselt werden',
+  },
+  size: {
+    b: 'B',
+    kb: 'KB',
+    mb: 'MB',
+    gb: 'GB',
+    tb: 'TB',
   },
   speed: {
     bps: 'Bit/s',

@@ -146,6 +146,7 @@ export default {
       connecting: 'در حال اتصال',
       disconnecting: 'در حال قطع',
       disconnected: 'خاموش',
+      failed: 'اتصال برقرار نشد',
     },
     action: {
       connect: 'اتصال',
@@ -234,6 +235,13 @@ export default {
   // Осталось только то, что ещё зовётся из кода
   proxy: {
     modeChangeFailed: 'حالت عوض نشد',
+  },
+  size: {
+    b: 'بایت',
+    kb: 'کیلوبایت',
+    mb: 'مگابایت',
+    gb: 'گیگابایت',
+    tb: 'ترابایت',
   },
   speed: {
     bps: 'بیت/ثانیه',

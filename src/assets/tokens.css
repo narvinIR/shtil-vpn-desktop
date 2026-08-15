@@ -151,11 +151,15 @@
    * 3. Смысловые значения — светлая тема
    * ============================================================ */
 
-  /* Акцент. ThemeStore.applyAccentVariables может его переставить */
-  --primary-color: var(--azure-500);
-  --primary-hover: var(--azure-300);
-  --primary-active: var(--azure-700);
-  --primary-soft: rgba(79, 146, 255, 0.1);
+  /* Акцент. Свой цвет человека приходит из `--accent-user` (его ставит
+     ThemeStore строкой стиля на корне). Пока цвет не выбран, переменной нет —
+     и каждая тема берёт СВОЙ оттенок: на светлом фоне и на тёмном один и тот
+     же синий читается по-разному. Раньше значение писали прямо в
+     `--primary-color`, и строка стиля перебивала тёмную тему навсегда. */
+  --primary-color: var(--accent-user, var(--azure-500));
+  --primary-hover: var(--accent-user-hover, var(--azure-300));
+  --primary-active: var(--accent-user-active, var(--azure-700));
+  --primary-soft: var(--accent-user-soft, rgba(79, 146, 255, 0.1));
   --primary-soft-strong: rgba(79, 146, 255, 0.16);
   --primary-contrast: #ffffff;
 
@@ -169,10 +173,13 @@
   --info-color: var(--blue-500);
   --info-soft: var(--blue-500-soft);
 
-  /* Текст по важности */
+  /* Текст по важности. Ступени выбраны по контрасту, а не на глаз: подпись
+     мельче основного текста, поэтому ей нужны те же 4.5:1. На белой карточке
+     ink-400 давал 2.35:1 — подписи «Отклик», «Принято», «Отдано» и строка под
+     кругом читались как выключенные (замер 15.08.2026). ink-500 даёт 5.42:1. */
   --text-primary: var(--ink-900);
   --text-secondary: var(--ink-600);
-  --text-tertiary: var(--ink-400);
+  --text-tertiary: var(--ink-500);
   --text-disabled: var(--ink-300);
   --text-on-primary: #ffffff;
 
@@ -224,10 +231,10 @@
  * ============================================================ */
 .dark,
 [data-theme='dark'] {
-  --primary-color: var(--azure-300);
-  --primary-hover: var(--azure-200);
-  --primary-active: var(--azure-500);
-  --primary-soft: rgba(127, 178, 255, 0.16);
+  --primary-color: var(--accent-user, var(--azure-300));
+  --primary-hover: var(--accent-user-hover, var(--azure-200));
+  --primary-active: var(--accent-user-active, var(--azure-500));
+  --primary-soft: var(--accent-user-soft, rgba(127, 178, 255, 0.16));
   --primary-soft-strong: rgba(127, 178, 255, 0.24);
   --primary-contrast: #ffffff;
 
@@ -236,9 +243,12 @@
   --error-color: var(--red-400);
   --info-color: var(--blue-400);
 
+  /* Та же мерка на тёмном: ink-500 давал 3.31:1 — подписи тонули в карточке.
+     Ступени сдвинуты на одну вверх, разница между важностями сохранена
+     (9.94:1 против 7.63:1). */
   --text-primary: #e9effa;
-  --text-secondary: #9baac4;
-  --text-tertiary: var(--ink-500);
+  --text-secondary: var(--ink-300);
+  --text-tertiary: var(--ink-400);
   --text-disabled: var(--ink-600);
 
   --bg-base: var(--ink-950);

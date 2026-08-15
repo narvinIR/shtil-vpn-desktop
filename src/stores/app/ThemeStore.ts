@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { darkTheme, type GlobalThemeOverrides, useOsTheme } from 'naive-ui'
 import { DatabaseService } from '@/services/database-service'
 import type { ThemeConfig } from '@/types/database'
@@ -161,24 +162,53 @@ export const useThemeStore = defineStore(
       document.documentElement.classList.toggle('compact-mode', compact)
     }
 
+    /**
+     * Выбранный акцент кладём в ОТДЕЛЬНЫЕ переменные, а не поверх смысловых.
+     *
+     * Строка стиля на корне документа сильнее любого правила таблицы: пока сюда
+     * писали сам `--primary-color`, заявленные в тёмной теме значения не
+     * применялись никогда. Теперь темы читают акцент сами и подставляют свой
+     * оттенок, когда человек ничего не выбирал (`tokens.css`).
+     */
+    const ACCENT_VARIABLES = [
+      '--accent-user',
+      '--accent-user-hover',
+      '--accent-user-active',
+      '--accent-user-soft',
+    ]
+
     const applyAccentVariables = () => {
       if (typeof document === 'undefined') return
       const primary = normalizeHexColor(accentColor.value)
-      const hover = adjustColor(primary, 10)
-      const active = adjustColor(primary, -8)
+      const root = document.documentElement
 
-      document.documentElement.style.setProperty('--primary-color', primary)
-      document.documentElement.style.setProperty('--primary-hover', hover)
-      document.documentElement.style.setProperty('--primary-active', active)
-      document.documentElement.style.setProperty('--chip-bg', hexToRgba(primary, 0.12))
-      document.documentElement.style.setProperty('--chip-text', primary)
-      document.documentElement.style.setProperty('--border-hover', hexToRgba(primary, 0.35))
+      // Свой цвет человек не выбирал — не мешаем темам: у светлой и тёмной
+      // оттенок акцента разный, и подставленный сюда общий их бы обесцветил.
+      if (primary === DEFAULT_ACCENT) {
+        ACCENT_VARIABLES.forEach((name) => root.style.removeProperty(name))
+        return
+      }
+
+      root.style.setProperty('--accent-user', primary)
+      root.style.setProperty('--accent-user-hover', adjustColor(primary, 10))
+      root.style.setProperty('--accent-user-active', adjustColor(primary, -8))
+      root.style.setProperty('--accent-user-soft', hexToRgba(primary, 0.12))
+    }
+
+    /**
+     * Окно на Маке светлеет вместе с интерфейсом: материал стекла спрашивает
+     * светлоту у самого окна, и без этого светлая тема оставалась серой.
+     * На Windows и Linux команда ничего не делает.
+     */
+    const applyWindowTheme = (dark: boolean) => {
+      void invoke('set_window_theme', { dark }).catch(() => undefined)
     }
 
     const syncUiTheme = (dark: boolean, compact: boolean) => {
       applyThemeClass(dark)
       applyCompactClass(compact)
       applyAccentVariables()
+      applyWindowTheme(dark)
     }
 
     let saveTimer: number | null = null

@@ -215,6 +215,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // Стекло окна на Маке светлеет вместе с темой экранов
+            crate::app::system::window_appearance::set_window_theme,
             // Enhanced Storage service commands (数据库)
             crate::app::storage::enhanced_storage_service::db_get_app_config,
             crate::app::storage::enhanced_storage_service::db_save_app_config,

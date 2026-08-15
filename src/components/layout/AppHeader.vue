@@ -233,6 +233,17 @@ const emit = defineEmits<{
   }
 }
 
+/* Система просила не двигать — точка просто горит. */
+@media (prefers-reduced-motion: reduce) {
+  .app-status.running .status-dot {
+    animation: none;
+  }
+
+  .brand-logo-wrapper:hover {
+    transform: none;
+  }
+}
+
 /* 中部速览 */
 .header-glance {
   display: flex;

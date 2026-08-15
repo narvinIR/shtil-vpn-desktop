@@ -27,8 +27,9 @@
       <div class="ring-wrap">
         <div v-if="connected" class="ring-halo"></div>
         <button class="ring" :disabled="!ringEnabled" @click="onRingClick">
+          <!-- Слова «Подключено» в круге нет: оно уже стоит заголовком над ним,
+               и вдвоём они читались как заикание. -->
           <template v-if="connected">
-            <span class="ring-word">{{ t('home.state.connected') }}</span>
             <span class="ring-timer">{{ uptime }}</span>
             <span class="ring-note">{{ t('home.action.disconnect') }}</span>
           </template>
@@ -239,6 +240,9 @@ const stateClass = computed(() => {
   if (connected.value) return 'is-connected'
   if (busy.value) return 'is-busy'
   if (!hasKey.value) return 'is-empty'
+  // Сбой обязан быть виден по самому кругу: раньше не подключившееся
+  // приложение выглядело ровно как выключенное, и человек жал ту же кнопку.
+  if (failureText.value) return 'is-failed'
   return 'is-off'
 })
 
@@ -398,7 +402,8 @@ const openSupportInBot = () => openUrl('https://t.me/RealityVPNBot_bot')
 const stateTitle = computed(() => {
   if (!hasKey.value) return t('home.action.addKey')
   if (busy.value) return busyWord.value
-  return connected.value ? t('home.state.connected') : t('home.state.disconnected')
+  if (connected.value) return t('home.state.connected')
+  return failureText.value ? t('home.state.failed') : t('home.state.disconnected')
 })
 
 const hint = computed(() => {
@@ -576,6 +581,12 @@ onUnmounted(() => {
   --wave-color: var(--text-tertiary);
 }
 
+/* Не подключились: круг красный, а не такой же, как у выключенного. */
+.home.is-failed {
+  --state-color: var(--error-color);
+  --wave-color: var(--error-color);
+}
+
 .home-inner {
   position: relative;
   z-index: 1;
@@ -641,6 +652,18 @@ onUnmounted(() => {
   }
 }
 
+/* Система просила не двигать — не двигаем. Кольцо остаётся, но замирает. */
+@media (prefers-reduced-motion: reduce) {
+  .ring-halo {
+    animation: none;
+    opacity: 0.28;
+  }
+
+  .ring:active:not(:disabled) {
+    transform: none;
+  }
+}
+
 .ring {
   width: clamp(200px, 32vh, 264px);
   height: clamp(200px, 32vh, 264px);
@@ -664,6 +687,19 @@ onUnmounted(() => {
 .ring:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 0 32px var(--primary-soft-strong);
+}
+
+/* Главная кнопка приложения обязана отзываться на нажатие — иначе непонятно,
+   услышали ли тебя, и человек жмёт второй раз. */
+.ring:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: 90ms;
+}
+
+/* Клавиатура: круг — единственное действие экрана, до него доходят табом. */
+.ring:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 .ring:disabled {
@@ -782,11 +818,14 @@ onUnmounted(() => {
   border-left: 1px solid var(--border-color);
 }
 
+/* Число не переносим: «225.47 КБ» уезжало на вторую строку, и три показателя
+   разъезжались по высоте — подпись одного оказывалась ниже соседних. */
 .stat-value {
   font-size: var(--text-lg);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .stat-value.accent {

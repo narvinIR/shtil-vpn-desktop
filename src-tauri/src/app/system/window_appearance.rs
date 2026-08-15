@@ -18,16 +18,60 @@ use tauri::WebviewWindow;
 /// (`--window-radius` в `tokens.css`) — иначе содержимое вылезет из-под угла.
 pub const MACOS_CORNER_RADIUS: f64 = 12.0;
 
+/// Материал стекла под окном. Свой перечень, а не системный: так выбор
+/// проверяется тестом на любой системе, а не только на Маке.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WindowMaterial {
+    /// HUD — материал системы для тёмных панелей. Всегда тёмный по своей природе.
+    Hud,
+    /// Фон содержимого окна. Светлеет и темнеет вместе с темой окна.
+    Content,
+}
+
+/// Материал под тему.
+///
+/// Тёмная остаётся на HUD: он выбран замером 06.08.2026 (32 % света против 14 %
+/// у соседей). Светлой он не годится вовсе — HUD у системы тёмный всегда, и
+/// светлая тема поверх него выходила серой: замер 15.08.2026 дал рабочую
+/// область 173 при карточках и колонке 224, то есть «светлая» тема была темнее
+/// собственных карточек.
+pub fn material_for(dark: bool) -> WindowMaterial {
+    if dark {
+        WindowMaterial::Hud
+    } else {
+        WindowMaterial::Content
+    }
+}
+
+/// Навести стекло под окном. Тема задаётся отдельно: при создании окна её ещё
+/// никто не знает, поэтому берём тёмную — она в продукте по умолчанию.
 #[cfg(target_os = "macos")]
 pub fn apply(window: &WebviewWindow) {
-    use tauri::window::{Effect, EffectState, EffectsBuilder};
+    apply_theme(window, true);
+}
 
-    // Материал выбран замером на живой машине (06.08.2026): одно и то же окно
-    // над светлым и над тёмным местом рабочего стола. Света сквозь окно
-    // проходит: `Sidebar` — 14 %, `HudWindow` — 32 %. Берём второй: рабочий
-    // стол за окном виден, а текст читается и в тёмной теме, и в светлой.
+/// Стекло и светлота окна под выбранную тему.
+///
+/// Материалу мало быть светлым по имени: систему он спрашивает у самого окна
+/// (`effectiveAppearance`). Пока окну не сказано, что оно светлое, любой
+/// материал остаётся тёмным — поэтому светлота ставится здесь же.
+#[cfg(target_os = "macos")]
+pub fn apply_theme(window: &WebviewWindow, dark: bool) {
+    use tauri::window::{Effect, EffectState, EffectsBuilder};
+    use tauri::Theme;
+
+    let theme = if dark { Theme::Dark } else { Theme::Light };
+    if let Err(err) = window.set_theme(Some(theme)) {
+        tracing::warn!("не удалось задать светлоту окна: {}", err);
+    }
+
+    let effect = match material_for(dark) {
+        WindowMaterial::Hud => Effect::HudWindow,
+        WindowMaterial::Content => Effect::ContentBackground,
+    };
+
     let effects = EffectsBuilder::new()
-        .effect(Effect::HudWindow)
+        .effect(effect)
         .state(EffectState::FollowsWindowActiveState)
         .radius(MACOS_CORNER_RADIUS)
         .build();
@@ -39,3 +83,16 @@ pub fn apply(window: &WebviewWindow) {
 
 #[cfg(not(target_os = "macos"))]
 pub fn apply(_window: &WebviewWindow) {}
+
+#[cfg(not(target_os = "macos"))]
+pub fn apply_theme(_window: &WebviewWindow, _dark: bool) {}
+
+/// Экраны сообщают сюда свою тему: окно на Маке светлеет вместе с ними.
+#[tauri::command]
+pub fn set_window_theme(window: WebviewWindow, dark: bool) {
+    apply_theme(&window, dark);
+}
+
+#[cfg(test)]
+#[path = "window_appearance.tests.rs"]
+mod tests;
