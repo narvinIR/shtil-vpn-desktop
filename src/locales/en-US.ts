@@ -197,7 +197,7 @@ export default {
       renew: 'Renew',
     },
     advanced: {
-      title: 'For advanced users',
+      title: 'Connection mode',
       restartNote: 'If the connection behaves oddly',
       tunHint: 'Turn it off and the regular connection comes back at once — the internet stays.',
     },

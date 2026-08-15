@@ -130,8 +130,13 @@
         </details>
       </div>
 
+      <!-- Полоса внизу молчала о том, что за ней: человек не знал, стоит ли
+           открывать. Теперь она сразу отвечает, каким режимом он живёт. -->
       <details class="advanced">
-        <summary>{{ t('home.advanced.title') }}</summary>
+        <summary>
+          <span>{{ t('home.advanced.title') }}</span>
+          <span class="advanced-current">{{ currentModeLabel }}</span>
+        </summary>
         <div class="advanced-body">
           <div class="advanced-row">
             <div class="advanced-info">
@@ -331,6 +336,12 @@ const sentText = computed(() =>
 )
 
 const proxyAddress = computed(() => `127.0.0.1:${appStore.proxyPort}`)
+
+/** Каким режимом человек живёт прямо сейчас — видно, не открывая свёртку. */
+const currentModeLabel = computed(() => {
+  if (appStore.tunEnabled) return t('home.proxyMode.tun')
+  return appStore.systemProxyEnabled ? t('home.proxyMode.system') : t('home.proxyMode.manual')
+})
 
 /** Оплата живёт только в боте — отсюда туда и ведём. */
 const payInBot = () => openUrl('https://t.me/RealityVPNBot_bot?start=buy_vpn')
@@ -587,13 +598,18 @@ onUnmounted(() => {
   --wave-color: var(--error-color);
 }
 
+/* Одна колонка по центру. Раньше ширину задавала себе каждая часть сама:
+   плита выходила узкой, подписка и режим — широкими, а по бокам оставались
+   два мёртвых поля во весь экран. */
 .home-inner {
   position: relative;
   z-index: 1;
   min-height: calc(100vh - var(--header-height));
+  width: min(560px, 100%);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   gap: var(--space-5);
   padding: clamp(16px, 2.2vw, 28px);
@@ -602,6 +618,7 @@ onUnmounted(() => {
 
 /* ============ Плита ============ */
 .stage {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -949,9 +966,9 @@ onUnmounted(() => {
   font-family: var(--font-mono);
 }
 
-/* ============ Для опытных ============ */
+/* ============ Режим связи ============ */
 .advanced {
-  width: min(420px, 100%);
+  width: 100%;
   border-radius: 12px;
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
@@ -959,6 +976,10 @@ onUnmounted(() => {
 }
 
 .advanced summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
   padding: var(--space-3) var(--space-4);
   cursor: pointer;
   font-size: var(--text-sm);
@@ -967,13 +988,20 @@ onUnmounted(() => {
   list-style: none;
 }
 
+/* Текущий режим — сразу в строке, до открытия */
+.advanced-current {
+  margin-left: auto;
+  margin-right: var(--space-4);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
 .advanced summary::-webkit-details-marker {
   display: none;
 }
 
 .advanced summary::after {
   content: '▾';
-  float: right;
   color: var(--text-tertiary);
 }
 

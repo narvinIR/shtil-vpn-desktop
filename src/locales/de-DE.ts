@@ -203,7 +203,7 @@ export default {
       renew: 'Verlängern',
     },
     advanced: {
-      title: 'Für Fortgeschrittene',
+      title: 'Verbindungsmodus',
       restartNote: 'Wenn die Verbindung sich seltsam verhält',
       tunHint:
         'Schalten Sie es aus, kehrt die normale Verbindung sofort zurück — das Internet bleibt.',

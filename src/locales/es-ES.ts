@@ -202,7 +202,7 @@ export default {
       renew: 'Renovar',
     },
     advanced: {
-      title: 'Para usuarios avanzados',
+      title: 'Modo de conexión',
       restartNote: 'Si la conexión se comporta de forma extraña',
       tunHint:
         'Desactívelo y la conexión normal vuelve enseguida: internet no se corta.',

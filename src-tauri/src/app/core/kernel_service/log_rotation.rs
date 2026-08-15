@@ -142,12 +142,19 @@ mod tests {
     }
 
     // 简易唯一标识，避免并发测试目录冲突（不引入 uuid 依赖）。
+    /// Имя временной папки. Одних часов мало: на macOS они идут крупнее
+    /// наносекунды, и два теста в разных потоках получали ОДНУ папку — соседний
+    /// клал туда `.1`, а этот падал на «ротации не было». Счётчик делает имя
+    /// уникальным всегда.
     fn uuid_like() -> String {
+        use std::sync::atomic::{AtomicUsize, Ordering};
         use std::time::{SystemTime, UNIX_EPOCH};
+
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        format!("{:x}", nanos)
+        format!("{:x}-{}", nanos, COUNTER.fetch_add(1, Ordering::Relaxed))
     }
 }
