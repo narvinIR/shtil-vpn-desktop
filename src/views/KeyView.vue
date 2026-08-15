@@ -52,71 +52,79 @@
       <section class="card primary">
         <h2 class="card-title">{{ t('key.fromBot.title') }}</h2>
 
-        <!-- Компьютер уже привязан: дальше всё происходит само -->
-        <template v-if="deviceLink.linked">
-          <p class="card-text">{{ t('key.fromBot.linkedText') }}</p>
-          <div class="card-actions">
-            <!-- Оплата, срок и поддержка живут в боте, поэтому вход туда
-                 нужен и после привязки, а не только в момент получения кода -->
-            <n-button type="primary" @click="openBot">
-              <template #icon>
-                <n-icon><PaperPlaneOutline /></n-icon>
-              </template>
-              {{ t('key.fromBot.open') }}
-            </n-button>
-            <n-button secondary @click="unlink">{{ t('key.fromBot.unlink') }}</n-button>
-          </div>
-        </template>
-
-        <!-- Код получен: человек называет его боту и ждёт -->
-        <template v-else-if="deviceLink.code">
-          <p class="card-text">{{ t('key.fromBot.codeText') }}</p>
-          <div class="bot-row">
-            <div class="bot-actions">
-              <div class="link-code">{{ groupedCode }}</div>
-              <p class="card-note wait" v-if="deviceLink.waiting">
-                {{ t('key.fromBot.waiting') }}
-              </p>
-              <p class="card-note warn" v-if="deviceLink.failure === 'no_subscription'">
-                {{ t('key.fromBot.noSubscription') }}
-              </p>
+        <!-- Привязка — главный момент продукта, и до 15.08.2026 он проходил
+             мгновенной подменой: только что ждали кода, и вдруг другой текст.
+             Смена ветки идёт затуханием, `out-in` — потому что высота у веток
+             разная и две сразу распёрли бы карточку. -->
+        <Transition name="stage" mode="out-in">
+          <div class="link-stage" :key="linkStage">
+            <!-- Компьютер уже привязан: дальше всё происходит само -->
+            <template v-if="deviceLink.linked">
+              <p class="card-text">{{ t('key.fromBot.linkedText') }}</p>
               <div class="card-actions">
+                <!-- Оплата, срок и поддержка живут в боте, поэтому вход туда
+                     нужен и после привязки, а не только в момент получения кода -->
                 <n-button type="primary" @click="openBot">
                   <template #icon>
                     <n-icon><PaperPlaneOutline /></n-icon>
                   </template>
                   {{ t('key.fromBot.open') }}
                 </n-button>
-                <n-button quaternary @click="deviceLink.stopWaiting">
-                  {{ t('key.fromBot.cancel') }}
-                </n-button>
+                <n-button secondary @click="unlink">{{ t('key.fromBot.unlink') }}</n-button>
               </div>
-            </div>
-            <!-- Telegram у большинства на телефоне: код уезжает в бота одним наведением -->
-            <div v-if="codeQr" class="qr-row">
-              <img class="qr" :src="codeQr" alt="" />
-              <p class="card-note">{{ t('key.fromBot.codeQrHint') }}</p>
-            </div>
-          </div>
-        </template>
+            </template>
 
-        <!-- Ключа нет: одна кнопка -->
-        <template v-else>
-          <p class="card-text">{{ t('key.fromBot.text') }}</p>
-          <div class="bot-row">
-            <div class="bot-actions">
-              <n-button type="primary" :loading="deviceLink.requesting" @click="askCode">
-                {{ t('key.fromBot.getCode') }}
-              </n-button>
-              <p class="card-note warn" v-if="codeFailure">{{ codeFailure }}</p>
-              <p class="card-note" v-else>{{ t('key.fromBot.getCodeHint') }}</p>
-            </div>
-            <div v-if="botQr" class="qr-row">
-              <img class="qr" :src="botQr" alt="" />
-              <p class="card-note">{{ t('key.fromBot.qrHint') }}</p>
-            </div>
+            <!-- Код получен: человек называет его боту и ждёт -->
+            <template v-else-if="deviceLink.code">
+              <p class="card-text">{{ t('key.fromBot.codeText') }}</p>
+              <div class="bot-row">
+                <div class="bot-actions">
+                  <div class="link-code">{{ groupedCode }}</div>
+                  <p class="card-note wait" v-if="deviceLink.waiting">
+                    {{ t('key.fromBot.waiting') }}
+                  </p>
+                  <p class="card-note warn" v-if="deviceLink.failure === 'no_subscription'">
+                    {{ t('key.fromBot.noSubscription') }}
+                  </p>
+                  <div class="card-actions">
+                    <n-button type="primary" @click="openBot">
+                      <template #icon>
+                        <n-icon><PaperPlaneOutline /></n-icon>
+                      </template>
+                      {{ t('key.fromBot.open') }}
+                    </n-button>
+                    <n-button quaternary @click="deviceLink.stopWaiting">
+                      {{ t('key.fromBot.cancel') }}
+                    </n-button>
+                  </div>
+                </div>
+                <!-- Telegram у большинства на телефоне: код уезжает в бота одним наведением -->
+                <div v-if="codeQr" class="qr-row">
+                  <img class="qr" :src="codeQr" alt="" />
+                  <p class="card-note">{{ t('key.fromBot.codeQrHint') }}</p>
+                </div>
+              </div>
+            </template>
+
+            <!-- Ключа нет: одна кнопка -->
+            <template v-else>
+              <p class="card-text">{{ t('key.fromBot.text') }}</p>
+              <div class="bot-row">
+                <div class="bot-actions">
+                  <n-button type="primary" :loading="deviceLink.requesting" @click="askCode">
+                    {{ t('key.fromBot.getCode') }}
+                  </n-button>
+                  <p class="card-note warn" v-if="codeFailure">{{ codeFailure }}</p>
+                  <p class="card-note" v-else>{{ t('key.fromBot.getCodeHint') }}</p>
+                </div>
+                <div v-if="botQr" class="qr-row">
+                  <img class="qr" :src="botQr" alt="" />
+                  <p class="card-note">{{ t('key.fromBot.qrHint') }}</p>
+                </div>
+              </div>
+            </template>
           </div>
-        </template>
+        </Transition>
       </section>
 
       <!-- Ключа нет вовсе: дать связь сразу, иначе до бота не дойти — он тоже за границей -->
@@ -185,7 +193,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useMessage } from 'naive-ui'
+import { useAppMessage } from '@/composables/useAppMessage'
 import { PaperPlaneOutline } from '@vicons/ionicons5'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { readText } from '@tauri-apps/plugin-clipboard-manager'
@@ -219,7 +227,7 @@ const GUEST_HOURS = 2
 const GUEST_TRAFFIC_GB = 1
 
 const { t } = useI18n()
-const message = useMessage()
+const message = useAppMessage()
 const subStore = useSubStore()
 const appStore = useAppStore()
 const deviceLink = useDeviceLinkStore()
@@ -245,6 +253,12 @@ const trafficLine = computed(() => {
 })
 
 const formatExpire = (timestamp?: number) => formatExpireTime(timestamp, t)
+
+/** Ключ перехода: пока он не меняется, карточка не пересобирается. */
+const linkStage = computed(() => {
+  if (deviceLink.linked) return 'linked'
+  return deviceLink.code ? 'code' : 'idle'
+})
 
 const openBot = async () => {
   // Код уже в ссылке: бот откроется с ним, вводить руками ничего не нужно.
@@ -652,8 +666,53 @@ onUnmounted(() => {
   text-align: center;
 }
 
+/* Ожидание длится от пары секунд до минуты, и всё это время экран не менялся
+   вовсе — замершая строка читается как «повисло». Дышит только прозрачность:
+   текст в этот момент читают, двигать его нельзя. */
 .card-note.wait {
   color: var(--primary-color);
+  animation: wait-breath 1.8s ease-in-out infinite;
+}
+
+@keyframes wait-breath {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Уход быстрее прихода: пропажу старого замечать незачем, приход нового —
+   это и есть сообщение. На уходе только затухание, без встречного сдвига. */
+.stage-leave-active {
+  transition: opacity var(--transition-fast);
+}
+
+.stage-enter-active {
+  transition:
+    opacity var(--transition-base),
+    transform var(--transition-base);
+}
+
+.stage-leave-to {
+  opacity: 0;
+}
+
+.stage-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-note.wait {
+    animation: none;
+  }
+
+  .stage-enter-from {
+    transform: none;
+  }
 }
 
 .card-note.warn {
