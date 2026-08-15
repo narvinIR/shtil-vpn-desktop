@@ -65,7 +65,7 @@ fn applied_proxy_port() -> Option<u16> {
 }
 
 /// Запись прокси одного канала: то, что показывает `networksetup -getwebproxy`.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 struct ProxyRecord {
     server: String,
@@ -74,10 +74,10 @@ struct ProxyRecord {
 }
 
 /// Чужие записи, поверх которых мы легли: ключ «канал|вид» → что там стояло.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 type ProxyBackup = std::collections::BTreeMap<String, ProxyRecord>;
 
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 fn backup_key(service: &str, kind: &str) -> String {
     format!("{}|{}", service, kind)
 }
@@ -284,11 +284,21 @@ fn disable_system_proxy_windows() -> io::Result<()> {
         return Ok(());
     }
 
-    // 禁用代理
-    settings.set_value(registry::PROXY_ENABLE, &0u32)?;
+    // Уходя, возвращаем чужую запись, которую собой закрыли. Не было такой —
+    // тогда просто выключаем свою.
+    match read_foreign_backup().get(&backup_key("windows", "proxy")) {
+        Some(previous) => {
+            settings.set_value(registry::PROXY_SERVER, &previous.server)?;
+            settings.set_value(registry::PROXY_ENABLE, &1u32)?;
+            tracing::info!("чужая запись прокси возвращена: реестр → {}", previous.server);
+        }
+        None => {
+            settings.set_value(registry::PROXY_ENABLE, &0u32)?;
+            settings.set_value(registry::PROXY_SERVER, &"")?;
+        }
+    }
 
-    // 清空代理服务器地址
-    settings.set_value(registry::PROXY_SERVER, &"")?;
+    clear_foreign_backup();
 
     // 通知 WinINet 重新读取设置，使基于 WinINet 的应用（Edge/Chrome/IE 等）立即生效。
     notify_wininet_change();
@@ -386,6 +396,18 @@ const PROXY_KINDS: [(&str, &str, &str, &str); 3] = [
     ),
 ];
 
+/// Что стояло в реестре Windows до нас. Значение берём целиком: там бывает и
+/// простой вид `host:port`, и составной `http=…;https=…`, а вернуть человеку
+/// надо ровно его настройку, а не наш пересказ.
+#[cfg(any(target_os = "windows", test))]
+fn windows_foreign_value(current: &str, our_port: Option<u16>) -> Option<String> {
+    if current.is_empty() || is_our_windows_proxy(current, our_port) {
+        return None;
+    }
+
+    Some(current.to_string())
+}
+
 /// Пары «служба — устройство» из ответа `networksetup -listnetworkserviceorder`.
 ///
 /// Служба без устройства (виртуальный канал чужого VPN-клиента) и выключенная
@@ -417,20 +439,16 @@ fn parse_service_devices(order_output: &str) -> Vec<(String, String)> {
     services
 }
 
-/// Живой канал — тот, у кого поднято соединение. Кабель не воткнут — значит
-/// человек по этому каналу не ходит.
+/// Каналы, в которые мы имеем право прописать свой адрес: сетевые карты
+/// машины.
+///
+/// Только сюда — но во ВСЕ, а не в один активный: человек переставляет ноутбук
+/// с Wi-Fi на кабель, и запись обязана уже стоять там, иначе трафик молча
+/// пойдёт мимо VPN при зелёном экране. А вот канал без устройства — это
+/// виртуальная служба чужого VPN-клиента: там наша запись бессмысленна с
+/// первой секунды и переживает нас насовсем.
 #[cfg(target_os = "macos")]
-fn is_device_active(ifconfig_output: &str) -> bool {
-    ifconfig_output
-        .lines()
-        .any(|line| line.trim() == "status: active")
-}
-
-/// Каналы, по которым машина реально ходит в сеть. Только в них мы имеем право
-/// прописать свой адрес: запись в спящем канале человек не найдёт никогда, а
-/// работать она перестанет вместе с нашим ядром.
-#[cfg(target_os = "macos")]
-fn active_network_services() -> Vec<String> {
+fn services_to_apply() -> Vec<String> {
     let Ok(output) = std::process::Command::new("networksetup")
         .args(["-listnetworkserviceorder"])
         .output()
@@ -444,25 +462,18 @@ fn active_network_services() -> Vec<String> {
 
     parse_service_devices(&String::from_utf8_lossy(&output.stdout))
         .into_iter()
-        .filter(|(_, device)| {
-            std::process::Command::new("ifconfig")
-                .arg(device)
-                .output()
-                .map(|out| is_device_active(&String::from_utf8_lossy(&out.stdout)))
-                .unwrap_or(false)
-        })
         .map(|(service, _)| service)
         .collect()
 }
 
 /// Где лежат запомненные чужие записи. На диске, а не в памяти: приложение
 /// может упасть, а вернуть человеку его настройку надо в любом случае.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn foreign_backup_path() -> std::path::PathBuf {
     std::path::PathBuf::from(crate::utils::app_util::get_work_dir_sync()).join("foreign_proxy.json")
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn read_foreign_backup() -> ProxyBackup {
     std::fs::read_to_string(foreign_backup_path())
         .ok()
@@ -470,7 +481,7 @@ fn read_foreign_backup() -> ProxyBackup {
         .unwrap_or_default()
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn write_foreign_backup(backup: &ProxyBackup) {
     match serde_json::to_string_pretty(backup) {
         Ok(raw) => {
@@ -482,7 +493,7 @@ fn write_foreign_backup(backup: &ProxyBackup) {
     }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn clear_foreign_backup() {
     let _ = std::fs::remove_file(foreign_backup_path());
 }
@@ -572,7 +583,27 @@ fn disable_system_proxy_macos() -> io::Result<()> {
 #[cfg(target_os = "windows")]
 fn enable_system_proxy_windows(host: &str, port: u16, bypass: Option<&str>) -> io::Result<()> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let settings = hkcu.open_subkey_with_flags(registry::INTERNET_SETTINGS, KEY_WRITE)?;
+    let settings =
+        hkcu.open_subkey_with_flags(registry::INTERNET_SETTINGS, KEY_READ | KEY_WRITE)?;
+
+    // На этом месте могла стоять чужая запись — другой VPN-клиент или рабочий
+    // прокси. Запоминаем ДО того, как ляжем поверх: на выходе вернём ровно её,
+    // иначе человек остаётся с мёртвым браузером в соседней программе.
+    let current: String = settings
+        .get_value(registry::PROXY_SERVER)
+        .unwrap_or_default();
+    if let Some(foreign) = windows_foreign_value(&current, applied_proxy_port()) {
+        let mut backup = read_foreign_backup();
+        backup
+            .entry(backup_key("windows", "proxy"))
+            .or_insert(ProxyRecord {
+                server: foreign.clone(),
+                port: 0,
+                enabled: true,
+            });
+        write_foreign_backup(&backup);
+        tracing::info!("чужая запись прокси запомнена: реестр → {}", foreign);
+    }
 
     // 设置代理服务器地址
     let proxy_server = format!("{}:{}", host, port);
@@ -764,11 +795,10 @@ fn enable_system_proxy_macos(host: &str, port: u16, bypass: Option<&str>) -> io:
     // записи: на выходе вернём ровно то, что стояло.
     let mut backup = read_foreign_backup();
 
-    // Только живые каналы: в спящем наша запись останется мусором, который
-    // человек не найдёт, а трафик по нему всё равно не идёт.
+    // Только сетевые карты машины: виртуальный канал чужого клиента не наш.
     let entries = parse_bypass_entries(bypass);
 
-    for service in active_network_services() {
+    for service in services_to_apply() {
         let service = service.as_str();
 
         // HTTP и HTTPS: запоминаем чужое, потом кладём своё

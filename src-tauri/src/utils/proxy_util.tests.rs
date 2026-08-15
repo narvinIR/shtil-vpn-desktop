@@ -177,6 +177,32 @@ fn windows_touches_only_our_own_registry_record() {
     assert!(!is_our_windows_proxy("", Some(12080)));
 }
 
+/// Windows: чужую запись запоминаем ДО того, как ляжем поверх. Снятие там уже
+/// умело не трогать чужое, а включение затирало без спроса — ровно половина,
+/// на которой обожглись на Маке 06.08.2026. У владельца на боевой Windows
+/// живёт Throne на 2080: без этого его настройка исчезала бы навсегда.
+#[test]
+fn foreign_windows_record_is_remembered_before_we_overwrite_it() {
+    // строка реестра запоминается целиком: там бывает и составной вид
+    assert_eq!(
+        windows_foreign_value("127.0.0.1:2080", Some(12080)),
+        Some("127.0.0.1:2080".to_string())
+    );
+    assert_eq!(
+        windows_foreign_value("http=127.0.0.1:2080;https=127.0.0.1:2080", Some(12080)),
+        Some("http=127.0.0.1:2080;https=127.0.0.1:2080".to_string())
+    );
+    assert_eq!(
+        windows_foreign_value("proxy.corp.local:3128", Some(12080)),
+        Some("proxy.corp.local:3128".to_string())
+    );
+
+    // своё запоминать нечего
+    assert_eq!(windows_foreign_value("127.0.0.1:12080", Some(12080)), None);
+    // пустое место — тоже
+    assert_eq!(windows_foreign_value("", Some(12080)), None);
+}
+
 /// macOS: свой адрес пишем ТОЛЬКО в каналы, по которым машина реально ходит в
 /// сеть. Раньше писали во все подряд — и след оставался в спящих каналах, где
 /// его потом никто не искал (15.08.2026: Мак владельца полгода гнал трафик в
@@ -224,16 +250,24 @@ fn service_switched_off_by_the_person_is_skipped() {
     );
 }
 
-/// Живой канал — тот, у кого поднято соединение. Кабель не воткнут (`inactive`)
-/// или устройства нет вовсе — значит человек по этому каналу не ходит, и наша
-/// запись там будет только мусором.
+/// Кабель без линка пропускать НЕЛЬЗЯ: человек переставляет ноутбук с Wi-Fi на
+/// кабель, и запись обязана уже стоять там — иначе трафик пойдёт мимо VPN при
+/// зелёном экране «Подключено». Поэтому сетевые карты берём все, а отсекаем
+/// только каналы без устройства.
 #[cfg(target_os = "macos")]
 #[test]
-fn sleeping_channel_is_left_alone() {
-    let active = "\tinet 192.168.2.110 netmask 0xffffff00 broadcast 192.168.2.255\n\tstatus: active\n";
-    let sleeping = "\tstatus: inactive\n";
+fn every_network_card_keeps_our_record() {
+    let order = "An asterisk (*) denotes that a network service is disabled.\n\
+                 (1) Ethernet\n\
+                 (Hardware Port: Ethernet, Device: en0)\n\
+                 \n\
+                 (2) Wi-Fi\n\
+                 (Hardware Port: Wi-Fi, Device: en1)\n";
 
-    assert!(is_device_active(active));
-    assert!(!is_device_active(sleeping));
-    assert!(!is_device_active(""));
+    let services: Vec<String> = parse_service_devices(order)
+        .into_iter()
+        .map(|(service, _)| service)
+        .collect();
+
+    assert_eq!(services, vec!["Ethernet".to_string(), "Wi-Fi".to_string()]);
 }
