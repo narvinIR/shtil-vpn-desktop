@@ -145,6 +145,8 @@ export default {
       disconnecting: 'Disconnecting',
       disconnected: 'Off',
       failed: 'Connection failed',
+      bypassed: 'Not protected',
+      silent: 'Server is not responding',
     },
     action: {
       connect: 'Connect',
@@ -170,8 +172,6 @@ export default {
       channels: {
         auto: 'Automatic',
         main: 'USA · New York',
-        backup: 'USA · New York · backup',
-        fast: 'USA · New York · fast',
         direct: 'No channel, direct',
       },
     },
@@ -179,7 +179,12 @@ export default {
       noKey: 'Add a key — the Shtil bot in Telegram issues it',
       ready: 'Click the circle and the connection turns on',
       busy: 'This takes a couple of seconds',
-      connected: 'Russian sites keep opening through your home connection — banks, government services and shops still see your usual address',
+      connected:
+        'Russian sites keep opening through your home connection — banks, government services and shops still see your usual address',
+      bypassed:
+        'The connection is established, but traffic bypasses the VPN. Turn on “Through the system” in “Connection mode”',
+      silent:
+        'The connection is established, but the server is not responding. Choose another server or refresh your key on the “Key” screen',
     },
     deviceNews: {
       paid: 'The subscription is extended — you can connect',
@@ -194,6 +199,7 @@ export default {
       over: 'The subscription has ended — renew it in the bot',
       daysLeft: '{days} days left',
       lastDay: 'last day',
+      unlimited: 'Subscription without an end date',
       renew: 'Renew',
     },
     advanced: {
@@ -219,7 +225,8 @@ export default {
         permission_denied: 'The system refused — run Shtil as administrator',
         sudo_required: 'Your account password is required — enter it in the settings',
         sudo_invalid: 'The account password did not fit — enter it again',
-        port_conflict: 'The port is taken by another program — close it or change the port in the settings',
+        port_conflict:
+          'The port is taken by another program — close it or change the port in the settings',
         process_exited_early: 'The connection dropped right after the start — please try again',
         api_http_error: 'The connection does not answer — please try again',
         api_timeout: 'The connection did not answer in time — please try again',
@@ -249,7 +256,8 @@ export default {
   },
   diagnostics: {
     entryTitle: 'Diagnostics',
-    entryDesc: 'What the app is doing and where connections go. Useful when you ask support for help',
+    entryDesc:
+      'What the app is doing and where connections go. Useful when you ask support for help',
     entryOpen: 'Open diagnostics',
     title: 'Diagnostics',
     subtitle: 'App activity log and connections right now',
@@ -329,8 +337,9 @@ export default {
   },
   setting: {
     title: 'Settings',
-    subtitle: 'Manage application configuration and system settings',
+    subtitle: 'How the app starts, how it looks, and how it works with your network',
     appVersion: 'App Version',
+    kernelVersion: 'Kernel Version',
     notInstalled: 'Not Installed',
     newVersionFound: 'New Version Found',
     navigation: {
@@ -365,8 +374,8 @@ export default {
       title: 'Language',
       auto: 'Auto',
       changed: 'Language changed',
-      changeSuccess: 'Language changed successfully',
-      description: 'Select application interface display language',
+      changeSuccess: 'Language changed',
+      description: 'The language the app speaks to you in',
     },
     network: {
       title: 'Network Settings',
@@ -384,7 +393,7 @@ export default {
       proxyPort: 'Proxy Port',
       apiPort: 'API Port',
       portSettings: 'Port Settings',
-      invalidPort: 'Invalid port number, please enter a port between 1024-65535',
+      invalidPort: 'The port number is invalid — enter a value between 1024 and 65535',
       portConflict: 'Proxy port and API port cannot be the same',
       restartRequired: 'Kernel restart required',
       restartDesc: 'Kernel restart required after port changes to take effect',
@@ -437,7 +446,7 @@ export default {
       prereleaseDisabledDesc: 'You will only receive stable version update notifications',
       newVersionFound: 'New version {version} found!',
       downloadStarted: 'Update download started in the background.',
-      installStarted: 'Installer has started, please follow the prompts to finish installation',
+      installStarted: 'Installation has started — follow the prompts on screen',
       externalUpdateHint:
         'In-app update is not supported on this platform yet. Please open the release page and download the proper package manually.',
       downloadError: 'Update download failed: {error}',
@@ -457,16 +466,17 @@ export default {
       restoreConfirm: 'Restore will overwrite current configuration. Continue?',
       restoreSuccess: 'Restore completed with {count} subscriptions',
       restoreWithWarnings: 'Restore completed with {count} warnings',
-      operationFailed: 'Backup operation failed',
+      operationFailed: 'The backup did not work out',
       selectedFile: 'Backup File',
       subscriptionCount: 'Subscriptions',
       warningCount: 'Warnings',
+      warningsHint:
+        'Some values are missing from the backup — they will fall back to defaults. Your subscriptions and keys are not affected',
       noPreview: 'No validation result yet. Restore will ask you to pick a backup file.',
     },
     autoStart: {
       app: 'Startup with System',
       appDesc: 'Automatically run application on system startup',
-      error: 'Failed to set auto-start',
     },
     startup: {
       title: 'Startup Settings',
@@ -476,12 +486,12 @@ export default {
         'Only applies when the app is launched by system autostart. Disable it to show the main window on login.',
       closeBehavior: 'Close Button Behavior',
       closeBehaviorDesc:
-        'Choose whether closing the window hides it to tray or destroys it for lower background memory usage',
+        'What the close button does: hide the window to the tray, or close it completely so it uses less memory in the background',
       closeBehaviorHide: 'Hide to Tray',
-      closeBehaviorLightweight: 'Lightweight Mode (Destroy Window)',
+      closeBehaviorLightweight: 'Close completely — less memory',
       enabled: 'Startup with system enabled',
       disabled: 'Startup with system disabled',
-      enableSuccess: 'Startup with system setting successful',
+      enableSuccess: 'Startup with system enabled',
       disableSuccess: 'Startup with system disabled',
     },
     kernel: {
@@ -523,7 +533,7 @@ export default {
       manualDownloadTitle: 'Manual Download Instructions',
       manualDownloadGuide:
         'You normally do not need this: the kernel already ships inside the app and updates with it.\n\n1. Open https://github.com/SagerNet/sing-box/releases/latest\n2. Download the file for your system\n3. Put the unpacked file here:\nWindows: %LOCALAPPDATA%\\ShtilVPN\\sing-box\\sing-box.exe\nmacOS: ~/Library/Application Support/ShtilVPN/sing-box/sing-box\n\nThen press “Check Installation”.',
-      installPrompt: 'Please download and install kernel before use.',
+      installPrompt: 'Download and install the kernel before you start.',
       downloadFailedMessage: 'Kernel download failed: {error}',
       downloadSuccess: 'Kernel downloaded successfully',
       downloadFailed: 'Kernel download failed',
@@ -540,7 +550,7 @@ export default {
       tunTitle: 'TUN Virtual Adapter',
       tunAddressInfo: 'IPv4/IPv6 ranges are preset to 172.19.0.1/30 and fdfe:dcba:9876::1/126.',
       tunMtu: 'MTU',
-      tunStack: 'Protocol stack',
+      tunStack: 'Network stack',
       tunRouteExcludeAddress: 'Route exclude addresses',
       tunRouteExcludeAddressPlaceholder:
         'One CIDR per line, e.g.\n192.168.0.0/16\nfd00::/8\nLeave blank to use the default behavior',
@@ -634,7 +644,8 @@ export default {
       codeQrHint: 'Or point your phone camera here: the bot opens with this code',
       waiting: 'Waiting for confirmation in the bot…',
       cancel: 'Cancel',
-      linkedText: 'This computer is linked to the bot: the key and the subscription term arrive on their own',
+      linkedText:
+        'This computer is linked to the bot: the key and the subscription term arrive on their own',
       unlink: 'Unlink',
       unlinked: 'The computer is unlinked from the bot',
       noSubscription: 'This account has no active subscription — pay for it in the bot',
@@ -648,7 +659,8 @@ export default {
       left: 'Trial access: {left} left · {traffic} GB of traffic',
       leftHours: '{hours} h {minutes} min',
       leftMinutes: '{minutes} min',
-      alreadyIssued: 'This computer has already used the trial access. The Shtil bot in Telegram issues the key',
+      alreadyIssued:
+        'This computer has already used the trial access. The Shtil bot in Telegram issues the key',
       limit: 'No trial accesses are left for today. Try later or take the key in the bot',
       disabled: 'Trial access is closed right now. The Shtil bot in Telegram issues the key',
       failed: 'The server did not answer. Check the connection and try again',
@@ -656,9 +668,9 @@ export default {
     link: {
       clipboardEmpty: 'The clipboard is empty — copy the key in the bot first',
       paste: 'Paste from clipboard',
-      text: 'A subscription link works, and so does a key that starts with vless://',
+      text: 'A subscription link works, and so does the key itself — paste whatever the bot sent',
       title: 'Paste the key here',
-      placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
+      placeholder: 'Paste the link or the key from the bot here',
       apply: 'Apply the key',
       needLink: 'Paste the link or the key',
     },
@@ -688,7 +700,8 @@ export default {
     quit: 'Quit Application',
   },
   notification: {
-    subscriptionRefreshFailed: 'The key could not be refreshed after the app update. Open the Key screen and press Refresh',
+    subscriptionRefreshFailed:
+      'The key could not be refreshed after the app update. Open the Key screen and press Refresh',
     proxyModeChanged: 'Proxy mode changed',
     proxyModeChangeFailed: 'Proxy mode change failed',
     kernelRestarted: 'Connection restarted',
@@ -711,13 +724,15 @@ export default {
       KERNEL_BINARY_MISSING: 'Kernel binary not found. Please install the kernel first.',
       KERNEL_START_UNSTABLE: 'Kernel exited shortly after startup. Check the config or port usage.',
       KERNEL_GUARD_RESTART_FAILED: 'Kernel stopped unexpectedly and auto-restart failed.',
-      KERNEL_GUARD_SELF_HEAL_FAILED: 'Kernel self-healing restart failed.',
+      KERNEL_GUARD_SELF_HEAL_FAILED: 'The connection could not be restored automatically.',
       KERNEL_STOP_FAILED: 'Failed to stop the kernel.',
       KERNEL_AUTO_MANAGE_FAILED: 'Kernel auto-management failed.',
-      KERNEL_CONFLICT_DETECTED: 'A stale kernel is running. Trying to force-stop it before continuing.',
-      KERNEL_CONFLICT_FORCE_STOP_FAILED: 'Failed to force-stop the stale kernel. Please end the process manually and retry.',
+      KERNEL_CONFLICT_DETECTED:
+        'A stale kernel is running. Trying to force-stop it before continuing.',
+      KERNEL_CONFLICT_FORCE_STOP_FAILED:
+        'Failed to force-stop the stale kernel. Please end the process manually and retry.',
       KERNEL_RUNTIME_ERROR: 'Kernel runtime error',
-      KERNEL_OPERATION_FAILED: 'Kernel operation failed: {operation}',
+      KERNEL_OPERATION_FAILED: 'The connection did not respond — please try again',
       details: 'Details: {details}',
     },
   },

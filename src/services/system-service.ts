@@ -40,8 +40,9 @@ export interface PendingAppUpdate {
 }
 
 export const systemService = {
-  pickKernelImportFile() {
-    return invokeWithAppContext<string | null>('pick_kernel_import_file', undefined, {
+  /** Заголовок системного окна выбора файла — на языке клиента, с экрана. */
+  pickKernelImportFile(title?: string) {
+    return invokeWithAppContext<string | null>('pick_kernel_import_file', { title }, {
       skipDataRestore: true,
     })
   },

@@ -203,7 +203,7 @@ import BrandWave from '@/components/common/BrandWave.vue'
 import { subscriptionExpiryDate } from '@/views/sub/subscription-utils'
 import { useKernelStatus } from '@/composables/useKernelStatus'
 import { formatBytes } from '@/utils'
-import { channelKey } from '@/utils/channel-names'
+import { channelKey, describeChannel } from '@/utils/channel-names'
 
 defineOptions({
   name: 'HomeView',
@@ -226,6 +226,9 @@ const { statusState, isReady } = useKernelStatus(kernelStore)
 /** Своё ожидание: стор помечает загрузку только на запуске, не на остановке. */
 const pending = ref<'connect' | 'disconnect' | null>(null)
 const modeSwitchPending = ref(false)
+/** Сколько проб канала подряд не дошло: замер отклика — единственная живая
+    проверка, что связь не только поднялась, но и везёт. */
+const probeFailures = ref(0)
 const now = ref(Date.now())
 let tick: number | null = null
 let serverTick: number | null = null
@@ -241,8 +244,21 @@ const busy = computed(
 )
 const ringEnabled = computed(() => !busy.value)
 
+/**
+ * Пущен ли трафик через нас. Ядро живо и отвечает — это ещё не защита: при
+ * выключенных обоих режимах программы выходят напрямую, а экран до этой
+ * правки продолжал писать «Подключено».
+ */
+const trafficRouted = computed(() => appStore.systemProxyEnabled || appStore.tunEnabled)
+
+/** Канал не ответил на две пробы подряд: связь поднята, а интернета через неё нет. */
+const channelSilent = computed(() => connected.value && probeFailures.value >= 2)
+
 const stateClass = computed(() => {
-  if (connected.value) return 'is-connected'
+  if (connected.value) {
+    if (!trafficRouted.value) return 'is-bypassed'
+    return channelSilent.value ? 'is-failed' : 'is-connected'
+  }
   if (busy.value) return 'is-busy'
   if (!hasKey.value) return 'is-empty'
   // Сбой обязан быть виден по самому кругу: раньше не подключившееся
@@ -295,17 +311,50 @@ const uptime = computed(() => {
 
 /** Группа выбора из подписки: в ней и лежат каналы, между которыми переключаемся. */
 const channelGroup = computed(() => proxyStore.proxyGroups[0])
-const activeNode = computed(() => channelGroup.value?.now || '')
 
-/** Служебное имя узла («VPN-HY2») человеку не показываем — только людское. */
-const channelLabel = (tag: string) => {
-  const key = channelKey(tag)
-  return key ? t(`home.server.channels.${key}`) : tag
+/** Что выбрано человеком: канал или «Автоматически». */
+const activeChoice = computed(() => channelGroup.value?.now || '')
+
+/**
+ * За «Автоматически» стоит ещё одна группа, а трафик везёт конкретный канал.
+ * Разворачиваем до него: отклик меряем у того, кто реально работает, а не у
+ * пункта выбора — иначе к честному кругу добавляется лишний, а на экране
+ * стоит «Автоматически» без ответа, какой это канал.
+ */
+const resolveLeaf = (tag: string) => {
+  let current = tag
+  for (let step = 0; step < 4; step += 1) {
+    const group = proxyStore.proxyGroups.find((item) => item.name === current)
+    if (!group?.now || group.now === current) break
+    current = group.now
+  }
+  return current
 }
 
-const serverName = computed(() =>
-  activeNode.value ? channelLabel(activeNode.value) : t('home.server.searching'),
-)
+const activeNode = computed(() => (activeChoice.value ? resolveLeaf(activeChoice.value) : ''))
+
+/**
+ * Служебное имя узла («VPN-HY2») человеку не показываем — только людское. Ключ
+ * могут выдать с любым тегом, поэтому у чужого имени убираем служебные части:
+ * «Shtil-HY2-Tallinn» превращается в «Tallinn».
+ */
+const channelLabel = (tag: string) => {
+  const key = channelKey(tag)
+  if (key) return t(`home.server.channels.${key}`)
+  const words = describeChannel(tag)
+  return words.length ? words.join(' · ') : tag
+}
+
+/** Показываем и выбор человека, и канал за ним: «Автоматически» само по себе
+    не отвечает на вопрос, куда именно идёт связь. */
+const serverName = computed(() => {
+  if (!activeChoice.value) return t('home.server.searching')
+  const choice = channelLabel(activeChoice.value)
+  if (activeNode.value && activeNode.value !== activeChoice.value) {
+    return `${choice} · ${channelLabel(activeNode.value)}`
+  }
+  return choice
+})
 
 /**
  * Каналы на выбор. «Напрямую» из списка убрано: это не сервер, а выход МИМО
@@ -313,19 +362,28 @@ const serverName = computed(() =>
  * «Подключено». Российские сайты и без того идут напрямую, это решает сам
  * ключ, а не человек.
  */
-const channelOptions = computed(() =>
-  (channelGroup.value?.all || [])
+const channelOptions = computed(() => {
+  // Один сервер часто заведён несколькими способами связи. Человеку это один
+  // и тот же выбор, поэтому одинаковые имена в списке не повторяем.
+  const seen = new Set<string>()
+  return (channelGroup.value?.all || [])
     .filter((tag) => channelKey(tag) !== 'direct')
-    .map((tag) => ({ key: tag, label: channelLabel(tag) })),
-)
+    .map((tag) => ({ key: tag, label: channelLabel(tag) }))
+    .filter((option) => {
+      if (seen.has(option.label)) return false
+      seen.add(option.label)
+      return true
+    })
+})
 
 const onPickChannel = async (tag: string) => {
   const group = channelGroup.value
-  if (!group || tag === activeNode.value) return
+  if (!group || tag === activeChoice.value) return
   try {
     await proxyStore.changeProxy(group.name, tag)
-    await proxyStore.fetchProxies()
-    void proxyStore.testNodeDelay(tag).catch(() => undefined)
+    // Новый канал — новая проба: прежние неудачи к нему отношения не имеют.
+    probeFailures.value = 0
+    await refreshServer()
   } catch {
     message.error(t('home.server.pickFailed'))
   }
@@ -373,12 +431,30 @@ const keyExpiryLine = () => {
   return date ? t('home.subscription.activeUntil', { date: formatUntil(date) }) : ''
 }
 
+/**
+ * Срок, который назвал бот. Бессрочный ключ приходит датой далеко в будущем, и
+ * «до 31 июля 2108 г. · осталось 29936 дн.» человек читает как сбой, а не как
+ * подписку без конца. Горизонт тот же, что и у ключа.
+ */
+const deviceExpiryDate = computed(() => {
+  const raw = deviceLink.expiresAt
+  if (!raw) return null
+  const parsed = new Date(raw)
+  if (Number.isNaN(parsed.getTime())) return null
+  return subscriptionExpiryDate(Math.floor(parsed.getTime() / 1000))
+})
+
+/** Дату вообще не разобрать — это не «бессрочно», а «срок неизвестен». */
+const deviceExpiryBroken = computed(() => {
+  const raw = deviceLink.expiresAt
+  if (!raw) return false
+  return Number.isNaN(new Date(raw).getTime())
+})
+
 /** Сколько дней осталось: человек считает днями, а датой сверяется. */
 const subscriptionDaysLeft = computed(() => {
-  const raw = deviceLink.expiresAt
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return ''
+  const date = deviceExpiryDate.value
+  if (!date) return ''
   const msLeft = date.getTime() - Date.now()
   if (msLeft <= 0) return ''
   const days = Math.ceil(msLeft / 86_400_000)
@@ -394,10 +470,9 @@ const subscriptionLine = computed(() => {
   if (!deviceLink.linked) return keyExpiryLine()
   if (deviceLink.subscription === 'expired') return t('home.subscription.over')
   if (deviceLink.subscription !== 'active') return keyExpiryLine()
-  const raw = deviceLink.expiresAt
-  if (!raw) return keyExpiryLine()
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return ''
+  if (!deviceLink.expiresAt || deviceExpiryBroken.value) return keyExpiryLine()
+  const date = deviceExpiryDate.value
+  if (!date) return t('home.subscription.unlimited')
   const text = formatUntil(date)
   const until = deviceLink.isTrial
     ? t('home.subscription.trialUntil', { date: text })
@@ -421,13 +496,19 @@ const openSupportInBot = () => openUrl('https://t.me/RealityVPNBot_bot')
 const stateTitle = computed(() => {
   if (!hasKey.value) return t('home.action.addKey')
   if (busy.value) return busyWord.value
-  if (connected.value) return t('home.state.connected')
+  if (connected.value) {
+    if (!trafficRouted.value) return t('home.state.bypassed')
+    return channelSilent.value ? t('home.state.silent') : t('home.state.connected')
+  }
   return failureText.value ? t('home.state.failed') : t('home.state.disconnected')
 })
 
 const hint = computed(() => {
   if (!hasKey.value) return t('home.hint.noKey')
-  if (connected.value) return t('home.hint.connected')
+  if (connected.value) {
+    if (!trafficRouted.value) return t('home.hint.bypassed')
+    return channelSilent.value ? t('home.hint.silent') : t('home.hint.connected')
+  }
   if (busy.value) return t('home.hint.busy')
   return t('home.hint.ready')
 })
@@ -543,13 +624,14 @@ const restart = async () => {
  */
 const refreshServer = async () => {
   await proxyStore.fetchProxies().catch(() => undefined)
-  const node = proxyStore.proxyGroups[0]?.now
-  if (node) {
-    await proxyStore.testNodeDelay(node).catch(() => undefined)
-  }
+  const node = activeNode.value
+  if (!node) return
+  const result = await proxyStore.testNodeDelay(node).catch(() => null)
+  probeFailures.value = result?.ok ? 0 : probeFailures.value + 1
 }
 
 watch(connected, (isOn) => {
+  probeFailures.value = 0
   if (isOn) refreshServer()
 })
 
@@ -576,13 +658,22 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Цвет состояния не берётся из акцента: выбрав зелёный акцент, человек получал
+   зелёный круг и зелёную волну на выключенном VPN — ровно тот же вид, что у
+   работающего. Зелёный тут значит «защищено», и ничего больше. */
 .home {
   position: relative;
   min-height: calc(100vh - var(--header-height));
   overflow: hidden;
   background: var(--page-bg);
-  --state-color: var(--primary-color);
-  --wave-color: var(--primary-color);
+  --state-color: var(--text-tertiary);
+  --wave-color: var(--text-tertiary);
+}
+
+/* Выключено: серый, как и «ключа нет» — оба состояния означают «защиты нет». */
+.home.is-off {
+  --state-color: var(--text-tertiary);
+  --wave-color: var(--text-tertiary);
 }
 
 .home.is-connected {
@@ -604,6 +695,12 @@ onUnmounted(() => {
 .home.is-failed {
   --state-color: var(--error-color);
   --wave-color: var(--error-color);
+}
+
+/* Связь есть, но трафик идёт мимо: не зелёный — защиты сейчас нет. */
+.home.is-bypassed {
+  --state-color: var(--warning-color);
+  --wave-color: var(--warning-color);
 }
 
 /* Одна колонка по центру. Раньше ширину задавала себе каждая часть сама:
@@ -649,16 +746,19 @@ onUnmounted(() => {
 }
 
 /* ============ Круг ============ */
+/* Место под кольцо отдаём самой обёртке: раньше кольцо расходилось за её
+   границы и накрывало плашку сервера под кругом. */
 .ring-wrap {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 26px;
 }
 
 .ring-halo {
   position: absolute;
-  inset: -22px;
+  inset: 0;
   border-radius: var(--radius-pill);
   border: 3px solid var(--state-color);
   opacity: 0.35;
@@ -672,7 +772,7 @@ onUnmounted(() => {
     opacity: 0.36;
   }
   100% {
-    transform: scale(1.1);
+    transform: scale(1);
     opacity: 0;
   }
 }
@@ -703,28 +803,42 @@ onUnmounted(() => {
   gap: 6px;
   padding: 0 24px;
   cursor: pointer;
+  /* Подъём и нажатие живут в РАЗНЫХ величинах одного transform: раньше
+     :active со своим transform стирал подъём от :hover целиком, и кнопка
+     дёргалась вниз вместо того, чтобы вжаться. */
+  --ring-lift: 0px;
+  --ring-press: 1;
+  transform: translateY(var(--ring-lift)) scale(var(--ring-press));
   transition:
     border-color var(--transition-base),
     transform var(--transition-fast),
     box-shadow var(--transition-base);
 }
 
-.ring:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 0 32px var(--primary-soft-strong);
+/* Наведение — только там, где указатель настоящий: на касании палец рождает
+   ложное наведение, и кнопка остаётся приподнятой после отпускания. */
+@media (hover: hover) and (pointer: fine) {
+  .ring:hover:not(:disabled) {
+    --ring-lift: -2px;
+    box-shadow: 0 0 32px var(--primary-soft-strong);
+  }
 }
 
 /* Главная кнопка приложения обязана отзываться на нажатие — иначе непонятно,
-   услышали ли тебя, и человек жмёт второй раз. */
+   услышали ли тебя, и человек жмёт второй раз. Отклик короче остального
+   движения: рука ждёт ответа сразу. */
 .ring:active:not(:disabled) {
-  transform: scale(0.97);
-  transition-duration: 90ms;
+  --ring-press: 0.97;
+  transition-duration: 120ms;
 }
 
-/* Клавиатура: круг — единственное действие экрана, до него доходят табом. */
+/* Клавиатура: круг — единственное действие экрана, до него доходят табом.
+   Рамку рисуем обводкой, а не тенью: у подключённого круга своё свечение
+   (`.is-connected .ring`, 42px) той же весомости, но ниже по файлу — оно
+   перебивало тень фокуса, и идущий табом жал пробел вслепую, обрывая связь. */
 .ring:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
+  outline: 2px solid var(--primary-color);
+  outline-offset: 4px;
 }
 
 .ring:disabled {
@@ -909,9 +1023,13 @@ onUnmounted(() => {
   justify-content: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   font-weight: 600;
-  color: var(--primary-color);
+  /* Срок подписки красился акцентным синим — 3.00:1 на стекле плиты при норме
+     4.5:1, то есть главное число экрана было самым нечитаемым. Акцент здесь
+     работал украшением, а не смыслом: цветом на экране выделяется одно
+     действие — круг подключения. */
+  color: var(--text-primary);
 }
 
 .failure {

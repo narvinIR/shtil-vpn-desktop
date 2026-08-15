@@ -176,3 +176,64 @@ fn windows_touches_only_our_own_registry_record() {
     assert!(!is_our_windows_proxy("127.0.0.1:12080", None));
     assert!(!is_our_windows_proxy("", Some(12080)));
 }
+
+/// macOS: свой адрес пишем ТОЛЬКО в каналы, по которым машина реально ходит в
+/// сеть. Раньше писали во все подряд — и след оставался в спящих каналах, где
+/// его потом никто не искал (15.08.2026: Мак владельца полгода гнал трафик в
+/// мёртвый порт, диктовка и браузер молчали, «Штиля» на машине уже не было).
+#[cfg(target_os = "macos")]
+#[test]
+fn only_channels_with_a_device_are_written_to() {
+    let order = "An asterisk (*) denotes that a network service is disabled.\n\
+                 (1) Ethernet\n\
+                 (Hardware Port: Ethernet, Device: en0)\n\
+                 \n\
+                 (2) Thunderbolt Bridge\n\
+                 (Hardware Port: Thunderbolt Bridge, Device: bridge0)\n\
+                 \n\
+                 (3) Wi-Fi\n\
+                 (Hardware Port: Wi-Fi, Device: en1)\n\
+                 \n\
+                 (4) Hiddify\n\
+                 (Hardware Port: apple.hiddify.com, Device: )\n";
+
+    assert_eq!(
+        parse_service_devices(order),
+        vec![
+            ("Ethernet".to_string(), "en0".to_string()),
+            ("Thunderbolt Bridge".to_string(), "bridge0".to_string()),
+            ("Wi-Fi".to_string(), "en1".to_string()),
+        ]
+    );
+}
+
+/// Выключенную человеком службу (со звёздочкой) не трогаем вовсе.
+#[cfg(target_os = "macos")]
+#[test]
+fn service_switched_off_by_the_person_is_skipped() {
+    let order = "An asterisk (*) denotes that a network service is disabled.\n\
+                 (1) Ethernet\n\
+                 (Hardware Port: Ethernet, Device: en0)\n\
+                 \n\
+                 (*) Wi-Fi\n\
+                 (Hardware Port: Wi-Fi, Device: en1)\n";
+
+    assert_eq!(
+        parse_service_devices(order),
+        vec![("Ethernet".to_string(), "en0".to_string())]
+    );
+}
+
+/// Живой канал — тот, у кого поднято соединение. Кабель не воткнут (`inactive`)
+/// или устройства нет вовсе — значит человек по этому каналу не ходит, и наша
+/// запись там будет только мусором.
+#[cfg(target_os = "macos")]
+#[test]
+fn sleeping_channel_is_left_alone() {
+    let active = "\tinet 192.168.2.110 netmask 0xffffff00 broadcast 192.168.2.255\n\tstatus: active\n";
+    let sleeping = "\tstatus: inactive\n";
+
+    assert!(is_device_active(active));
+    assert!(!is_device_active(sleeping));
+    assert!(!is_device_active(""));
+}

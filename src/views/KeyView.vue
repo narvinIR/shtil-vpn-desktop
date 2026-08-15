@@ -108,9 +108,7 @@
               <n-button type="primary" :loading="deviceLink.requesting" @click="askCode">
                 {{ t('key.fromBot.getCode') }}
               </n-button>
-              <p class="card-note warn" v-if="deviceLink.failure === 'network'">
-                {{ t('key.fromBot.failed') }}
-              </p>
+              <p class="card-note warn" v-if="codeFailure">{{ codeFailure }}</p>
               <p class="card-note" v-else>{{ t('key.fromBot.getCodeHint') }}</p>
             </div>
             <div v-if="botQr" class="qr-row">
@@ -260,10 +258,22 @@ const groupedCode = computed(() => {
   return `${value.slice(0, 1)} ${value.slice(1, 4)} ${value.slice(4, 7)} ${value.slice(7)}`
 })
 
+/**
+ * Почему код не пришёл. Сервер называет причину своим словом, а сеть возвращает
+ * текст исключения — человеку в обоих случаях нужна фраза, а не тишина. Раньше
+ * экран ждал ровно `network`, а такого значения не приходит ниоткуда: провал
+ * «Получить ключ» молчал совсем.
+ */
+const codeFailure = computed(() => {
+  if (!deviceLink.failure) return ''
+  if (deviceLink.failure === 'no_subscription') return t('key.fromBot.noSubscription')
+  return t('key.fromBot.failed')
+})
+
 const askCode = async () => {
   await deviceLink.requestCode()
-  if (deviceLink.failure === 'network') {
-    message.error(t('key.fromBot.failed'))
+  if (codeFailure.value) {
+    message.error(codeFailure.value)
   }
 }
 

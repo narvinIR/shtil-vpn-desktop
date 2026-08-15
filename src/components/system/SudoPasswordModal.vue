@@ -44,9 +44,10 @@ const errorText = computed(() => {
     case 'invalid':
       return t('home.sudoPassword.invalid')
     case 'failed':
-      return sudoStore.errorDetail
-        ? `${t('home.sudoPassword.failed')}：${sudoStore.errorDetail}`
-        : t('home.sudoPassword.failed')
+      // Сырой ответ системы человеку не показываем: там служебный текст и вывод
+      // системной команды. В окне, где просят пароль администратора, такое
+      // выглядит как взлом, а сделать по нему всё равно нечего.
+      return t('home.sudoPassword.failed')
     default:
       return ''
   }

@@ -132,10 +132,14 @@
   --z-modal: 2000;
   --z-popover: 1500;
 
-  /* Плавность движения */
-  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Плавность движения. Сильное торможение: быстрый старт, мягкая остановка —
+     движение читается как отклик, а не как проигрывание. Прежняя кривая
+     (0.4, 0, 0.2, 1) разгонялась медленно, и та же длительность ощущалась вялой;
+     Мак свою правильную кривую получил ещё 05.08, Windows и Linux оставались на
+     чужой. */
+  --transition-fast: 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  --transition-base: 0.22s cubic-bezier(0.23, 1, 0.32, 1);
+  --transition-slow: 0.32s cubic-bezier(0.23, 1, 0.32, 1);
 
   /* Размеры раскладки */
   /* Скругление самого окна. На Windows и Linux форму окна задаёт система,
@@ -161,7 +165,12 @@
   --primary-active: var(--accent-user-active, var(--azure-700));
   --primary-soft: var(--accent-user-soft, rgba(79, 146, 255, 0.1));
   --primary-soft-strong: rgba(79, 146, 255, 0.16);
-  --primary-contrast: #ffffff;
+  /* Текст на акценте — чернильный, а не белый. Замер: белое на azure-500 даёт
+     3.05:1 при норме 4.5:1, на azure-300 тёмной темы — 2.16:1, то есть надписи
+     на кнопках и активной вкладке формально нечитаемы. Чернильный даёт 5.97:1 и
+     8.41:1. Это же значение стоит на телефоне (Color.kt → AzureInk), так что
+     заодно уходит расхождение носителей №2 из DESIGN.md. */
+  --primary-contrast: var(--azure-900);
 
   /* Состояния: получилось, внимание, ошибка, справка */
   --success-color: var(--green-500);
@@ -181,7 +190,7 @@
   --text-secondary: var(--ink-600);
   --text-tertiary: var(--ink-500);
   --text-disabled: var(--ink-300);
-  --text-on-primary: #ffffff;
+  --text-on-primary: var(--azure-900);
 
   /* Фон по глубине */
   --bg-base: var(--ink-50);
@@ -236,7 +245,7 @@
   --primary-active: var(--accent-user-active, var(--azure-500));
   --primary-soft: var(--accent-user-soft, rgba(127, 178, 255, 0.16));
   --primary-soft-strong: rgba(127, 178, 255, 0.24);
-  --primary-contrast: #ffffff;
+  --primary-contrast: var(--azure-900);
 
   --success-color: var(--green-400);
   --warning-color: var(--amber-400);

@@ -200,8 +200,10 @@ const handleUpdate = async () => {
     }
     showUpdateModal.value = false
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error)
-    message.error(errMsg)
+    // Плагин обновления отвечает своим машинным текстом, а это единственный
+    // путь обновления в продукте: человеку нужна фраза, а не ответ библиотеки.
+    console.warn('[update]', error)
+    message.error(t('setting.update.updateFailed'))
   }
 }
 
@@ -277,12 +279,20 @@ watch(
   overflow-x: hidden;
 }
 
-/* 页面过渡 */
-.page-fade-enter-active,
-.page-fade-leave-active {
+/* Смена экрана. Уходящий доигрывает целиком, и только потом приходит новый
+   (mode="out-in"), поэтому человек ждёт СУММУ двух движений — по экранам ходят
+   десятки раз за сеанс, и здесь важна незаметность, а не красота перехода.
+   Уход короче входа: прощаться не с чем, а приходящий экран нужно прочитать. */
+.page-fade-enter-active {
   transition:
     opacity var(--transition-fast),
     transform var(--transition-fast);
+}
+
+.page-fade-leave-active {
+  transition:
+    opacity 100ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 100ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .page-fade-enter-from {
@@ -293,5 +303,14 @@ watch(
 .page-fade-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+/* Просьба системы «меньше движения»: смысл перехода несёт проявление,
+   а не сдвиг — сдвиг убираем, проявление оставляем. */
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-enter-from,
+  .page-fade-leave-to {
+    transform: none;
+  }
 }
 </style>
