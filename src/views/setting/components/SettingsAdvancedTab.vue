@@ -54,14 +54,9 @@
 
           <div class="form-section-title">{{ props.t('setting.proxyAdvanced.tunTitle') }}</div>
 
-          <div class="setting-form-grid">
-            <n-form-item :label="props.t('setting.proxyAdvanced.tunMtu')">
-              <n-input-number v-model:value="proxyAdvancedForm.tunMtu" :min="576" :max="9000" />
-            </n-form-item>
-            <n-form-item :label="props.t('setting.proxyAdvanced.tunStack')">
-              <n-select v-model:value="proxyAdvancedForm.tunStack" :options="props.tunStackOptions" />
-            </n-form-item>
-          </div>
+          <n-form-item :label="props.t('setting.proxyAdvanced.tunMtu')">
+            <n-input-number v-model:value="proxyAdvancedForm.tunMtu" :min="576" :max="9000" />
+          </n-form-item>
 
           <n-form-item :label="props.t('setting.proxyAdvanced.tunRouteExcludeAddress')">
             <n-input
@@ -114,260 +109,42 @@
       </div>
     </transition>
 
-    <h3 class="setting-section-title">{{ props.t('setting.singboxProfile.title') }}</h3>
-
-    <div class="collapsible-header" @click="toggleSection('profile')">
-      <span class="collapsible-label">{{ props.t('setting.singboxProfile.routingTitle') }}</span>
-      <n-icon :size="16" class="collapse-arrow" :class="{ expanded: expandedSections.profile }">
-        <ChevronDownOutline />
-      </n-icon>
-    </div>
-    <transition name="collapse">
-      <div v-if="expandedSections.profile" class="collapsible-body">
-        <div v-if="props.usingOriginalConfig" class="setting-alert info">
-          <n-icon :size="16"><InformationCircleOutline /></n-icon>
-          <span>{{ props.t('setting.singboxProfile.originalConfigHint') }}</span>
-        </div>
-
-        <n-form label-placement="top" class="advanced-form">
-          <div class="form-section-title">{{ props.t('setting.singboxProfile.routingTitle') }}</div>
-
-          <div class="setting-form-grid">
-            <n-form-item :label="props.t('setting.singboxProfile.defaultOutbound')">
-              <n-select
-                v-model:value="singboxProfileForm.defaultProxyOutbound"
-                :options="defaultOutboundOptions"
-              />
-            </n-form-item>
-            <n-form-item :label="props.t('setting.singboxProfile.downloadDetour')">
-              <n-select
-                v-model:value="singboxProfileForm.downloadDetour"
-                :options="downloadDetourOptions"
-              />
-            </n-form-item>
-          </div>
-
-          <div class="setting-toggles-grid">
-            <div class="setting-toggle-item">
-              <span class="setting-toggle-label">{{ props.t('setting.singboxProfile.dnsHijack') }}</span>
-              <n-switch v-model:value="singboxProfileForm.dnsHijack" />
-            </div>
-            <div class="setting-toggle-item">
-              <span class="setting-toggle-label">{{ props.t('setting.singboxProfile.fakeDnsEnabled') }}</span>
-              <n-switch v-model:value="singboxProfileForm.fakeDnsEnabled" />
-            </div>
-          </div>
-
-          <div class="form-section-title">{{ props.t('setting.singboxProfile.fakeDnsTitle') }}</div>
-
-          <div class="setting-form-grid">
-            <n-form-item :label="props.t('setting.singboxProfile.fakeDnsIpv4Range')">
-              <n-input
-                v-model:value="singboxProfileForm.fakeDnsIpv4Range"
-                placeholder="198.18.0.0/15"
-                :disabled="!singboxProfileForm.fakeDnsEnabled"
-              />
-            </n-form-item>
-          </div>
-
-          <div class="setting-form-grid">
-            <n-form-item :label="props.t('setting.singboxProfile.fakeDnsIpv6Range')">
-              <n-input
-                v-model:value="singboxProfileForm.fakeDnsIpv6Range"
-                placeholder="fc00::/18"
-                :disabled="!singboxProfileForm.fakeDnsEnabled"
-              />
-            </n-form-item>
-          </div>
-
-          <div class="form-section-title">{{ props.t('setting.singboxProfile.dnsTitle') }}</div>
-
-          <div class="setting-form-grid">
-            <n-form-item :label="props.t('setting.singboxProfile.dnsProxy')">
-              <n-input
-                v-model:value="singboxProfileForm.dnsProxy"
-                placeholder="https://dns.google/dns-query"
-              />
-            </n-form-item>
-            <n-form-item :label="props.t('setting.singboxProfile.dnsCn')">
-              <n-input
-                v-model:value="singboxProfileForm.dnsCn"
-                placeholder="https://77.88.8.8/dns-query"
-              />
-            </n-form-item>
-          </div>
-
-          <div class="setting-form-grid">
-            <n-form-item :label="props.t('setting.singboxProfile.dnsResolver')">
-              <n-input
-                v-model:value="singboxProfileForm.dnsResolver"
-                placeholder="77.88.8.8"
-              />
-            </n-form-item>
-            <n-form-item :label="props.t('setting.singboxProfile.urltestUrl')">
-              <n-input
-                v-model:value="singboxProfileForm.urltestUrl"
-                placeholder="http://cp.cloudflare.com/generate_204"
-              />
-            </n-form-item>
-          </div>
-
-          <n-button
-            type="primary"
-            block
-            :loading="savingSingboxProfile"
-            @click="saveSingboxProfileSettings"
-          >
-            {{ props.t('setting.singboxProfile.save') }}
-          </n-button>
-        </n-form>
-      </div>
-    </transition>
-
-    <h3 class="setting-section-title">{{ extraLabels.dashboardTitle }}</h3>
-
-    <div class="collapsible-header" @click="toggleSection('dashboard')">
-      <span class="collapsible-label">{{ extraLabels.proxyPrefs }}</span>
-      <n-icon :size="16" class="collapse-arrow" :class="{ expanded: expandedSections.dashboard }">
-        <ChevronDownOutline />
-      </n-icon>
-    </div>
-    <transition name="collapse">
-      <div v-if="expandedSections.dashboard" class="collapsible-body">
-        <div class="form-section-title">{{ extraLabels.proxyPrefs }}</div>
-        <div class="setting-form-grid">
-          <n-form-item :label="extraLabels.proxyOrdering">
-            <n-select v-model:value="proxyStore.ordering" :options="proxyOrderingOptions" />
-          </n-form-item>
-          <n-form-item :label="extraLabels.proxyDisplay">
-            <n-select v-model:value="proxyStore.displayMode" :options="proxyDisplayOptions" />
-          </n-form-item>
-        </div>
-
-        <div class="setting-toggles-grid">
-          <div class="setting-toggle-item">
-            <span class="setting-toggle-label">{{ extraLabels.proxyHideUnavailable }}</span>
-            <n-switch v-model:value="proxyStore.hideUnavailable" />
-          </div>
-          <div class="setting-toggle-item">
-            <span class="setting-toggle-label">{{ extraLabels.proxyAutoClose }}</span>
-            <n-switch v-model:value="proxyStore.autoCloseConnections" />
-          </div>
-        </div>
-
-        <div class="setting-form-grid">
-          <n-form-item :label="extraLabels.latencyTimeout">
-            <n-input-number
-              v-model:value="proxyStore.latencyTimeoutMs"
-              :min="1000"
-              :max="20000"
-              :step="500"
-            />
-          </n-form-item>
-          <n-form-item :label="extraLabels.latencyUrl">
-            <n-input v-model:value="proxyStore.latencyTestUrl" :placeholder="props.appStore.singboxUrltestUrl" />
-          </n-form-item>
-        </div>
-
-        <div class="form-section-title">{{ extraLabels.logRetentionPrefs }}</div>
-        <div class="setting-form-grid">
-          <n-form-item :label="extraLabels.logMaxRows">
-            <n-input-number
-              v-model:value="logStore.maxLogs"
-              :min="100"
-              :max="5000"
-              :step="100"
-            />
-          </n-form-item>
-        </div>
-        <div class="setting-hint">{{ extraLabels.logRetentionHint }}</div>
-      </div>
-    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
-import {
-  SettingsOutline,
-  InformationCircleOutline,
-  ChevronDownOutline,
-} from '@vicons/ionicons5'
+import { reactive } from 'vue'
+import { SettingsOutline, ChevronDownOutline } from '@vicons/ionicons5'
 import { useMessage } from 'naive-ui'
 import type { useAppStore } from '@/stores'
 import { useAdvancedSettingsForm } from '@/views/setting/useAdvancedSettingsForm'
-import { useProxyStore } from '@/stores/kernel/ProxyStore'
-import { useLogStore } from '@/stores/kernel/LogStore'
 
-type LabeledOption = { label: string; value: string }
 type AppStoreLike = ReturnType<typeof useAppStore>
 
 const props = defineProps<{
   t: (key: string, params?: Record<string, string | number>) => string
   appStore: AppStoreLike
-  tunStackOptions: LabeledOption[]
-  usingOriginalConfig: boolean
   onIpVersionChange: (value: boolean) => void | Promise<void>
   onLanAccessChange: (value: boolean) => void | Promise<void>
   showPortSettings: () => void
 }>()
 
 const message = useMessage()
-const proxyStore = useProxyStore()
-const logStore = useLogStore()
 
 const expandedSections = reactive({
   proxy: false,
-  profile: false,
-  dashboard: false,
 })
 
 const toggleSection = (key: keyof typeof expandedSections) => {
   expandedSections[key] = !expandedSections[key]
 }
 
-const {
-  savingAdvanced,
-  proxyAdvancedForm,
-  savingSingboxProfile,
-  singboxProfileForm,
-  defaultOutboundOptions,
-  downloadDetourOptions,
-  saveProxyAdvancedSettings,
-  saveSingboxProfileSettings,
-} = useAdvancedSettingsForm({
+const { savingAdvanced, proxyAdvancedForm, saveProxyAdvancedSettings } = useAdvancedSettingsForm({
   appStore: props.appStore,
   message,
   t: props.t,
 })
 
-// Глубокие настройки форка мы не переводим: они падают на английский, а не на
-// сырое имя ключа. Китайская ветка снесена — этого языка в продукте нет.
-const extraLabels = computed(() => ({
-  dashboardTitle: 'Dashboard & List Preferences',
-  proxyPrefs: 'Proxy Preferences',
-  proxyOrdering: 'Node Ordering',
-  proxyDisplay: 'Node Display Mode',
-  proxyHideUnavailable: 'Hide unavailable nodes',
-  proxyAutoClose: 'Close existing connections after switch',
-  latencyTimeout: 'Latency timeout (ms)',
-  latencyUrl: 'Latency URL',
-  logRetentionPrefs: 'Log Retention',
-  logMaxRows: 'Maximum log rows',
-  logRetentionHint:
-    'Controls only the number of log rows shown in the UI. The on-disk sing-box.log is rotated automatically on kernel start (kept to last 3 files after 10MB).',
-}))
-
-const proxyOrderingOptions = computed(() => [
-  { label: 'Natural', value: 'natural' },
-  { label: 'Latency', value: 'latency' },
-  { label: 'Name', value: 'name' },
-])
-
-const proxyDisplayOptions = computed(() => [
-  { label: 'Card', value: 'card' },
-  { label: 'Compact List', value: 'list' },
-])
 </script>
 
 <style scoped>

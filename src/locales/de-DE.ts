@@ -151,6 +151,8 @@ export default {
       disconnecting: 'Verbindung wird getrennt',
       disconnected: 'Aus',
       failed: 'Verbindung fehlgeschlagen',
+      bypassed: 'Nicht geschützt',
+      silent: 'Server antwortet nicht',
     },
     action: {
       connect: 'Verbinden',
@@ -176,8 +178,6 @@ export default {
       channels: {
         auto: 'Automatisch',
         main: 'USA · New York',
-        backup: 'USA · New York · Reserve',
-        fast: 'USA · New York · schnell',
         direct: 'Ohne Kanal, direkt',
       },
     },
@@ -186,6 +186,10 @@ export default {
       ready: 'Klicken Sie auf den Kreis, dann startet die Verbindung',
       busy: 'Das dauert ein paar Sekunden',
       connected: 'Russische Seiten laufen weiter über Ihre gewohnte Verbindung — Banken, Behördenportale und Shops sehen Ihre übliche Adresse',
+      bypassed:
+        'Die Verbindung steht, aber der Datenverkehr läuft am VPN vorbei. Aktivieren Sie „Über das System“ unter „Verbindungsmodus“',
+      silent:
+        'Die Verbindung steht, aber der Server antwortet nicht. Wählen Sie einen anderen Server oder aktualisieren Sie den Schlüssel im Bereich „Schlüssel“',
     },
     deviceNews: {
       paid: 'Das Abo ist verlängert — Sie können sich verbinden',
@@ -200,6 +204,7 @@ export default {
       over: 'Das Abo ist abgelaufen — verlängern Sie es im Bot',
       daysLeft: 'noch {days} Tage',
       lastDay: 'letzter Tag',
+      unlimited: 'Abo ohne Ablaufdatum',
       renew: 'Verlängern',
     },
     advanced: {
@@ -335,9 +340,9 @@ export default {
     link: {
       clipboardEmpty: 'Die Zwischenablage ist leer — kopieren Sie den Schlüssel zuerst im Bot',
       paste: 'Aus Zwischenablage einfügen',
-      text: 'Es passt ein Abo-Link ebenso wie ein Schlüssel, der mit vless:// beginnt',
+      text: 'Es passt ein Abo-Link ebenso wie der Schlüssel selbst — fügen Sie ein, was der Bot geschickt hat',
       title: 'Schlüssel hier einfügen',
-      placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
+      placeholder: 'Link oder Schlüssel aus dem Bot hier einfügen',
       apply: 'Schlüssel übernehmen',
       needLink: 'Fügen Sie den Link oder den Schlüssel ein',
     },
@@ -398,7 +403,7 @@ export default {
       KERNEL_CONFLICT_FORCE_STOP_FAILED:
         'Die alte Sitzung ließ sich nicht beenden. Bitte beenden Sie den Prozess von Hand und versuchen Sie es erneut.',
       KERNEL_RUNTIME_ERROR: 'Fehler in der Verbindung',
-      KERNEL_OPERATION_FAILED: 'Vorgang fehlgeschlagen: {operation}',
+      KERNEL_OPERATION_FAILED: 'Die Verbindung hat nicht reagiert — bitte erneut versuchen',
       details: 'Details: {details}',
     },
   },

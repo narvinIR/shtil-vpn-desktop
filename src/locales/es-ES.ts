@@ -150,6 +150,8 @@ export default {
       disconnecting: 'Desconectando',
       disconnected: 'Apagado',
       failed: 'No se pudo conectar',
+      bypassed: 'Sin protección',
+      silent: 'El servidor no responde',
     },
     action: {
       connect: 'Conectar',
@@ -175,8 +177,6 @@ export default {
       channels: {
         auto: 'Automático',
         main: 'EE. UU. · Nueva York',
-        backup: 'EE. UU. · Nueva York · reserva',
-        fast: 'EE. UU. · Nueva York · rápido',
         direct: 'Sin canal, directo',
       },
     },
@@ -185,6 +185,10 @@ export default {
       ready: 'Pulse el círculo y la conexión se activará',
       busy: 'Esto tarda un par de segundos',
       connected: 'Los sitios rusos siguen abriéndose por su conexión habitual: bancos, servicios públicos y tiendas ven su dirección de siempre',
+      bypassed:
+        'La conexión está establecida, pero el tráfico no pasa por la VPN. Active «A través del sistema» en «Modo de conexión»',
+      silent:
+        'La conexión está establecida, pero el servidor no responde. Elija otro servidor o actualice su clave en la pantalla «Clave»',
     },
     deviceNews: {
       paid: 'La suscripción se ha renovado: ya puede conectarse',
@@ -199,6 +203,7 @@ export default {
       over: 'La suscripción ha terminado: renuévela en el bot',
       daysLeft: 'quedan {days} días',
       lastDay: 'último día',
+      unlimited: 'Suscripción sin fecha de fin',
       renew: 'Renovar',
     },
     advanced: {
@@ -334,9 +339,9 @@ export default {
     link: {
       clipboardEmpty: 'El portapapeles está vacío: copie primero la clave en el bot',
       paste: 'Pegar del portapapeles',
-      text: 'Sirve un enlace de suscripción y también una clave que empieza por vless://',
+      text: 'Sirve un enlace de suscripción y también la propia clave: pegue lo que le envió el bot',
       title: 'Pegue la clave aquí',
-      placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
+      placeholder: 'Pegue aquí el enlace o la clave del bot',
       apply: 'Aplicar la clave',
       needLink: 'Pegue el enlace o la clave',
     },
@@ -397,7 +402,7 @@ export default {
       KERNEL_CONFLICT_FORCE_STOP_FAILED:
         'No se pudo cerrar la sesión anterior. Ciérrela a mano e inténtelo otra vez.',
       KERNEL_RUNTIME_ERROR: 'Error en la conexión',
-      KERNEL_OPERATION_FAILED: 'La operación ha fallado: {operation}',
+      KERNEL_OPERATION_FAILED: 'La conexión no respondió: inténtelo de nuevo',
       details: 'Detalles: {details}',
     },
   },

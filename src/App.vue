@@ -145,7 +145,7 @@ const normalizeKernelOperationFailedPayload = (
   const typed = payload && typeof payload === 'object' ? (payload as KernelOperationFailedPayload) : {}
   const details = extractKernelErrorMessage(payload) || t('notification.kernelErrors.KERNEL_RUNTIME_ERROR')
   const operation = typed.operation || 'kernel.operation'
-  const userMessage = t('notification.kernelErrors.KERNEL_OPERATION_FAILED', { operation })
+  const userMessage = t('notification.kernelErrors.KERNEL_OPERATION_FAILED')
   return {
     code: 'KERNEL_OPERATION_FAILED',
     userMessage,
@@ -164,8 +164,11 @@ const notifyKernelFailure = (failure: NormalizedKernelFailure) => {
   } else {
     appStore.showErrorMessage?.(failure.userMessage)
   }
+  // Подробности приходят от служебной части машинным текстом на её языке.
+  // Клиенту вторым сообщением они говорят только одно: «настоящую причину от
+  // тебя скрыли». Оставляем их в журнале — там их и читает поддержка.
   if (failure.details && failure.details !== failure.userMessage) {
-    appStore.showInfoMessage?.(t('notification.kernelErrors.details', { details: failure.details }))
+    console.warn('[kernel]', failure.code, failure.details)
   }
 }
 
@@ -312,8 +315,10 @@ onMounted(async () => {
           payload && typeof payload === 'object' && 'message' in payload
             ? String((payload as { message?: unknown }).message ?? '')
             : ''
-        const fallback = t('notification.subscriptionRefreshFailed')
-        appStore.showWarningMessage?.(messageText || fallback)
+        // Служебная часть присылает свой текст на своём языке, и он не пустой
+        // никогда — значит наша фраза до клиента не доходила вовсе.
+        if (messageText) console.warn('[subscription]', messageText)
+        appStore.showWarningMessage?.(t('notification.subscriptionRefreshFailed'))
       },
     )
     cleanupFunctions.push(unlistenUpgradeRefreshFailed)

@@ -184,10 +184,11 @@
         <span class="preview-label">{{ props.t('setting.backup.warningCount') }}</span>
         <span class="preview-value">{{ props.backupPreview.warnings.length }}</span>
       </div>
+      <!-- Сами предупреждения приходят служебным текстом на чужом языке и с
+           именами внутренних полей. Человеку хватает их числа и общей фразы:
+           копия применится, часть значений возьмётся по умолчанию. -->
       <div v-if="props.backupPreview.warnings.length > 0" class="warning-list">
-        <div v-for="(w, i) in props.backupPreview.warnings" :key="i" class="warning-item">
-          {{ w }}
-        </div>
+        <div class="warning-item">{{ props.t('setting.backup.warningsHint') }}</div>
       </div>
     </div>
     <div v-else class="empty-hint">

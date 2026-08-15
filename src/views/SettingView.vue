@@ -62,8 +62,6 @@
             v-if="activeTab === 'advanced'"
             :t="t"
             :app-store="appStore"
-            :tun-stack-options="tunStackOptions"
-            :using-original-config="usingOriginalConfig"
             :on-ip-version-change="onIpVersionChange"
             :on-lan-access-change="onLanAccessChange"
             :show-port-settings="showPortSettings"
@@ -175,7 +173,7 @@ import type { UpdateChannel } from '@/stores/app/UpdateStore'
 import { systemService, type BackupImportResult } from '@/services/system-service'
 import { supportedLocales } from '@/locales'
 import PortSettingsDialog from '@/components/common/PortSettingsDialog.vue'
-import { ACCENT_PRESETS, TUN_STACK_OPTIONS } from '@/views/setting/setting-options'
+import { ACCENT_PRESETS } from '@/views/setting/setting-options'
 import { useKernelDownload } from '@/views/setting/useKernelDownload'
 import { useUpdateProgressListener } from '@/views/setting/useUpdateProgressListener'
 import SettingsBasicTab from '@/views/setting/components/SettingsBasicTab.vue'
@@ -269,11 +267,7 @@ const trayCloseBehaviorOptions = computed<{ label: string; value: TrayCloseBehav
   { label: t('setting.startup.closeBehaviorLightweight'), value: 'lightweight' },
 ])
 
-const tunStackOptions = TUN_STACK_OPTIONS
-
 const kernelLatestVersion = computed(() => kernelStore.latestAvailableVersion || '')
-const activeSubscription = computed(() => subStore.getActiveSubscription())
-const usingOriginalConfig = computed(() => activeSubscription.value?.useOriginalConfig ?? false)
 const hasNewVersion = computed(() => kernelStore.hasKernelUpdate)
 const kernelVersionOptions = computed(() => {
   const versions = kernelStore.availableVersions || []
@@ -459,7 +453,7 @@ const showManualDownloadModal = () => {
 
 const pickManualKernelFile = async () => {
   try {
-    const selected = await systemService.pickKernelImportFile()
+    const selected = await systemService.pickKernelImportFile(t('setting.kernel.chooseFile'))
     if (selected) {
       manualKernelPath.value = selected
     }
@@ -477,15 +471,15 @@ const importManualKernel = async () => {
 
   manualImporting.value = true
   try {
-    const result = await systemService.importKernelExecutable(manualKernelPath.value)
-    message.success(result.message || t('common.saveSuccess'))
+    // Служебная часть отвечает своим текстом и на своём языке — даже про успех.
+    await systemService.importKernelExecutable(manualKernelPath.value)
+    message.success(t('common.saveSuccess'))
     showManualImportModal.value = false
     manualKernelPath.value = ''
     await kernelStore.checkKernelInstallation()
   } catch (error) {
-    console.error('导入内核失败:', error)
-    const errMsg = error instanceof Error ? error.message : t('setting.kernel.importFailed')
-    message.error(errMsg)
+    console.warn('[kernel-import]', error)
+    message.error(t('setting.kernel.importFailed'))
   } finally {
     manualImporting.value = false
   }
@@ -510,9 +504,8 @@ const handleUpdateNow = async () => {
     updateStore.updateProgress('downloading', 0, t('setting.update.preparingDownload'))
     await updateStore.downloadAndInstallUpdate()
   } catch (error) {
-    console.error('执行更新操作失败:', error)
-    const errMsg = error instanceof Error ? error.message : t('setting.update.updateFailed')
-    message.error(errMsg)
+    console.warn('[update]', error)
+    message.error(t('setting.update.updateFailed'))
   }
 }
 
@@ -557,9 +550,8 @@ const handleExportBackup = async () => {
     const result = await systemService.backupExportSnapshot()
     message.success(t('setting.backup.exportSuccess', { path: result.file_path }))
   } catch (error) {
-    console.error('导出备份失败:', error)
-    const errMsg = error instanceof Error ? error.message : t('setting.backup.operationFailed')
-    message.error(errMsg)
+    console.warn('[backup-export]', error)
+    message.error(t('setting.backup.operationFailed'))
   } finally {
     backupExporting.value = false
   }
@@ -576,9 +568,8 @@ const handleValidateBackup = async () => {
       message.success(t('setting.backup.validateSuccess', { count: result.subscriptions_count }))
     }
   } catch (error) {
-    console.error('预检备份失败:', error)
-    const errMsg = error instanceof Error ? error.message : t('setting.backup.operationFailed')
-    message.error(errMsg)
+    console.warn('[backup-check]', error)
+    message.error(t('setting.backup.operationFailed'))
   } finally {
     backupValidating.value = false
   }
@@ -627,9 +618,8 @@ const handleRestoreBackup = async () => {
       message.success(t('setting.backup.restoreSuccess', { count: result.subscriptions_count }))
     }
   } catch (error) {
-    console.error('恢复备份失败:', error)
-    const errMsg = error instanceof Error ? error.message : t('setting.backup.operationFailed')
-    message.error(errMsg)
+    console.warn('[backup-restore]', error)
+    message.error(t('setting.backup.operationFailed'))
   } finally {
     backupRestoring.value = false
   }

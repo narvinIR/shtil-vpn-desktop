@@ -200,8 +200,10 @@ const handleUpdate = async () => {
     }
     showUpdateModal.value = false
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error)
-    message.error(errMsg)
+    // Плагин обновления отвечает своим машинным текстом, а это единственный
+    // путь обновления в продукте: человеку нужна фраза, а не ответ библиотеки.
+    console.warn('[update]', error)
+    message.error(t('setting.update.updateFailed'))
   }
 }
 

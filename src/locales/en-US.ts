@@ -145,6 +145,8 @@ export default {
       disconnecting: 'Disconnecting',
       disconnected: 'Off',
       failed: 'Connection failed',
+      bypassed: 'Not protected',
+      silent: 'Server is not responding',
     },
     action: {
       connect: 'Connect',
@@ -170,8 +172,6 @@ export default {
       channels: {
         auto: 'Automatic',
         main: 'USA · New York',
-        backup: 'USA · New York · backup',
-        fast: 'USA · New York · fast',
         direct: 'No channel, direct',
       },
     },
@@ -180,6 +180,10 @@ export default {
       ready: 'Click the circle and the connection turns on',
       busy: 'This takes a couple of seconds',
       connected: 'Russian sites keep opening through your home connection — banks, government services and shops still see your usual address',
+      bypassed:
+        'The connection is established, but traffic bypasses the VPN. Turn on “Through the system” in “Connection mode”',
+      silent:
+        'The connection is established, but the server is not responding. Choose another server or refresh your key on the “Key” screen',
     },
     deviceNews: {
       paid: 'The subscription is extended — you can connect',
@@ -194,6 +198,7 @@ export default {
       over: 'The subscription has ended — renew it in the bot',
       daysLeft: '{days} days left',
       lastDay: 'last day',
+      unlimited: 'Subscription without an end date',
       renew: 'Renew',
     },
     advanced: {
@@ -461,6 +466,8 @@ export default {
       selectedFile: 'Backup File',
       subscriptionCount: 'Subscriptions',
       warningCount: 'Warnings',
+      warningsHint:
+        'Some values are missing from the backup — they will fall back to defaults. Your subscriptions and keys are not affected',
       noPreview: 'No validation result yet. Restore will ask you to pick a backup file.',
     },
     autoStart: {
@@ -656,9 +663,9 @@ export default {
     link: {
       clipboardEmpty: 'The clipboard is empty — copy the key in the bot first',
       paste: 'Paste from clipboard',
-      text: 'A subscription link works, and so does a key that starts with vless://',
+      text: 'A subscription link works, and so does the key itself — paste whatever the bot sent',
       title: 'Paste the key here',
-      placeholder: 'https://sub.ndvsdom54.ru/sub/…  ·  vless://…',
+      placeholder: 'Paste the link or the key from the bot here',
       apply: 'Apply the key',
       needLink: 'Paste the link or the key',
     },
@@ -717,7 +724,7 @@ export default {
       KERNEL_CONFLICT_DETECTED: 'A stale kernel is running. Trying to force-stop it before continuing.',
       KERNEL_CONFLICT_FORCE_STOP_FAILED: 'Failed to force-stop the stale kernel. Please end the process manually and retry.',
       KERNEL_RUNTIME_ERROR: 'Kernel runtime error',
-      KERNEL_OPERATION_FAILED: 'Kernel operation failed: {operation}',
+      KERNEL_OPERATION_FAILED: 'The connection did not respond — please try again',
       details: 'Details: {details}',
     },
   },
