@@ -23,12 +23,15 @@ pub struct KernelImportResult {
 }
 
 #[tauri::command]
-pub fn pick_kernel_import_file() -> Result<Option<String>, String> {
+pub fn pick_kernel_import_file(title: Option<String>) -> Result<Option<String>, String> {
     // 这里不限制后缀，让 Linux/macOS 下无扩展名二进制也可选择。
-    let file = rfd::FileDialog::new()
-        .set_title("选择 sing-box 内核文件（可执行文件或压缩包）")
-        .pick_file();
-    Ok(file.map(|p| p.to_string_lossy().to_string()))
+    // Заголовок приходит с экрана: это окно рисует сама система, мимо нашей
+    // локализации, и язык клиента известен только там.
+    let mut dialog = rfd::FileDialog::new();
+    if let Some(title) = title.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        dialog = dialog.set_title(title);
+    }
+    Ok(dialog.pick_file().map(|p| p.to_string_lossy().to_string()))
 }
 
 /// 导入内核文件（支持可执行文件或压缩包）。
