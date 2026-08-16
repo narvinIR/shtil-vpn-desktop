@@ -710,6 +710,12 @@ onUnmounted(() => {
     animation: none;
   }
 
+  .stale summary::before,
+  .stale[open] summary::before {
+    transition: none;
+    transform: none;
+  }
+
   .stage-enter-from {
     transform: none;
   }
@@ -734,6 +740,14 @@ onUnmounted(() => {
   margin: 0 auto;
 }
 
+/* Подпись живёт ПОД кодом, а не сбоку: ширина 160px без выравнивания прижимала
+   её к левому краю карточки и рвала фразу на три коротких строки. Только своя
+   карточка: у кодов в «Ключе из бота» ширина подписи задаёт порог переноса колонок. */
+.card.current .qr-row .card-note {
+  margin: var(--space-2) auto 0;
+  max-width: 260px;
+}
+
 .qr-row .card-note {
   margin-top: var(--space-2);
   max-width: 160px;
@@ -743,10 +757,35 @@ onUnmounted(() => {
   margin-top: var(--space-3);
 }
 
+/* Системный треугольник браузера — чужой в нашей типографике: рисуем свой
+   указатель, он же поворачивается при раскрытии. */
 .stale summary {
   cursor: pointer;
   font-size: var(--text-xs);
   color: var(--text-secondary);
+  list-style: none;
+  transition: color var(--transition-fast);
+}
+
+.stale summary::-webkit-details-marker {
+  display: none;
+}
+
+.stale summary::before {
+  content: '›';
+  display: inline-block;
+  margin-right: var(--space-1);
+  transition: transform var(--transition-fast);
+}
+
+.stale[open] summary::before {
+  transform: rotate(90deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .stale summary:hover {
+    color: var(--text-primary);
+  }
 }
 
 .stale .card-note {

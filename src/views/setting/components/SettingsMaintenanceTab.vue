@@ -132,7 +132,7 @@
 
     <h3 class="setting-section-title">{{ props.t('setting.backup.title') }}</h3>
 
-    <div class="setting-row top-align">
+    <div class="setting-row top-align backup-row">
       <div class="setting-info">
         <div class="setting-label">{{ props.t('setting.backup.description') }}</div>
         <div class="setting-desc">{{ props.t('setting.backup.restoreHint') }}</div>
@@ -363,8 +363,18 @@ const router = useRouter()
 
 .backup-btns {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   flex-shrink: 0;
+}
+
+/* Три действия и длинное описание в одну строку не встают никогда: текст
+   сжимается до столбика по слову. Описание занимает ширину целиком, кнопки
+   идут под ним — так же, как действия в карточке обновления выше. */
+.setting-row.backup-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
 }
 
 .backup-preview {
