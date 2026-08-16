@@ -789,30 +789,6 @@ onUnmounted(() => {
   }
 }
 
-/* Система просила не двигать — не двигаем. Кольцо остаётся, но замирает. */
-@media (prefers-reduced-motion: reduce) {
-  .ring-halo {
-    animation: none;
-    opacity: 0.28;
-  }
-
-  .ring:active:not(:disabled) {
-    transform: none;
-  }
-
-  .ring-face-enter-from,
-  .ring-face-leave-to {
-    transform: none;
-  }
-
-  /* Снимаем ПЕРЕХОД, а не поворот: указатель нарисован границами, без поворота
-     он превратится в уголок, который никуда не показывает. */
-  .advanced summary::after,
-  .failure-details summary::before {
-    transition: none;
-  }
-}
-
 .ring {
   width: clamp(200px, 32vh, 264px);
   height: clamp(200px, 32vh, 264px);
@@ -1273,5 +1249,34 @@ onUnmounted(() => {
 
 code.advanced-note {
   font-family: var(--font-mono);
+}
+
+/* Система просила не двигать — не двигаем. Весь отказ от движения собран здесь,
+   в САМОМ КОНЦЕ файла, намеренно: специфичность у этих правил та же, что у
+   обычных, и побеждает тот, кто ниже. Стоя выше по файлу, блок молча проигрывал
+   — круг на главном экране всё равно масштабировался, а указатель всё равно
+   ехал. Снимаем у указателя именно переход, а не поворот: без поворота
+   нарисованный границами уголок перестаёт куда-либо показывать. */
+@media (prefers-reduced-motion: reduce) {
+  .ring-halo {
+    animation: none;
+    opacity: 0.28;
+  }
+
+  .ring:active:not(:disabled) {
+    transform: none;
+  }
+
+  .ring-face-enter-from,
+  .ring-face-leave-to {
+    transform: none;
+  }
+
+  .advanced summary::after,
+  .advanced[open] summary::after,
+  .failure-details summary::before,
+  .failure-details[open] summary::before {
+    transition: none;
+  }
 }
 </style>

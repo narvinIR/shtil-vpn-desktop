@@ -705,23 +705,6 @@ onUnmounted(() => {
   transform: translateY(4px);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .card-note.wait {
-    animation: none;
-  }
-
-  /* Снимаем ПЕРЕХОД, а не сам поворот: указатель нарисован границами, и без
-     поворота он превратится в уголок, который никуда не показывает. */
-  .stale summary::before,
-  .fold summary::after {
-    transition: none;
-  }
-
-  .stage-enter-from {
-    transform: none;
-  }
-}
-
 .card-note.warn {
   color: var(--warning-color, #e0a300);
 }
@@ -872,5 +855,28 @@ onUnmounted(() => {
 
 .file-input {
   display: none;
+}
+
+/* Стоит в САМОМ КОНЦЕ намеренно: специфичность у медиа-блока та же, что у
+   правил выше, поэтому побеждает тот, кто ниже. Стоя в середине файла, этот
+   блок молча проигрывал — человек просил убрать движение и всё равно получал
+   переход 0,15 с. Снимаем именно переход, а не поворот: указатель нарисован
+   границами, без поворота он превратится в уголок, который никуда не
+   показывает. */
+@media (prefers-reduced-motion: reduce) {
+  .card-note.wait {
+    animation: none;
+  }
+
+  .stage-enter-from {
+    transform: none;
+  }
+
+  .stale summary::before,
+  .stale[open] summary::before,
+  .fold summary::after,
+  .fold[open] summary::after {
+    transition: none;
+  }
 }
 </style>

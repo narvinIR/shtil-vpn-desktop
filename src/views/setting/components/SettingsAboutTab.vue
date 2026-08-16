@@ -95,23 +95,22 @@ const props = defineProps<{
 .about-logo {
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  /* Тень нейтральная, как у знака в шапке окна: синее свечение вокруг тёмной
-     плитки читалось подсветкой выбранного элемента. */
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
-/* Знак сам себе плитка — синяя заливка под ним давала цветную рамку по краю. */
+/* Знак сам себе плитка: заливка и обрезка под ним лишние — они давали цветную
+   рамку по краю. Скругления не задаём вовсе: у рисунка своя непрерывная кривая,
+   и круговой радиус её надкусывает по углам. Тень — общий с шапкой окна токен
+   `--logo-shadow`; в тёмной теме её там нет намеренно, объяснение в `tokens.css`. */
 .about-logo-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
+  filter: var(--logo-shadow);
 }
 
 .about-name {

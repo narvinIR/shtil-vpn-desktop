@@ -296,15 +296,6 @@ const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav
 }
 
 /* 底部 */
-/* Система просила не двигать — не двигаем: подложка и цвет остаются, вжатие
-   уходит. Так же сделано на главном экране. */
-@media (prefers-reduced-motion: reduce) {
-  .nav-item:active:not(:disabled),
-  .footer-btn:active {
-    transform: none;
-  }
-}
-
 .sider-footer {
   padding-top: var(--space-3);
   border-top: 1px solid var(--border-color);
@@ -370,5 +361,18 @@ const collapseLabel = computed(() => (props.collapsed ? t('nav.expand') : t('nav
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateX(-6px);
+}
+
+/* Система просила не двигать — не двигаем: подложка и цвет остаются, вжатие
+   уходит. Стоит в САМОМ КОНЦЕ намеренно: специфичность та же, что у обычных
+   правил, и побеждает тот, кто ниже. Из середины файла блок гасил вжатие только
+   у пунктов меню, а кнопки «Светлая тема» и «Свернуть» продолжали вжиматься —
+   их правило объявлено ниже (замер 16.08.2026). Так же сделано на главном
+   экране и на экране ключа. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-item:active:not(:disabled),
+  .footer-btn:active {
+    transform: none;
+  }
 }
 </style>
