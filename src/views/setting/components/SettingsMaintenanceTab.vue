@@ -122,10 +122,10 @@
         <div class="setting-label">{{ props.t('setting.update.channel') }}</div>
       </div>
       <n-select
+        class="setting-select"
         :value="props.updateStore.updateChannel"
         :options="props.updateChannelOptions"
         size="small"
-        style="width: 160px"
         @update:value="props.onUpdateChannelChange"
       />
     </div>

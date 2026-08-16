@@ -78,10 +78,10 @@
         <div class="setting-desc">{{ props.t('setting.language.description') }}</div>
       </div>
       <n-select
+        class="setting-select"
         :value="props.localeStore.locale"
         :options="props.languageOptions"
         size="small"
-        style="width: 160px"
         @update:value="props.onChangeLanguage"
       />
     </div>
@@ -117,10 +117,10 @@
         <div class="setting-desc">{{ props.t('setting.startup.closeBehaviorDesc') }}</div>
       </div>
       <n-select
+        class="setting-select"
         :value="props.trayCloseBehavior"
         :options="props.trayCloseBehaviorOptions"
         size="small"
-        style="width: 160px"
         @update:value="props.onTrayCloseBehaviorChange"
       />
     </div>

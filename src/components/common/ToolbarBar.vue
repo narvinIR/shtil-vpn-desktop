@@ -76,6 +76,17 @@
   flex-wrap: wrap;
 }
 
+/* Поле поиска и поля выбора — блочные, ширина по умолчанию тянется на всю
+   строку. В ряду это разваливало панель в столбик: каждое поле занимало
+   отдельную строку во всю ширину, а кнопки уезжали третьим ярусом. */
+.toolbar-filters :deep(.n-input) {
+  width: 224px;
+}
+
+.toolbar-filters :deep(.n-select) {
+  width: 190px;
+}
+
 .toolbar-stats {
   display: flex;
   align-items: center;

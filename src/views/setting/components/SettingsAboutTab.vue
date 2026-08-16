@@ -1,8 +1,10 @@
 <template>
   <div class="setting-section">
     <div class="about-hero">
+      <!-- Здесь стоял значок GitHub — приложение представлялось человеку чужим
+           знаком. Знак наш, тот же файл, что в шапке окна. -->
       <div class="about-logo">
-        <n-icon :size="28"><LogoGithub /></n-icon>
+        <img :src="logo" alt="" class="about-logo-img" />
       </div>
       <div class="about-identity">
         <div class="about-name">{{ props.t('common.appName') }}</div>
@@ -66,6 +68,7 @@
 import {
   LogoGithub,
 } from '@vicons/ionicons5'
+import logo from '@/assets/icon.png'
 import type { useKernelStore, useUpdateStore } from '@/stores'
 
 type KernelStoreLike = ReturnType<typeof useKernelStore>
@@ -93,13 +96,22 @@ const props = defineProps<{
   width: 48px;
   height: 48px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
-  color: var(--primary-contrast);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 6px 20px var(--primary-soft-strong);
+  /* Тень нейтральная, как у знака в шапке окна: синее свечение вокруг тёмной
+     плитки читалось подсветкой выбранного элемента. */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+/* Знак сам себе плитка — синяя заливка под ним давала цветную рамку по краю. */
+.about-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .about-name {

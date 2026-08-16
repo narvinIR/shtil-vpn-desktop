@@ -804,6 +804,13 @@ onUnmounted(() => {
   .ring-face-leave-to {
     transform: none;
   }
+
+  /* Снимаем ПЕРЕХОД, а не поворот: указатель нарисован границами, без поворота
+     он превратится в уголок, который никуда не показывает. */
+  .advanced summary::after,
+  .failure-details summary::before {
+    transition: none;
+  }
 }
 
 .ring {
@@ -1128,8 +1135,32 @@ onUnmounted(() => {
   color: var(--text-tertiary);
 }
 
+/* Здесь стоял родной треугольник браузера — на одном экране с «Дополнительно»
+   получались две раскрывашки разного вида. Значок и высота строки те же. */
 .failure-details summary {
   cursor: pointer;
+  padding: var(--space-1) 0;
+  list-style: none;
+}
+
+.failure-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.failure-details summary::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: var(--space-2);
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(-45deg);
+  transition: transform var(--transition-fast);
+}
+
+.failure-details[open] summary::before {
+  transform: translateY(-2px) rotate(45deg);
 }
 
 .failure-details pre {
@@ -1173,13 +1204,22 @@ onUnmounted(() => {
   display: none;
 }
 
+/* Указатель НАРИСОВАН границами, а не набран знаком '▾': знак озвучивается
+   чтением с экрана как текст, а его размер и оптический центр зависят от
+   шрифта системы — на Windows и Маке он вставал по-разному. */
 .advanced summary::after {
-  content: '▾';
-  color: var(--text-tertiary);
+  content: '';
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  border-right: 1.5px solid var(--text-tertiary);
+  border-bottom: 1.5px solid var(--text-tertiary);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--transition-fast);
 }
 
 .advanced[open] summary::after {
-  content: '▴';
+  transform: translateY(1px) rotate(-135deg);
 }
 
 .advanced-body {

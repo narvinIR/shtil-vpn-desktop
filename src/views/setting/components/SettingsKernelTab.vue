@@ -19,12 +19,12 @@
         <div class="setting-desc">{{ props.t('setting.kernel.embeddedHint') }}</div>
       </div>
       <n-select
+        class="setting-select"
         :value="props.selectedKernelVersion"
         :options="props.kernelVersionOptions"
         :loading="props.kernelStore.isLoading"
         :disabled="props.downloading"
         size="small"
-        style="width: 160px"
         :placeholder="props.t('setting.kernel.latest')"
         @update:value="props.onSelectedKernelVersionChange"
       />

@@ -39,13 +39,18 @@
         <n-button size="small" type="error" secondary @click="clearLogs">{{ t('log.clear') }}</n-button>
       </template>
       <template #stats>
+        <!-- Счётчики нейтральны: оранжевый на «после фильтра» и синий на статусе
+             читались как тревога и подсказка, хотя это просто числа. -->
         <n-tag size="small" round :bordered="false">{{ t('log.records') }}: {{ logStore.logs.length }}</n-tag>
-        <n-tag size="small" round :bordered="false" type="warning">{{ labels.filtered }}: {{ sortedLogs.length }}</n-tag>
-        <n-tag size="small" round :bordered="false" type="info">{{ labels.status }}: {{ logStore.paused ? labels.paused : labels.streaming }}</n-tag>
+        <n-tag size="small" round :bordered="false">{{ labels.filtered }}: {{ sortedLogs.length }}</n-tag>
+        <n-tag size="small" round :bordered="false">{{ labels.status }}: {{ logStore.paused ? labels.paused : labels.streaming }}</n-tag>
       </template>
     </ToolbarBar>
 
-    <div v-if="groupedLogs.length" class="logs-card">
+    <!-- Считаем ЗАПИСИ, а не группы: без группировки список групп всегда равен
+         одной пустой группе, поэтому вместо «Записей пока нет» человек видел
+         плиту с заголовками колонок и пустотой под ними. -->
+    <div v-if="sortedLogs.length" class="logs-card">
       <div class="log-table-wrap">
         <table class="log-table">
           <thead>

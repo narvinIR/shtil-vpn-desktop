@@ -710,10 +710,11 @@ onUnmounted(() => {
     animation: none;
   }
 
+  /* Снимаем ПЕРЕХОД, а не сам поворот: указатель нарисован границами, и без
+     поворота он превратится в уголок, который никуда не показывает. */
   .stale summary::before,
-  .stale[open] summary::before {
+  .fold summary::after {
     transition: none;
-    transform: none;
   }
 
   .stage-enter-from {
@@ -758,9 +759,12 @@ onUnmounted(() => {
 }
 
 /* Системный треугольник браузера — чужой в нашей типографике: рисуем свой
-   указатель, он же поворачивается при раскрытии. */
+   указатель, он же поворачивается при раскрытии. Он именно НАРИСОВАН двумя
+   границами, а не набран знаком '›': знак озвучивается чтением с экрана как
+   текст и при повороте уезжает с оптической оси строки. */
 .stale summary {
   cursor: pointer;
+  padding: var(--space-1) 0;
   font-size: var(--text-xs);
   color: var(--text-secondary);
   list-style: none;
@@ -772,14 +776,19 @@ onUnmounted(() => {
 }
 
 .stale summary::before {
-  content: '›';
+  content: '';
   display: inline-block;
-  margin-right: var(--space-1);
+  width: 5px;
+  height: 5px;
+  margin-right: var(--space-2);
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(-45deg);
   transition: transform var(--transition-fast);
 }
 
 .stale[open] summary::before {
-  transform: rotate(90deg);
+  transform: translateY(-2px) rotate(45deg);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -817,7 +826,9 @@ onUnmounted(() => {
 }
 
 .fold summary {
+  position: relative;
   cursor: pointer;
+  padding: var(--space-1) var(--space-5) var(--space-1) 0;
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-secondary);
@@ -828,14 +839,23 @@ onUnmounted(() => {
   display: none;
 }
 
+/* Тот же нарисованный указатель, что и у «.stale»: две раскрывашки на одном
+   экране обязаны раскрываться одним знаком. */
 .fold summary::after {
-  content: '▾';
-  float: right;
-  color: var(--text-tertiary);
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--text-tertiary);
+  border-bottom: 1.5px solid var(--text-tertiary);
+  transform: translateY(-50%) rotate(45deg);
+  transition: transform var(--transition-fast);
 }
 
 .fold[open] summary::after {
-  content: '▴';
+  transform: translateY(-50%) rotate(-135deg);
 }
 
 .fold-body {
